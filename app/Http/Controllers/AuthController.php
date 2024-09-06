@@ -11,136 +11,39 @@ use App\Helper;
 use Twilio\Rest\Client;
 use App\Mail\GetOtpMail;
 use Illuminate\Support\Facades\Mail;
-
+use Illuminate\Support\Facades\Log;
 
 
 class AuthController extends Controller
 {
-    public function processUser(Request $request)
-    {
-        try {
-            $validator = validator($request->all(), [
-                'email' => 'required|string|email|max:255',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json($validator->errors(), 400);
-            }
-
-            $validatedData = $validator->validated();
-            $this->generateAndSendOtp($validatedData['email']);
-            return response()->json('success');
-        } catch (\Exception $e) {
-            $errorFrom = 'processUser';
-            $errorMessage = $e->getMessage();
-            $priority = 'high';
-            Helper::ErrorLog($errorFrom, $errorMessage, $priority);
-            return 'Something Went Wrong';
-        }
-    }
-    public function verifyUser(Request $request)
-    {
-        try {
-            $validator = validator($request->all(), [
-                'email' => 'required|string|email',
-                'verification_code' => 'required|numeric',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json($validator->errors(), 400);
-            }
-
-            $validatedData = $validator->validated();
-                $userOtpExist = UserOtp::where('email', $validatedData['email'])->first();
-                if(!$userOtpExist){
-                    return response()->json([
-                        'status' => 'error',
-                        'msg' => 'user not found',
-                        'user_status' => null,
-                        'token' => null
-                    ],400);
-                }
-                else{
-                    $correctOtp = UserOtp::where('email', $validatedData['email'])->where('otp', $validatedData['verification_code'])->first();
-                if (!$correctOtp) {
-                    return response()->json([
-                        'status' => 'error',
-                        'msg' => 'invalid otp',
-                        'user_status' => null,
-                        'token' => null
-                    ],400);
-                } else {
-                    if ($correctOtp->expire_at >= now()) {
-                        $correctOtp->verified = true;
-                        $correctOtp->save();
-                        $correctOtp->delete();
-                        $userExist = User::where('email', $validatedData['email'])->first();
-                        if($userExist)
-                        {
-                            $token = $userExist->createToken('access_token')->accessToken;
-                        }
-                        else{
-                            $newUser = new User();
-                            $newUser->email = $validatedData['email'];
-                            $newUser->save();
-                            $token = $newUser->createToken('access_token')->accessToken;
-                        }
-                        return response()->json([
-                            'status' => 'success',
-                            'msg' =>  $userExist ? 'Login Successful': 'Registration Successful',
-                            'user_status' => $userExist ? 1 : 0, // 0 => New User , 1=> existing user
-                            'token' => $token
-                        ]);
-                    } else {
-                        $correctOtp->delete();
-                        return response()->json([
-                            'status' => 'error',
-                            'msg' => 'otp has expired try again with new code',
-                            'user_status' => null,
-                            'token' => null
-                        ],400);
-                    }
-                }
-                }
-        } catch (\Exception $e) {
-            $errorFrom = 'verifyUser';
-            $errorMessage = $e->getMessage();
-            $priority = 'high';
-            Helper::ErrorLog($errorFrom, $errorMessage, $priority);
-            return 'Something Went Wrong';
-        }
-    }
 
     public function generateAndSendOtp($email)
     {
         try{
             $otp = rand(100000, 999999);
-            $otpExist = UserOtp::where('email',$email)->where('expire_at','>=',now())->first();
-            $otpExpire = UserOtp::where('email',$email)->where('expire_at','<=',now())->first();
-            if($otpExist)
-            {
-                Mail::to($email)->send(new GetOtpMail($otpExist->otp));
+            $checkUserOtp = UserOtp::where('email',$email)->where('expire_at','>',now())->first();
+            if($checkUserOtp){
+                try {
+                    Mail::to($email)->send(new GetOtpMail($otp));
+                } catch (\Exception $e) {
+                    Log::error("Mail sending failed: ".$e->getMessage());
+                }
+
+            }else{
+                $userOtp = new UserOtp();
+                $userOtp->otp =$otp;
+                $userOtp->email = $email;
+                $userOtp->verified = false;
+                $userOtp->expire_at = now()->addMinutes(5);
+                $userOtp->save();
+                try {
+                    Mail::to($email)->send(new GetOtpMail($otp));
+                } catch (\Exception $e) {
+                    Log::error("Mail sending failed: ".$e->getMessage());
+                }
             }
-            elseif($otpExpire)
-            {
-            $otpExpire->delete();
-            $userOtp = new UserOtp();
-            $userOtp->otp =$otp;
-            $userOtp->email = $email;
-            $userOtp->verified = false;
-            $userOtp->expire_at = now()->addMinutes(5);
-            $userOtp->save();
-            Mail::to($email)->send(new GetOtpMail($otp));
-            }
-            else{
-            $userOtp = new UserOtp();
-            $userOtp->otp = $otp;
-            $userOtp->email = $email;
-            $userOtp->verified = false;
-            $userOtp->expire_at = now()->addMinutes(5);
-            $userOtp->save();
-            Mail::to($email)->send(new GetOtpMail($otp));
-            }
+
+            return 'success';
         }
         catch(\Exception $e)
         {
@@ -151,17 +54,57 @@ class AuthController extends Controller
             return 'Something Went Wrong';
         }
     }
-    public function userInfo()
-    {
+
+
+     public function RegisterUser(Request $request)
+     {
         try {
-            $user = auth()->user();
-            return $user->properties;
+            $validator = validator($request->all(), [
+                'email' => 'required|string|email|max:255',
+            ]);
+            if ($validator->fails()) {
+                return response()->json($validator->errors(), 400);
+            }
+
+            $validatedData = $validator->validated();
+            $response = $this->generateAndSendOtp($validatedData['email']);
+            if($response == 'success'){
+                return response()->json([
+                    'status' => 'success',
+                    'msg' => 'otp sent successfully',
+                ],200);
+            }else{
+                return response()->json([
+                    'status' => 'error',
+                    'msg' => 'something went wrong',
+                ],400);
+            }
+
         } catch (\Exception $e) {
-            $errorFrom = 'userInfo';
+            $errorFrom = 'processUser';
             $errorMessage = $e->getMessage();
             $priority = 'high';
             Helper::ErrorLog($errorFrom, $errorMessage, $priority);
-            return 'Something Went Wrong';
+            return response()->json([
+                'status' => 'error',
+                'msg' => 'something went wrong',
+            ],400);
         }
-    }
+     }
+
+
+     public function CheckUserOtp(Request $request)
+     {
+
+        $otp = $request->input('otp');
+        $email = $request->input('email');
+
+        $checkUserDetails = UserOtp::where('email',$email)->where('otp',$otp)->where('expire_at','>',now())->first();
+        if($checkUserDetails){
+            UserOtp::where('email',$email)->where('otp',$otp)->update(['verified' => 1]);
+        }
+
+     }
+
+
 }
