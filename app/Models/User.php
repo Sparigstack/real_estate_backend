@@ -20,8 +20,6 @@ class User extends Authenticatable
         'name',
         'email',
         'contact_no',
-        'otp',
-        'user_info_flag'
     ];
 
     /**
