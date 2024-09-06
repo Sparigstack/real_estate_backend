@@ -56,7 +56,8 @@ class AuthController extends Controller
                     return response()->json([
                         'status' => 'error',
                         'msg' => 'user not found',
-                        'user_status' => null
+                        'user_status' => null,
+                        'token' => null
                     ],400);
                 }
                 else{
@@ -65,7 +66,8 @@ class AuthController extends Controller
                     return response()->json([
                         'status' => 'error',
                         'msg' => 'invalid otp',
-                        'user_status' => null
+                        'user_status' => null,
+                        'token' => null
                     ],400);
                 } else {
                     if ($correctOtp->expire_at >= now()) {
@@ -85,15 +87,17 @@ class AuthController extends Controller
                         }
                         return response()->json([
                             'status' => 'success',
-                            'msg' => $token,
-                            'user_status' => $userExist ? 1 : 0 // 0 => New User , 1=> existing user
+                            'msg' =>  $userExist ? 'Login Successful': 'Registration Successful',
+                            'user_status' => $userExist ? 1 : 0, // 0 => New User , 1=> existing user
+                            'token' => $token
                         ]);
                     } else {
                         $correctOtp->delete();
                         return response()->json([
                             'status' => 'error',
                             'msg' => 'otp has expired try again with new code',
-                            'user_status' => null
+                            'user_status' => null,
+                            'token' => null
                         ],400);
                     }
                 }
@@ -121,7 +125,7 @@ class AuthController extends Controller
             {
             $otpExpire->delete();
             $userOtp = new UserOtp();
-            $userOtp->otp = $otp;
+            $userOtp->otp =$otp;
             $userOtp->email = $email;
             $userOtp->verified = false;
             $userOtp->expire_at = now()->addMinutes(5);
@@ -140,7 +144,7 @@ class AuthController extends Controller
         }
         catch(\Exception $e)
         {
-            $errorFrom = 'userInfo';
+            $errorFrom = 'generateAndSendOtp';
             $errorMessage = $e->getMessage();
             $priority = 'high';
             Helper::ErrorLog($errorFrom, $errorMessage, $priority);
@@ -159,9 +163,5 @@ class AuthController extends Controller
             Helper::ErrorLog($errorFrom, $errorMessage, $priority);
             return 'Something Went Wrong';
         }
-    }
-    public function test()
-    {
-        return 'test';
     }
 }
