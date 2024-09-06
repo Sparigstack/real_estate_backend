@@ -28,11 +28,6 @@ class AuthController extends Controller
             }
 
             $validatedData = $validator->validated();
-            $otpExist = UserOtp::where('email',$validatedData['email'])->where('expire_at','>=',now())->first();
-            if($otpExist)
-            {
-            $otpExist->delete();
-            }
             $this->generateAndSendOtp($validatedData['email']);
             return response()->json('success');
         } catch (\Exception $e) {
@@ -116,6 +111,15 @@ class AuthController extends Controller
     {
         try{
             $otp = rand(100000, 999999);
+            $otpExist = UserOtp::where('email',$email)->where('expire_at','>=',now())->first();
+            $otpExpire = UserOtp::where('email',$email)->where('expire_at','<=',now())->first();
+            if($otpExist)
+            {
+                Mail::to($email)->send(new GetOtpMail($otpExist->otp));
+            }
+            elseif($otpExpire)
+            {
+            $otpExpire->delete();
             $userOtp = new UserOtp();
             $userOtp->otp = $otp;
             $userOtp->email = $email;
@@ -123,6 +127,16 @@ class AuthController extends Controller
             $userOtp->expire_at = now()->addMinutes(5);
             $userOtp->save();
             Mail::to($email)->send(new GetOtpMail($otp));
+            }
+            else{
+            $userOtp = new UserOtp();
+            $userOtp->otp = $otp;
+            $userOtp->email = $email;
+            $userOtp->verified = false;
+            $userOtp->expire_at = now()->addMinutes(5);
+            $userOtp->save();
+            Mail::to($email)->send(new GetOtpMail($otp));
+            }
         }
         catch(\Exception $e)
         {
