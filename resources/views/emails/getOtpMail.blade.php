@@ -51,7 +51,7 @@
             <img src="real-estate-logo.svg" alt="Site Logo" class="logo">
             <h1>Your OTP Code</h1>
             <p>Use the following OTP to complete your authentication:</p>
-            {{-- <p class="otp">{{ $otp }}</p> --}}
+            <p class="otp">{{ $otp }}</p>
             <p>This OTP is valid for 5 minutes. Please do not share it with anyone.</p>
         </div>
         <div class="footer">

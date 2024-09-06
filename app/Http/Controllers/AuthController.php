@@ -32,14 +32,9 @@ class AuthController extends Controller
             if($otpExist)
             {
             $otpExist->delete();
+            }
             $this->generateAndSendOtp($validatedData['email']);
-            }
-            else{
-                $this->generateAndSendOtp($validatedData['email']);
-            }
-            return response()->json([
-                'status' => 'status',
-            ],200);
+            return response()->json('success');
         } catch (\Exception $e) {
             $errorFrom = 'processUser';
             $errorMessage = $e->getMessage();
@@ -74,7 +69,7 @@ class AuthController extends Controller
                 if (!$correctOtp) {
                     return response()->json([
                         'status' => 'error',
-                        'msg' => 'invalid otp or user not found',
+                        'msg' => 'invalid otp',
                         'user_status' => null
                     ],400);
                 } else {
@@ -96,7 +91,7 @@ class AuthController extends Controller
                         return response()->json([
                             'status' => 'success',
                             'msg' => $token,
-                            'user_status' => $userExist ? 1 : 0
+                            'user_status' => $userExist ? 1 : 0 // 0 => New User , 1=> existing user
                         ]);
                     } else {
                         $correctOtp->delete();
