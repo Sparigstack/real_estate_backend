@@ -151,4 +151,8 @@ class AuthController extends Controller
             return 'Something Went Wrong';
         }
     }
+    public function test()
+    {
+        return 'test';
+    }
 }
