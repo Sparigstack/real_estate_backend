@@ -24,12 +24,16 @@ class AuthController extends Controller
             $checkUserOtp = UserOtp::where('email',$email)->where('expire_at','>',now())->first();
             if($checkUserOtp){
                 try {
-                    Mail::to($email)->send(new GetOtpMail($otp));
+                    Mail::to($email)->send(new GetOtpMail($checkUserOtp->otp));
                 } catch (\Exception $e) {
                     Log::error("Mail sending failed: ".$e->getMessage());
                 }
-
             }else{
+                $otpExpire = UserOtp::where('email',$email)->where('expire_at','<',now())->first();
+                if($otpExpire)
+                {
+                    $otpExpire->delete();
+                }
                 $userOtp = new UserOtp();
                 $userOtp->otp =$otp;
                 $userOtp->email = $email;
@@ -81,7 +85,7 @@ class AuthController extends Controller
             }
 
         } catch (\Exception $e) {
-            $errorFrom = 'processUser';
+            $errorFrom = 'RegisterUser';
             $errorMessage = $e->getMessage();
             $priority = 'high';
             Helper::ErrorLog($errorFrom, $errorMessage, $priority);
@@ -95,16 +99,72 @@ class AuthController extends Controller
 
      public function CheckUserOtp(Request $request)
      {
-
+        try
+        {
         $otp = $request->input('otp');
         $email = $request->input('email');
 
-        $checkUserDetails = UserOtp::where('email',$email)->where('otp',$otp)->where('expire_at','>',now())->first();
-        if($checkUserDetails){
-            UserOtp::where('email',$email)->where('otp',$otp)->update(['verified' => 1]);
+        $userOtpExist = UserOtp::where('email',$email)->first();
+                if(!$userOtpExist){
+                    return response()->json([
+                        'status' => 'error',
+                        'msg' => 'user not found'
+                    ],400);
+                }
+                else{
+                    $checkUserDetails = UserOtp::where('email', $userOtpExist->email)->where('otp', $otp)->first();
+                    if($checkUserDetails)
+                    {
+                        if($checkUserDetails->expire_at > now())
+                        {
+                            UserOtp::where('email',$email)->where('otp',$otp)->update(['verified' => 1]);
+                            $userExist = User::where('email',$email)->first();
+                                        if($userExist)
+                                        {
+                                            $userExist->tokens()->delete();
+                                            $token = $userExist->createToken('access_token')->accessToken;
+                                        }
+                                        else{
+                                            $newUser = new User();
+                                            $newUser->email = $email;
+                                            $newUser->save();
+                                            $token = $newUser->createToken('access_token')->accessToken;
+                                        }
+                            $checkUserDetails->delete();
+                            return response()->json([
+                                'status' => 'success',
+                                'token' => $token
+                            ],200);
+                        }
+                        else
+                        {
+                            $checkUserDetails->delete();
+                            // return response()->json([
+                            //     'status' => 'error',
+                            //     'msg' => 'OTP expired, please request a new code.'
+                            // ],400);
+                        }
+                    }
+                    else
+                    {
+                        return response()->json([
+                            'status' => 'error',
+                            'msg' => 'Invalid Otp. Please try again.'
+                        ],400);
+                    }
+                }
+
         }
-
+        catch(\Exception $e)
+        {
+            $errorFrom = 'CheckUserOtp';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::ErrorLog($errorFrom, $errorMessage, $priority);
+            return response()->json([
+                'status' => 'error',
+                'msg' => 'something went wrong',
+            ],400);
+        }
      }
-
-
 }
