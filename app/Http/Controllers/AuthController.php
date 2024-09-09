@@ -139,10 +139,10 @@ class AuthController extends Controller
                         else
                         {
                             $checkUserDetails->delete();
-                            // return response()->json([
-                            //     'status' => 'error',
-                            //     'msg' => 'OTP expired, please request a new code.'
-                            // ],400);
+                            return response()->json([
+                                'status' => 'error',
+                                'msg' => 'OTP expired, please request a new code.'
+                            ],400);
                         }
                     }
                     else
@@ -158,6 +158,30 @@ class AuthController extends Controller
         catch(\Exception $e)
         {
             $errorFrom = 'CheckUserOtp';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::ErrorLog($errorFrom, $errorMessage, $priority);
+            return response()->json([
+                'status' => 'error',
+                'msg' => 'something went wrong',
+            ],400);
+        }
+     }
+
+     public function logout(Request $request)
+     {
+        try{
+            if(!$request->header('Authorization'))
+            {
+                return response()->json([
+                    'status' => 'error',
+                    'msg' => 'access token not provided',
+                ],400);
+            }
+        }
+        catch(\Exception $e)
+        {
+            $errorFrom = 'logout';
             $errorMessage = $e->getMessage();
             $priority = 'high';
             Helper::ErrorLog($errorFrom, $errorMessage, $priority);
