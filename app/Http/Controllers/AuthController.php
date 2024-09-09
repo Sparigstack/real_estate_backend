@@ -38,7 +38,7 @@ class AuthController extends Controller
                 $userOtp->otp =$otp;
                 $userOtp->email = $email;
                 $userOtp->verified = false;
-                $userOtp->expire_at = now()->addMinutes(5);
+                $userOtp->expire_at = now()->addMinutes(2);
                 $userOtp->save();
                 try {
                     Mail::to($email)->send(new GetOtpMail($otp));
