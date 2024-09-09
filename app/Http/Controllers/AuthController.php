@@ -155,14 +155,16 @@ class AuthController extends Controller
         try{
             if($request->user())
         {
-            $request->user()->token()->revoke();
+            $request->user()->token()->delete();
             return response()->json([
-                'message' => 'success',
+                'status'=>'success',
+                'message' => 'Logout Successfully',
             ],200);
         }
         else{
             return response()->json([
-                'message' => 'Unauthenticated.',
+                'status'=>'error',
+                'message' => 'something went wrong',
             ],401);
         }
         }
@@ -173,6 +175,7 @@ class AuthController extends Controller
             $priority = 'high';
             Helper::ErrorLog($errorFrom, $errorMessage, $priority);
             return response()->json([
+                'status'=>'error',
                 'message' => 'something went wrong',
             ],400);
         }
