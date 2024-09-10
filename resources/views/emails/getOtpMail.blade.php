@@ -56,7 +56,7 @@
             <h1 class="textContent">Your OTP Code</h1>
             <p class="textContent">Use the following OTP to complete your authentication:</p>
             <p class="otp">{{ $otp }}</p>
-            <p class="textContent">This OTP is valid for 5 minutes. Please do not share it with anyone.</p>
+            <p class="textContent">This OTP is valid for 3 minutes. Please do not share it with anyone.</p>
         </div>
         <div class="footer">
             © {{ date('Y') }} All rights reserved.

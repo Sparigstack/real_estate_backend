@@ -15,8 +15,8 @@ class UserController extends Controller
     {
         $user = User::with('company_detail')->where('id',$uid)->first();
         $userDetails = [
-            'userName' => $user ? $user->name : null,
-            'contactNum' => $user ? $user->contact_no : null,
+            'userName' => $user ? $user->name : 'null',
+            'contactNum' => $user ? $user->contact_no : 'null',
             'companyName' => $user->company_detail ? $user->company_detail->name : null,
             'companyEmail' => $user->company_detail ? $user->company_detail->email : null,
             'companyContactNum' => $user->company_detail ? $user->company_detail->contact_no : null,
