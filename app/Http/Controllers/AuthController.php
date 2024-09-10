@@ -112,28 +112,36 @@ class AuthController extends Controller
                                 $userExist->tokens()->delete();
                             }
                             $token = $userExist->createToken('access_token')->accessToken;
+                            $userId = $userExist->id;
                     } else {
                         $newUser = new User();
                         $newUser->email = $email;
                         $newUser->save();
+                        $userId = $newUser->id;
                         $token = $newUser->createToken('access_token')->accessToken;
                     }
                     $checkUserDetails->delete();
                     return response()->json([
                         'status' => 'success',
-                        'token' => $token
+                        'msg' => null,
+                        'token' => $token,
+                        'userId' => $userId
                     ], 200);
                 } else {
                     $checkUserDetails->delete();
                     return response()->json([
                         'status' => 'error',
-                        'msg' => ''
+                        'msg' => null,
+                        'token' => null,
+                        'userId' => null
                     ], 400);
                 }
             } else {
                 return response()->json([
                     'status' => 'error',
-                    'msg' => 'Invalid Otp. Please try again.'
+                    'msg' => 'Invalid Otp. Please try again.',
+                    'token' => null,
+                    'userId' => null
                 ], 400);
             }
         }
