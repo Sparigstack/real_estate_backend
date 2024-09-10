@@ -51,13 +51,13 @@ class AuthController extends Controller
             $errorFrom = 'generateAndSendOtp';
             $errorMessage = $e->getMessage();
             $priority = 'high';
-            Helper::ErrorLog($errorFrom, $errorMessage, $priority);
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
             return 'Something Went Wrong';
         }
     }
 
 
-    public function RegisterUser(Request $request)
+    public function registerUser(Request $request)
     {
         try {
             $validator = validator($request->all(), [
@@ -85,7 +85,7 @@ class AuthController extends Controller
             $errorFrom = 'RegisterUser';
             $errorMessage = $e->getMessage();
             $priority = 'high';
-            Helper::ErrorLog($errorFrom, $errorMessage, $priority);
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
             return response()->json([
                 'status' => 'error',
                 'msg' => 'something went wrong',
@@ -94,7 +94,7 @@ class AuthController extends Controller
     }
 
 
-    public function CheckUserOtp(Request $request)
+    public function checkUserOtp(Request $request)
     {
         try
         {
@@ -127,7 +127,7 @@ class AuthController extends Controller
                     $checkUserDetails->delete();
                     return response()->json([
                         'status' => 'error',
-                        'msg' => 'Please request a new code.'
+                        'msg' => ''
                     ], 400);
                 }
             } else {
@@ -142,7 +142,7 @@ class AuthController extends Controller
             $errorFrom = 'CheckUserOtp';
             $errorMessage = $e->getMessage();
             $priority = 'high';
-            Helper::ErrorLog($errorFrom, $errorMessage, $priority);
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
             return response()->json([
                 'status' => 'error',
                 'msg' => 'something went wrong',
@@ -173,11 +173,13 @@ class AuthController extends Controller
             $errorFrom = 'logout';
             $errorMessage = $e->getMessage();
             $priority = 'high';
-            Helper::ErrorLog($errorFrom, $errorMessage, $priority);
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
             return response()->json([
                 'status'=>'error',
                 'message' => 'something went wrong',
             ],400);
         }
     }
+
+
 }

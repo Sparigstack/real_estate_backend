@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Http;
 
 class Helper{
 
-   public static function ErrorLog($errorfrom,$errormsg,$priority){
+   public static function errorLog($errorfrom,$errormsg,$priority){
         $error = new ErrorLog();
         $error->error_from = $errorfrom;
         $error->error_msg = $errormsg;
