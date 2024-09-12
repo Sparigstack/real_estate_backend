@@ -6,15 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Property;
 use App\Models\PropertyDetail;
 use App\Models\UserProperty;
+use App\Models\WingDetail;
 use Illuminate\Http\Request;
 use App\Helper;
 
 
 class PropertyController extends Controller
 {
- public function getPropertyTypes()
+ public function getPropertyTypes($typeflag)
  {
-    $get = Property::with('subProperties')->where('parent_id',0)->get();
+    $get = Property::with('subProperties')->where('id',$typeflag)->where('parent_id',0)->get(); //typeflag : 1=>residential ,2=>commercial
     return $get;
  }
 
@@ -31,6 +32,9 @@ class PropertyController extends Controller
     $description = $request->input('description');
     $userId = $request->input('userId');
     $pincode = $request->input('pincode');
+    $minPrice = $request->input('minPrice');
+    $maxPrice = $request->input('maxPrice');
+    $propertyPlan = $request->input('propertyPlan');
 
     if($propertyTypeFlag == 1)
     {
@@ -42,11 +46,15 @@ class PropertyController extends Controller
         $userProperty->rera_registered_no = $reraRegisteredNumber;
         $userProperty->address = $address;
         $userProperty->pincode = $pincode;
+        $userProperty->property_step_status = 1;
         $userProperty->save();
 
         $propertyDetails = new PropertyDetail();
         $propertyDetails->user_property_id = $userProperty->id;
         $propertyDetails->total_wings = $numberOfWings;
+        $propertyDetails->min_price = $minPrice;
+        $propertyDetails->max_price= $maxPrice;
+        $propertyDetails->property_plan = $propertyPlan;
         $propertyDetails->save();
     }
     return 'success';

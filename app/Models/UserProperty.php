@@ -16,7 +16,8 @@ class UserProperty extends Model
         'description',
         'rera_registered_no',
         'address',
-        'pincode'
+        'pincode',
+        'property_step_status'
     ];
     public function user()
     {

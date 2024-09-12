@@ -14,7 +14,10 @@ class PropertyDetail extends Model
         'total_wings',
         'amenities_id',
         'status_id',
-        'price'
+        'min_price',
+        'max_price',
+        'property_plan'
+
     ];
     public function userProperty()
     {

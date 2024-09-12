@@ -12,6 +12,6 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user-profile/{uid}', [UserController::class, 'userProfile']);
     Route::post('/add-update-user-profile', [UserController::class, 'addUpdateUserProfile']);
-    Route::get('/get-property-types', [PropertyController::class, 'getPropertyTypes']);
+    Route::get('/get-property-types/{typeFlag}', [PropertyController::class, 'getPropertyTypes']);
     Route::post('/add-property-details-first-step', [PropertyController::class, 'addPropertyDetailsFirstStep']);
 // });
