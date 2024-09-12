@@ -13,9 +13,9 @@ use App\Helper;
 
 class PropertyController extends Controller
 {
- public function getPropertyTypes($typeflag)
+ public function getPropertyTypes($typeFlag)
  {
-    $get = Property::with('subProperties')->where('id',$typeflag)->where('parent_id',0)->get(); //typeflag : 1=>residential ,2=>commercial
+    $get = Property::with('subProperties')->where('id',$typeFlag)->where('parent_id',0)->first(); //typeflag : 1=>residential ,2=>commercial
     return $get;
  }
 
