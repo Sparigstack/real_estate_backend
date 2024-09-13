@@ -38,6 +38,17 @@ class PropertyController extends Controller
 
     if($propertyTypeFlag == 1)
     {
+        $checkProperty = UserProperty::where('user_id',$userId)->where('rera_registered_no',$reraRegisteredNumber)->first();
+        if(isset($checkProperty))
+        {
+            return response()->json([
+                'status' => 'error',
+                'msg' => 'property with this registered number already exist',
+                'propertyId' => null
+            ], 400);
+        }
+        else
+        {
         $userProperty = new UserProperty();
         $userProperty->user_id = $userId;
         $userProperty->property_id = $propertySubTypeFlag;
@@ -56,15 +67,24 @@ class PropertyController extends Controller
         $propertyDetails->max_price= $maxPrice;
         $propertyDetails->property_plan = $propertyPlan;
         $propertyDetails->save();
+            return response()->json([
+                'status' => 'success',
+                'msg' => null,
+                'propertyId' => $userProperty->id
+            ], 200);
+            }
+        }
     }
-    return 'success';
-    }
+
     catch (\Exception $e) {
         $errorFrom = 'addPropertyDetailsFirstStep';
         $errorMessage = $e->getMessage();
         $priority = 'high';
         Helper::errorLog($errorFrom, $errorMessage, $priority);
-        return 'something Went Wrong';
+        return response()->json([
+            'status' => 'error',
+            'msg' => 'something went wrong',
+        ],400);
     }
  }
 }
