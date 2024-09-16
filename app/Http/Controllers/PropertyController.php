@@ -126,37 +126,42 @@ class PropertyController extends Controller
             $wingName = $request->input('wingName');
             $numberOfFloors = $request->input('numberOfFloors');
             $propertyId = $request->input('propertyId');
+            $sameUnitFlag = $request->input('sameUnitFlag');
 
-            $checkWing = WingDetail::where('user_property_id', $propertyId)->where('name', $wingName)->first();
-            if (isset($checkWing)) {
-                return response()->json([
-                    'status' => 'error',
-                    'msg' => 'Same wing name exist.',
-                    'wingId' => null,
-                    'floorIds' => null
-                ], 400);
-            } else {
-                $wingDetail = new WingDetail();
-                $wingDetail->user_property_id = $propertyId;
-                $wingDetail->name = $wingName;
-                $wingDetail->total_floors = $numberOfFloors;
-                $wingDetail->save();
+            if($sameUnitFlag == 1)
+            {
+                $checkWing = WingDetail::where('user_property_id', $propertyId)->where('name', $wingName)->first();
+                if (isset($checkWing)) {
+                    return response()->json([
+                        'status' => 'error',
+                        'msg' => 'Same wing name exist.',
+                        'wingId' => null,
+                        'floorIds' => null
+                    ], 400);
+                } else {
+                    $wingDetail = new WingDetail();
+                    $wingDetail->user_property_id = $propertyId;
+                    $wingDetail->name = $wingName;
+                    $wingDetail->total_floors = $numberOfFloors;
+                    $wingDetail->save();
 
-                for ($i = 1; $i <= $numberOfFloors; $i++) {
-                    $floorDetail = new FloorDetail();
-                    $floorDetail->user_property_id = $propertyId;
-                    $floorDetail->wing_id = $wingDetail->id;
-                    $floorDetail->save();
-                    $floorIds[] = $floorDetail->id;
+                    for ($i = 1; $i <= $numberOfFloors; $i++) {
+                        $floorDetail = new FloorDetail();
+                        $floorDetail->user_property_id = $propertyId;
+                        $floorDetail->wing_id = $wingDetail->id;
+                        $floorDetail->save();
+                        $floorIds[] = $floorDetail->id;
+                    }
+
+                    return response()->json([
+                        'status' => 'success',
+                        'msg' => null,
+                        'wingId' => $wingDetail->id,
+                        'floorIds' => $floorIds
+                    ], 200);
                 }
-
-                return response()->json([
-                    'status' => 'success',
-                    'msg' => null,
-                    'wingId' => $wingDetail->id,
-                    'floorIds' => $floorIds
-                ], 200);
             }
+
         } catch (\Exception $e) {
             $errorFrom = 'addWingDetails';
             $errorMessage = $e->getMessage();
