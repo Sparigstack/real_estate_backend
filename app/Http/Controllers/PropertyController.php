@@ -37,15 +37,13 @@ class PropertyController extends Controller
             $userId = $request->input('userId');
             $pincode = $request->input('pincode');
 
-            if ($propertyTypeFlag == 1)
-            {
-                if($reraRegisteredNumber == null)
-                {
-                    $checkProperty = UserProperty::where('user_id', $userId)->where('name', $name)->first();
-                    if (isset($checkProperty)) {
+            if ($propertyTypeFlag == 1) {
+                if ($reraRegisteredNumber != null) {
+                    $checkRegisterNumber = UserProperty::where('user_id', $userId)->where('rera_registered_no', $reraRegisteredNumber)->first();
+                    if (isset($checkRegisterNumber)) {
                         return response()->json([
                             'status' => 'error',
-                            'msg' => 'Property with this name already exist.',
+                            'msg' => 'Property with this registered number already exist.',
                             'propertyId' => null
                         ], 400);
                     } else {
@@ -64,6 +62,8 @@ class PropertyController extends Controller
                         $propertyDetails->user_property_id = $userProperty->id;
                         $propertyDetails->total_wings = $numberOfWings;
                         $propertyDetails->save();
+
+
                         return response()->json([
                             'status' => 'success',
                             'msg' => null,
@@ -72,16 +72,29 @@ class PropertyController extends Controller
                     }
                 }
                 else{
-                    $checkProperty = UserProperty::where('user_id', $userId)->where('name', $name)->where('rera_registered_no',$reraRegisteredNumber)->first();
-                    if (isset($checkProperty)) {
-                        return response()->json([
-                            'status' => 'error',
-                            'msg' => 'Property with this registered number already exist.',
-                            'propertyId' => null
-                        ], 400);
-                }
-            }
+                    $userProperty = new UserProperty();
+                        $userProperty->user_id = $userId;
+                        $userProperty->property_id = $propertySubTypeFlag;
+                        $userProperty->name = $name;
+                        $userProperty->description = $description;
+                        $userProperty->rera_registered_no = $reraRegisteredNumber;
+                        $userProperty->address = $address;
+                        $userProperty->pincode = $pincode;
+                        $userProperty->property_step_status = 1;
+                        $userProperty->save();
 
+                        $propertyDetails = new PropertyDetail();
+                        $propertyDetails->user_property_id = $userProperty->id;
+                        $propertyDetails->total_wings = $numberOfWings;
+                        $propertyDetails->save();
+
+
+                        return response()->json([
+                            'status' => 'success',
+                            'msg' => null,
+                            'propertyId' => $userProperty->id
+                        ], 200);
+                }
             }
         } catch (\Exception $e) {
             $errorFrom = 'addPropertyDetails';
@@ -109,15 +122,12 @@ class PropertyController extends Controller
 
     public function addWingDetails(Request $request)
     {
-        try
-        {
-        $wingName = $request->input('wingName');
-        $sameUnitFlag = $request->input('sameUnitFlag'); // 1 =>yes , 0 => no
-        $numberOfFloors = $request->input('numberOfFloors');
-        $propertyId = $request->input('propertyId');
+        try {
+            $wingName = $request->input('wingName');
+            $numberOfFloors = $request->input('numberOfFloors');
+            $propertyId = $request->input('propertyId');
 
-            $checkWing =
-                WingDetail::where('user_property_id', $propertyId)->where('name', $wingName)->first();
+            $checkWing = WingDetail::where('user_property_id', $propertyId)->where('name', $wingName)->first();
             if (isset($checkWing)) {
                 return response()->json([
                     'status' => 'error',
@@ -147,8 +157,7 @@ class PropertyController extends Controller
                     'floorIds' => $floorIds
                 ], 200);
             }
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             $errorFrom = 'addWingDetails';
             $errorMessage = $e->getMessage();
             $priority = 'high';
@@ -156,10 +165,10 @@ class PropertyController extends Controller
             return response()->json([
                 'status' => 'error',
                 'msg' => 'something went wrong',
-            ],400);
+            ], 400);
         }
     }
-//     public function addUnitDetails(Request $request)
+    //     public function addUnitDetails(Request $request)
 //  {
 //     // try
 //     // {
@@ -169,14 +178,14 @@ class PropertyController extends Controller
 //     $unitSize = $request->input('unitSize');
 //     $unitStartNumber = $request->input('unitStartNumber');
 
-//     if($sameUnitSizeFlag == 1)
+    //     if($sameUnitSizeFlag == 1)
 //     {
 //         $checkFloorDetails = FloorDetail::where('user_property_id',$propertyId)->where('wing_id',$wingId)->get();
 //         $count = count($checkFloorDetails);
 //     if($count > 0)
 //     {
 
-//     }
+    //     }
 //     }
 //     // }
 //     // catch (\Exception $e) {
