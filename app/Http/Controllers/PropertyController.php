@@ -38,63 +38,41 @@ class PropertyController extends Controller
             $pincode = $request->input('pincode');
 
             if ($propertyTypeFlag == 1) {
-                if ($reraRegisteredNumber != null) {
-                    $checkRegisterNumber = UserProperty::where('user_id', $userId)->where('rera_registered_no', $reraRegisteredNumber)->first();
-                    if (isset($checkRegisterNumber)) {
+                if ($reraRegisteredNumber) {
+                    $checkRegisterNumber = UserProperty::where('user_id', $userId)
+                        ->where('rera_registered_no', $reraRegisteredNumber)
+                        ->first();
+
+                    if ($checkRegisterNumber) {
                         return response()->json([
                             'status' => 'error',
-                            'msg' => 'Property with this registered number already exist.',
+                            'msg' => 'Property with this registered number already exists.',
                             'propertyId' => null
                         ], 400);
-                    } else {
-                        $userProperty = new UserProperty();
-                        $userProperty->user_id = $userId;
-                        $userProperty->property_id = $propertySubTypeFlag;
-                        $userProperty->name = $name;
-                        $userProperty->description = $description;
-                        $userProperty->rera_registered_no = $reraRegisteredNumber;
-                        $userProperty->address = $address;
-                        $userProperty->pincode = $pincode;
-                        $userProperty->property_step_status = 1;
-                        $userProperty->save();
-
-                        $propertyDetails = new PropertyDetail();
-                        $propertyDetails->user_property_id = $userProperty->id;
-                        $propertyDetails->total_wings = $numberOfWings;
-                        $propertyDetails->save();
-
-
-                        return response()->json([
-                            'status' => 'success',
-                            'msg' => null,
-                            'propertyId' => $userProperty->id
-                        ], 200);
                     }
                 }
-                else{
-                    $userProperty = new UserProperty();
-                        $userProperty->user_id = $userId;
-                        $userProperty->property_id = $propertySubTypeFlag;
-                        $userProperty->name = $name;
-                        $userProperty->description = $description;
-                        $userProperty->rera_registered_no = $reraRegisteredNumber;
-                        $userProperty->address = $address;
-                        $userProperty->pincode = $pincode;
-                        $userProperty->property_step_status = 1;
-                        $userProperty->save();
 
-                        $propertyDetails = new PropertyDetail();
-                        $propertyDetails->user_property_id = $userProperty->id;
-                        $propertyDetails->total_wings = $numberOfWings;
-                        $propertyDetails->save();
+                $userProperty = new UserProperty();
+                $userProperty->user_id = $userId;
+                $userProperty->property_id = $propertySubTypeFlag;
+                $userProperty->name = $name;
+                $userProperty->description = $description;
+                $userProperty->rera_registered_no = $reraRegisteredNumber;
+                $userProperty->address = $address;
+                $userProperty->pincode = $pincode;
+                $userProperty->property_step_status = 1;
+                $userProperty->save();
 
+                $propertyDetails = new PropertyDetail();
+                $propertyDetails->user_property_id = $userProperty->id;
+                $propertyDetails->total_wings = $numberOfWings;
+                $propertyDetails->save();
 
-                        return response()->json([
-                            'status' => 'success',
-                            'msg' => null,
-                            'propertyId' => $userProperty->id
-                        ], 200);
-                }
+                return response()->json([
+                    'status' => 'success',
+                    'msg' => null,
+                    'propertyId' => $userProperty->id
+                ], 200);
             }
         } catch (\Exception $e) {
             $errorFrom = 'addPropertyDetails';
