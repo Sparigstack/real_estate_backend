@@ -105,16 +105,16 @@ class PropertyController extends Controller
             $numberOfFloors = $request->input('numberOfFloors');
             $propertyId = $request->input('propertyId');
             $sameUnitFlag = $request->input('sameUnitFlag');
+            $numberOfUnits = $request->input('numberOfUnits');
 
-            if($sameUnitFlag == 1)
-            {
+            if ($sameUnitFlag == 1) {
                 $checkWing = WingDetail::where('user_property_id', $propertyId)->where('name', $wingName)->first();
                 if (isset($checkWing)) {
                     return response()->json([
                         'status' => 'error',
                         'msg' => 'Same wing name exist.',
                         'wingId' => null,
-                        'floorIds' => null
+                        'floorUnitDetails' => null
                     ], 400);
                 } else {
                     $wingDetail = new WingDetail();
@@ -122,20 +122,34 @@ class PropertyController extends Controller
                     $wingDetail->name = $wingName;
                     $wingDetail->total_floors = $numberOfFloors;
                     $wingDetail->save();
+                    $floorUnitDetails = [];
 
                     for ($i = 1; $i <= $numberOfFloors; $i++) {
                         $floorDetail = new FloorDetail();
                         $floorDetail->user_property_id = $propertyId;
                         $floorDetail->wing_id = $wingDetail->id;
+                        $floorDetail->total_units = $numberOfUnits;
                         $floorDetail->save();
-                        $floorIds[] = $floorDetail->id;
-                    }
 
+
+                        $unitDetails = [];
+                        for ($j = 1; $j <= $numberOfUnits; $j++) {
+                            $unitDetail = new UnitDetail();
+                            $unitDetail->user_property_id = $propertyId;
+                            $unitDetail->wing_id = $wingDetail->id;
+                            $unitDetail->floor_id = $floorDetail->id;
+                            $unitDetail->save();
+
+                            $unitDetails[] = ['unitId' => $unitDetail->id];
+                        }
+
+                        $floorUnitDetails[] = ['floorId'=> $floorDetail->id,'unitDetails' => $unitDetails];
+                    }
                     return response()->json([
                         'status' => 'success',
                         'msg' => null,
                         'wingId' => $wingDetail->id,
-                        'floorIds' => $floorIds
+                        'floorUnitDetails' => $floorUnitDetails
                     ], 200);
                 }
             }
@@ -151,35 +165,49 @@ class PropertyController extends Controller
             ], 400);
         }
     }
-    //     public function addUnitDetails(Request $request)
-//  {
-//     // try
-//     // {
-//     $propertyId = $request->input('propertyId');
-//     $wingId = $request->input('wingId');
-//     $sameUnitSizeFlag = $request->input('sameUnitSizeFlag'); // 1 =>yes , 0 => no
-//     $unitSize = $request->input('unitSize');
-//     $unitStartNumber = $request->input('unitStartNumber');
+    // public function addUnitDetails(Request $request)
+    // {
+    //     // try
+    //     // {
+    //     $propertyId = $request->input('propertyId');
+    //     $wingId = $request->input('wingId');
+    //     $sameUnitSizeFlag = $request->input('sameUnitSizeFlag'); // 1 =>yes , 0 => no
+    //     $unitSize = $request->input('unitSize');
+    //     $unitStartNumber = $request->input('unitStartNumber');
+    //     $floorIds = $request->input('floorIds');
 
-    //     if($sameUnitSizeFlag == 1)
-//     {
-//         $checkFloorDetails = FloorDetail::where('user_property_id',$propertyId)->where('wing_id',$wingId)->get();
-//         $count = count($checkFloorDetails);
-//     if($count > 0)
-//     {
 
+    //     if ($sameUnitSizeFlag == 1) {
+    //         foreach ($floorIds as $floorId) {
+    //             $checkUnitDetails = UnitDetail::where('floor_id', $floorId)->get();
+
+    //                 for ($j = 1; $j <= $numberOfUnits; $j++) {
+    //                     $unitDetail = new UnitDetail();
+    //                     $unitDetail->user_property_id = $propertyId;
+    //                     $unitDetail->wing_id = $wingId;
+    //                     $unitDetail->floor_id = $floorId;
+    //                     $unitDetail->name = $unitStartNumber;
+    //                     $unitDetail->unit_size = $unitSize;
+    //                     $unitDetail->save();
+    //                     $unitStartNumber += 1;
+    //                 }
+    //                 $unitStartNumber = ($unitStartNumber + 1000) - $numberOfUnits;
+    //             }
+
+    //         }
     //     }
-//     }
-//     // }
-//     // catch (\Exception $e) {
-//     //     $errorFrom = 'addUnitDetails';
-//     //     $errorMessage = $e->getMessage();
-//     //     $priority = 'high';
-//     //     Helper::errorLog($errorFrom, $errorMessage, $priority);
-//     //     return response()->json([
-//     //         'status' => 'error',
-//     //         'msg' => 'something went wrong',
-//     //     ],400);
-//     // }
-//  }
+
+
+        // }
+        // catch (\Exception $e) {
+        //     $errorFrom = 'addUnitDetails';
+        //     $errorMessage = $e->getMessage();
+        //     $priority = 'high';
+        //     Helper::errorLog($errorFrom, $errorMessage, $priority);
+        //     return response()->json([
+        //         'status' => 'error',
+        //         'msg' => 'something went wrong',
+        //     ],400);
+        // }
+    // }
 }
