@@ -88,4 +88,18 @@ class UserController extends Controller
         }
 
     }
+
+    public function getUserDetails($uid)
+    {
+        $userDetails = User::where('id', $uid)->first();
+        if ($userDetails) {
+            return response()->json([
+                'msg' => $userDetails
+            ], 200);
+        } else {
+            return response()->json([
+                'msg' => null,
+            ], 400);
+        }
+    }
 }
