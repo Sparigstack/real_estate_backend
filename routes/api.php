@@ -19,4 +19,5 @@ Route::middleware('auth:api')->group(function (){
     Route::post('/add-wing-details', [PropertyController::class, 'addWingDetails']);
     Route::post('/add-unit-details', [PropertyController::class, 'addUnitDetails']);
     Route::get('/get-wing-details/{propertyId}', [PropertyController::class, 'getWingDetails']);
+    Route::post('/add-similar-wing', [PropertyController::class, 'addSimilarWing']);
 });
