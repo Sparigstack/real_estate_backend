@@ -18,5 +18,5 @@ Route::middleware('auth:api')->group(function (){
     Route::get('/get-property-amenities', [PropertyController::class, 'getPropertyAmenities']);
     Route::post('/add-wing-details', [PropertyController::class, 'addWingDetails']);
     Route::post('/add-unit-details', [PropertyController::class, 'addUnitDetails']);
-
+    Route::get('/get-wing-details/{propertyId}', [PropertyController::class, 'getWingDetails']);
 });

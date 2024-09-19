@@ -278,4 +278,11 @@ class PropertyController extends Controller
             ],400);
         }
     }
+
+    public function getWingDetails($propertyId)
+    {
+        $WingDetails = WingDetail::with('floorDetails.unitDetails')->where('user_property_id',$propertyId)->get();
+        return $WingDetails;
+    }
+
 }
