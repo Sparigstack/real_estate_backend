@@ -44,7 +44,7 @@ class User extends Authenticatable
         ];
     }
 
-    public function user_profile()
+    public function userProfile()
     {
         return $this->hasOne(UserProfile::class,'user_id','id');
     }
@@ -54,12 +54,12 @@ class User extends Authenticatable
         return $this->hasMany(UserProperty::class,'user_id','id');
     }
 
-    public function customer_properties()
+    public function customerProperties()
     {
         return $this->hasMany(CustomerProperty::class,'user_id','id');
     }
 
-    public function company_detail()
+    public function companyDetail()
     {
         return $this->hasOne(CompanyDetail::class,'user_id','id');
     }

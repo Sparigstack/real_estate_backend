@@ -8,4 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 class Property extends Model
 {
     use HasFactory;
+
+    public function subProperties()
+    {
+        return $this->hasMany(Property::class,'parent_id');
+    }
 }
