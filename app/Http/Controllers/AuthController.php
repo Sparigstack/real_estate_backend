@@ -70,6 +70,14 @@ class AuthController extends Controller
             }
 
             $validatedData = $validator->validated();
+            $checkUser = User::where('email',$validatedData['email'])->first();
+            if($checkUser->name != $validatedData['username'])
+            {
+                return response()->json([
+                    'status' => 'error',
+                    'msg' => 'Username and email does not match',
+                ], 400);
+            }
             $response = $this->generateAndSendOtp($validatedData['email'],$validatedData['username']);
             if ($response == 'success') {
                 return response()->json([
