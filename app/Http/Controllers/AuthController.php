@@ -71,8 +71,6 @@ class AuthController extends Controller
 
             $validatedData = $validator->validated();
             $checkUser = User::where('email', $validatedData['email'])->first();
-            $validatedData = $validator->validated();
-            $checkUser = User::where('email', $validatedData['email'])->first();
 
             if ($checkUser && $checkUser->name !== $validatedData['username']) {
                 return response()->json([
