@@ -104,24 +104,26 @@ class PropertyController extends Controller
             $wingName = $request->input('wingName');
             $numberOfFloors = $request->input('numberOfFloors');
             $propertyId = $request->input('propertyId');
+            $wingId = $request->input('wingId');
             $sameUnitFlag = $request->input('sameUnitFlag');
             $numberOfUnits = $request->input('numberOfUnits');
+            $floorUnitCounts = $request->input('floorUnitCounts');
 
             if ($sameUnitFlag == 1) {
                 $checkWing = WingDetail::where('user_property_id', $propertyId)->where('name', $wingName)->first();
-                if (isset($checkWing)) {
-                    return response()->json([
-                        'status' => 'error',
-                        'msg' => 'Same wing name exist.',
-                        'wingId' => null,
-                        'floorUnitDetails' => null
-                    ], 400);
-                } else {
-                    $wingDetail = new WingDetail();
-                    $wingDetail->user_property_id = $propertyId;
-                    $wingDetail->name = $wingName;
-                    $wingDetail->total_floors = $numberOfFloors;
-                    $wingDetail->save();
+            if (isset($checkWing)) {
+                return response()->json([
+                    'status' => 'error',
+                    'msg' => 'Same wing name exist.',
+                    'wingId' => null,
+                    'floorUnitDetails' => null
+                ], 400);
+            }
+                $wingDetail = new WingDetail();
+                $wingDetail->user_property_id = $propertyId;
+                $wingDetail->name = $wingName;
+                $wingDetail->total_floors = $numberOfFloors;
+                $wingDetail->save();
                     $floorUnitDetails = [];
 
                     for ($i = 1; $i <= $numberOfFloors; $i++) {
@@ -130,7 +132,6 @@ class PropertyController extends Controller
                         $floorDetail->wing_id = $wingDetail->id;
                         $floorDetail->total_units = $numberOfUnits;
                         $floorDetail->save();
-
 
                         $unitDetails = [];
                         for ($j = 1; $j <= $numberOfUnits; $j++) {
@@ -143,18 +144,74 @@ class PropertyController extends Controller
                             $unitDetails[] = ['unitId' => $unitDetail->id];
                         }
 
-                        $floorUnitDetails[] = ['floorId'=> $floorDetail->id,'unitDetails' => $unitDetails];
+                        $floorUnitDetails[] = ['floorId' => $floorDetail->id, 'unitDetails' => $unitDetails];
                     }
                     return response()->json([
                         'status' => 'success',
                         'msg' => null,
                         'wingId' => $wingDetail->id,
-                        'floorUnitDetails' => $floorUnitDetails
+                        'floorUnitDetails' => $floorUnitDetails,
+                        'floorUnitCounts' => null
                     ], 200);
-                }
             }
+            elseif($sameUnitFlag == 2){
+                $checkWing = WingDetail::where('user_property_id', $propertyId)->where('name', $wingName)->first();
+            if (isset($checkWing)) {
+                return response()->json([
+                    'status' => 'error',
+                    'msg' => 'Same wing name exist.',
+                    'wingId' => null,
+                    'floorUnitDetails' => null
+                ], 400);
+            }
+                $wingDetail = new WingDetail();
+                $wingDetail->user_property_id = $propertyId;
+                $wingDetail->name = $wingName;
+                $wingDetail->total_floors = $numberOfFloors;
+                $wingDetail->save();
+                $floorUnitCounts = [];
 
-        } catch (\Exception $e) {
+                 for ($i = 1; $i <= $numberOfFloors; $i++) {
+                    $floorDetail = new FloorDetail();
+                    $floorDetail->user_property_id = $propertyId;
+                    $floorDetail->wing_id = $wingDetail->id;
+                    $floorDetail->save();
+                    $floorUnitCounts[] = ['floorId' => $floorDetail->id,'unit' => null];
+            }
+            return response()->json([
+                'status' => 'success',
+                'msg' => null,
+                'wingId' => $wingDetail->id,
+                'floorUnitDetails' => null,
+                'floorUnitCounts' => $floorUnitCounts
+            ], 200);
+        }
+        else{
+            $floorUnitDetails= [];
+            foreach($floorUnitCounts as $floorUnitCount)
+            {
+                $floorDetail = FloorDetail::where('id',$floorUnitCount['floorId'])->update(['total_units' => $floorUnitCount['unit']]);
+                $unitDetails = [];
+                for ($j = 1; $j <= $floorUnitCount['unit']; $j++) {
+                    $unitDetail = new UnitDetail();
+                    $unitDetail->user_property_id = $propertyId;
+                    $unitDetail->wing_id = $wingId;
+                    $unitDetail->floor_id = $floorUnitCount['floorId'];
+                    $unitDetail->save();
+                    $unitDetails[] = ['unitId' => $unitDetail->id];
+            }
+            $floorUnitDetails[] = ['floorId' => $floorUnitCount['floorId'], 'unitDetails' => $unitDetails];
+        }
+
+            return response()->json([
+                'status' => 'success',
+                'msg' => null,
+                'wingId' => $wingId,
+                'floorUnitDetails' => $floorUnitDetails,
+                'floorUnitCounts' => null
+            ], 200);
+    }
+    }catch (\Exception $e) {
             $errorFrom = 'addWingDetails';
             $errorMessage = $e->getMessage();
             $priority = 'high';
@@ -165,49 +222,67 @@ class PropertyController extends Controller
             ], 400);
         }
     }
-    // public function addUnitDetails(Request $request)
-    // {
-    //     // try
-    //     // {
-    //     $propertyId = $request->input('propertyId');
-    //     $wingId = $request->input('wingId');
-    //     $sameUnitSizeFlag = $request->input('sameUnitSizeFlag'); // 1 =>yes , 0 => no
-    //     $unitSize = $request->input('unitSize');
-    //     $unitStartNumber = $request->input('unitStartNumber');
-    //     $floorIds = $request->input('floorIds');
+    public function addUnitDetails(Request $request)
+    {
+        try
+        {
+        $unitStartNumber = $request->input('unitStartNumber');
+        $floorDetailsArray = $request->input('floorUnitDetails');
 
 
-    //     if ($sameUnitSizeFlag == 1) {
-    //         foreach ($floorIds as $floorId) {
-    //             $checkUnitDetails = UnitDetail::where('floor_id', $floorId)->get();
+            foreach($floorDetailsArray as $index => $floorDetail)
+            {
+                $currentStartNumber = (string)$unitStartNumber;
+                $unitLength = strlen($currentStartNumber);
+                if($unitLength == 3)
+                {
+                    $currentFloorStartNumber = $index * 100 +$unitStartNumber;
+                    foreach($floorDetail['unitDetails'] as $UnitDetail)
+                {
+                    UnitDetail::where('id',$UnitDetail['unitId'])->update(['name'=>$currentFloorStartNumber,'unit_size'=>$UnitDetail['unitSize']]);
+                    $currentFloorStartNumber++;
+                }
+                }
+                elseif($unitLength == 4)
+                {
+                    $currentFloorStartNumber = $index * 1000 + $unitStartNumber;
+                    foreach($floorDetail['unitDetails'] as $UnitDetail)
+                {
+                    UnitDetail::where('id',$UnitDetail['unitId'])->update(['name'=>$currentFloorStartNumber,'unit_size'=>$UnitDetail['unitSize']]);
+                    $currentFloorStartNumber++;
+                }
+                }
+                else{
+                    $currentFloorStartNumber =  $unitStartNumber;
+                    foreach($floorDetail['unitDetails'] as $UnitDetail)
+                {
+                    UnitDetail::where('id',$UnitDetail['unitId'])->update(['name'=>$currentFloorStartNumber,'unit_size'=>$UnitDetail['unitSize']]);
+                    $currentFloorStartNumber++;
+                }
+                $unitStartNumber = $currentFloorStartNumber;
+                }
+            }
+            return response()->json([
+                'status' => 'success',
+                'msg' => 'Unit details added successfully.',
+            ],200);
+        }
+        catch (\Exception $e) {
+            $errorFrom = 'addUnitDetails';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+            return response()->json([
+                'status' => 'error',
+                'msg' => 'something went wrong',
+            ],400);
+        }
+    }
 
-    //                 for ($j = 1; $j <= $numberOfUnits; $j++) {
-    //                     $unitDetail = new UnitDetail();
-    //                     $unitDetail->user_property_id = $propertyId;
-    //                     $unitDetail->wing_id = $wingId;
-    //                     $unitDetail->floor_id = $floorId;
-    //                     $unitDetail->name = $unitStartNumber;
-    //                     $unitDetail->unit_size = $unitSize;
-    //                     $unitDetail->save();
-    //                     $unitStartNumber += 1;
-    //                 }
-    //                 $unitStartNumber = ($unitStartNumber + 1000) - $numberOfUnits;
-    //             }
+    public function getWingDetails($propertyId)
+    {
+        $WingDetails = WingDetail::with('floorDetails.unitDetails')->where('user_property_id',$propertyId)->get();
+        return $WingDetails;
+    }
 
-    //         }
-    //     }
-
-
-        // }
-        // catch (\Exception $e) {
-        //     $errorFrom = 'addUnitDetails';
-        //     $errorMessage = $e->getMessage();
-        //     $priority = 'high';
-        //     Helper::errorLog($errorFrom, $errorMessage, $priority);
-        //     return response()->json([
-        //         'status' => 'error',
-        //         'msg' => 'something went wrong',
-        //     ],400);
-        // }
-    // }
 }
