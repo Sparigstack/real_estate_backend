@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
 class AuthController extends Controller
 {
 
-    public function generateAndSendOtp($email)
+    public function generateAndSendOtp($email,$username)
     {
         try {
             $otp = rand(100000, 999999);
@@ -37,6 +37,7 @@ class AuthController extends Controller
                 $userOtp->otp = $otp;
                 $userOtp->email = $email;
                 $userOtp->verified = false;
+                $userOtp->username = $username;
                 $userOtp->expire_at = now()->addMinutes(3);
                 $userOtp->save();
                 try {
@@ -62,13 +63,22 @@ class AuthController extends Controller
         try {
             $validator = validator($request->all(), [
                 'email' => 'required|string|email|max:255',
+                'username'=> 'required|string|max:45'
             ]);
             if ($validator->fails()) {
                 return response()->json($validator->errors(), 400);
             }
 
             $validatedData = $validator->validated();
-            $response = $this->generateAndSendOtp($validatedData['email']);
+            $checkUser = User::where('email',$validatedData['email'])->first();
+            if($checkUser->name != $validatedData['username'])
+            {
+                return response()->json([
+                    'status' => 'error',
+                    'msg' => 'Username and email does not match',
+                ], 400);
+            }
+            $response = $this->generateAndSendOtp($validatedData['email'],$validatedData['username']);
             if ($response == 'success') {
                 return response()->json([
                     'status' => 'success',
@@ -116,6 +126,7 @@ class AuthController extends Controller
                     } else {
                         $newUser = new User();
                         $newUser->email = $email;
+                        $newUser->name = $checkUserDetails->username;
                         $newUser->save();
                         $userId = $newUser->id;
                         $token = $newUser->createToken('access_token')->accessToken;
