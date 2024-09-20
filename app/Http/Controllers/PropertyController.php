@@ -234,19 +234,19 @@ class PropertyController extends Controller
                 if ($unitLength == 3) {
                     $currentFloorStartNumber = $index * 100 + $unitStartNumber;
                     foreach ($floorDetail['unitDetails'] as $UnitDetail) {
-                        UnitDetail::where('id', $UnitDetail['unitId'])->update(['name' => $currentFloorStartNumber, 'unit_size' => $UnitDetail['unitSize']]);
+                        UnitDetail::where('id', $UnitDetail['unitId'])->update(['name' => $currentFloorStartNumber, 'unit_size' => $UnitDetail['unitSize'],'original_price' => $UnitDetail['unitPrice']]);
                         $currentFloorStartNumber++;
                     }
                 } elseif ($unitLength == 4) {
                     $currentFloorStartNumber = $index * 1000 + $unitStartNumber;
                     foreach ($floorDetail['unitDetails'] as $UnitDetail) {
-                        UnitDetail::where('id', $UnitDetail['unitId'])->update(['name' => $currentFloorStartNumber, 'unit_size' => $UnitDetail['unitSize']]);
+                        UnitDetail::where('id', $UnitDetail['unitId'])->update(['name' => $currentFloorStartNumber, 'unit_size' => $UnitDetail['unitSize'],'original_price' => $UnitDetail['unitPrice']]);
                         $currentFloorStartNumber++;
                     }
                 } else {
                     $currentFloorStartNumber = $unitStartNumber;
                     foreach ($floorDetail['unitDetails'] as $UnitDetail) {
-                        UnitDetail::where('id', $UnitDetail['unitId'])->update(['name' => $currentFloorStartNumber, 'unit_size' => $UnitDetail['unitSize']]);
+                        UnitDetail::where('id', $UnitDetail['unitId'])->update(['name' => $currentFloorStartNumber, 'unit_size' => $UnitDetail['unitSize'],'original_price' => $UnitDetail['unitPrice']]);
                         $currentFloorStartNumber++;
                     }
                     $unitStartNumber = $currentFloorStartNumber;
@@ -279,7 +279,7 @@ class PropertyController extends Controller
         try
         {
         $propertyId = $request->input('propertyId');
-        $sameWingId = $request->input('sameWingId');
+        // $sameWingId = $request->input('sameWingId');
         $wingName = $request->input('wingName');
         $totalFloors = $request->input('totalFloors');
         $floorDetailsArray = $request->input('floorDetailsArray');
@@ -288,7 +288,7 @@ class PropertyController extends Controller
         if (isset($checkWing)) {
             return response()->json([
                 'status' => 'error',
-                'msg' => 'Same wing name exist.',
+                'msg' => 'Same wing name already exist.',
             ], 400);
         }
         $wingDetail = new WingDetail();
@@ -302,17 +302,18 @@ class PropertyController extends Controller
             $newFloorDetail = new FloorDetail();
             $newFloorDetail->user_property_id = $propertyId;
             $newFloorDetail->wing_id = $wingDetail->id;
-            $newFloorDetail->total_units = $floorDetail['total_units'];
+            $newFloorDetail->total_units = $floorDetail['totalUnits'];
             $newFloorDetail->save();
 
-            foreach($floorDetail['unit_details'] as $unitDetail)
+            foreach($floorDetail['unitDetails'] as $unitDetail)
             {
                 $newUnitDetail = new UnitDetail();
                 $newUnitDetail->user_property_id = $propertyId;
                 $newUnitDetail->wing_id = $wingDetail->id;
                 $newUnitDetail->floor_id = $newFloorDetail->id;
                 $newUnitDetail->name = $unitDetail['name'];
-                $newUnitDetail->unit_size = $unitDetail['unit_size'];
+                $newUnitDetail->unit_size = $unitDetail['unitSize'];
+                $newUnitDetail->original_price = $unitDetail['unitPrice'];
                 $newUnitDetail->save();
             }
             }
