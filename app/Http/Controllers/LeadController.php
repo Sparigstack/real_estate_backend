@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Helper;
 use App\Models\Lead;
 use App\Models\LeadSource;
+use App\Models\UserProperty;
 use Exception;
 use Illuminate\Support\Facades\Validator;
 
@@ -18,22 +19,68 @@ class LeadController extends Controller
     public function getLeads($uid)
     {
         try{
-            $allLeads = Lead::with('userproperty')->whereHas('userproperty', function ($query) use ($uid) {
+            $allLeads = Lead::with('userproperty','leadSource')->whereHas('userproperty', function ($query) use ($uid) {
                 $query->where('user_id', $uid);
             })->get();
             return $allLeads;
         }catch(Exception $e){
-            return $e->getMessage();
+            // Log the error
+            $errorFrom = 'getLeadDetails';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'msg' => 'Not found',
+            ], 400);
+        
+
+        }
+    }
+    public function getUserProperties($uid)
+    {
+        try{
+            $allUserProperties = UserProperty::where('user_id',$uid)->get();
+            return $allUserProperties;
+        }catch(Exception $e){
+            // Log the error
+            $errorFrom = 'getUserproperty';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'msg' => 'Not found',
+            ], 400);
+        
 
         }
     }
 
     public function getSources(Request $request)
     {
-        $allSources = LeadSource::all();
-        return $allSources;
+
+        try{
+            $allSources = LeadSource::all();
+            return $allSources;
+        }catch(Exception $e){
+            // Log the error
+            $errorFrom = 'getSources';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'msg' => 'Not found',
+            ], 400);
+        
+
+        }
     }
-    public function addLeads(Request $request)
+    public function addOrEditLeads(Request $request)
     {
         try {
             // Retrieve inputs from the request

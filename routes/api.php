@@ -23,9 +23,11 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/add-unit-details', [PropertyController::class, 'addUnitDetails']);
     Route::get('/get-wing-details/{propertyId}', [PropertyController::class, 'getWingDetails']);
 
-
-    Route::post('/add-leads', [LeadController::class, 'addLeads']); 
+    //leads call
     Route::get('/get-leads/{uid}', [LeadController::class, 'getLeads']); 
+    Route::get('/get-user-properties/{uid}', [LeadController::class, 'getUserProperties']); 
     Route::get('/get-sources', [LeadController::class, 'getSources']); 
+    
+    Route::post('/add-edit-leads', [LeadController::class, 'addOrEditLeads']); 
     Route::post('/lead-messages/send', [LeadController::class, 'sendBulkMessages']); 
 // });
