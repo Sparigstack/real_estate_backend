@@ -16,8 +16,11 @@ return new class extends Migration
             $table->unsignedBigInteger('property_id');
             $table->string('name', 255);
             $table->string('email', 255);
-            $table->string('phone', 20);
-            $table->string('source', 100);  // manual, csv, web form
+            $table->string('contact_no', 20);
+            $table->integer('source_id')->nullable(); // 1-refernce,2-social media,3-call,4-in person
+            $table->integer('budget')->nullable()->default(0); 
+            $table->integer('status')->nullable()->default(0); // 0-new,1-negotiation,2-in contact,3-highly interested,4-closed
+            $table->integer('type')->nullable()->default(0); // 0-manual, 1-csv, 2-web form
             // $table->enum('status', ['new', 'contacted', 'converted'])->default('new');
             $table->timestamps();
             

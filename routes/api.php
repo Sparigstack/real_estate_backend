@@ -4,11 +4,13 @@ use App\Http\Controllers\PropertyController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\LeadController;
+
 
 Route::post('/register-user', [AuthController::class, 'registerUser']);
 Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 
-Route::middleware('auth:api')->group(function (){
+// Route::middleware('auth:api')->group(function (){
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/get-user-details/{uid}', [UserController::class, 'getUserDetails']);
     Route::get('/user-profile/{uid}', [UserController::class, 'userProfile']);
@@ -20,4 +22,10 @@ Route::middleware('auth:api')->group(function (){
     Route::post('/add-wing-details', [PropertyController::class, 'addWingDetails']);
     Route::post('/add-unit-details', [PropertyController::class, 'addUnitDetails']);
     Route::get('/get-wing-details/{propertyId}', [PropertyController::class, 'getWingDetails']);
-});
+
+
+    Route::post('/add-leads', [LeadController::class, 'addLeads']); 
+    Route::get('/get-leads/{uid}', [LeadController::class, 'getLeads']); 
+    Route::get('/get-sources', [LeadController::class, 'getSources']); 
+    Route::post('/lead-messages/send', [LeadController::class, 'sendBulkMessages']); 
+// });

@@ -45,4 +45,5 @@ class UserProperty extends Model
     {
         return $this->hasMany(UnitDetail::class,'user_property_id','id');
     }
+
 }
