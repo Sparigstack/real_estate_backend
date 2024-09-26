@@ -93,6 +93,17 @@ class UserController extends Controller
     {
         $userDetails = User::where('id', $uid)->first();
         if ($userDetails) {
+            // Check if client_id and client_secret_key are missing, generate if needed
+            if (empty($userDetails->client_id)) {
+                $userDetails->client_id = uniqid('client_', true);
+            }
+            
+            if (empty($userDetails->client_secret_key)) {
+                $userDetails->client_secret_key = bin2hex(random_bytes(16)); // Generate a random 32-character key
+            }
+
+        // Save the new values if they were generated
+        $userDetails->save();
             return response()->json([
                 'msg' => $userDetails
             ], 200);
