@@ -136,14 +136,14 @@ class LeadController extends Controller
 
             if ($leadid == 0) {
 
-                $property = UserProperty::where('id', $propertyid)->first();
-                // Uniqueness check: If the same email and property_id exist, skip
+                // Check if the same email and property combination already exists
                 $existingLead = Lead::where('email', $email)
-                    ->where('property_id', $property->id)
+                    ->where('property_id', $propertyid)
                     ->first();
 
+
                 if (!$existingLead) {
-                     // Create a new lead record for manual or web form entry //0 or 2
+                    // Create a new lead record for manual or web form entry //0 or 2
                     $lead = Lead::create([
                         'property_id' => $propertyid,
                         'name' => $name,
@@ -161,15 +161,13 @@ class LeadController extends Controller
                         'msg' => 'Lead added successfully.',
                         'data' => $lead
                     ], 200);
-                }else{
+                } else {
                     return response()->json([
                         'status' => 'success',
-                        'msg' => 'Lead already added.',
+                        'msg' => 'Lead already exists.',
                         'data' => null
                     ], 200);
                 }
-               
-
             } else {
                 // update a lead record for manual or web form entry //0 or 2
                 // Find existing lead by ID
@@ -182,6 +180,20 @@ class LeadController extends Controller
                         'msg' => 'Lead not found.',
                         'data' => null
                     ], 404);
+                }
+
+                // Check if another lead with the same email and updated property_id exists
+                $duplicateLead = Lead::where('email', $email)
+                    ->where('property_id', $propertyid)
+                    ->where('id', '!=', $leadid)  // Exclude the current lead
+                    ->first();
+
+                if ($duplicateLead) {
+                    return response()->json([
+                        'status' => 'error',
+                        'msg' => 'Lead already exists.',
+                        'data' => null
+                    ], 200);
                 }
 
                 // Update the existing lead record
@@ -227,13 +239,13 @@ class LeadController extends Controller
                     'status' => 'error',
                     'message' => 'CSV file not found.',
                     'data' => null
-                ], 400);
+                ], 200);
             }
 
             // Open the CSV file
             $csvFile = fopen($file, 'r');
             $header = fgetcsv($csvFile);
-            $expectedHeaders = ['name', 'email', 'contactno', 'property', 'source', 'budget'];
+            $expectedHeaders = ['name', 'email', 'contact', 'property', 'source', 'budget'];
             $escapedHeader = [];
 
             foreach ($header as $key => $value) {
@@ -246,7 +258,7 @@ class LeadController extends Controller
                     'status' => 'error',
                     'message' => 'Invalid CSV headers.',
                     'data' => null
-                ], 400);
+                ], 200);
             }
 
             $leads = [];
@@ -285,7 +297,7 @@ class LeadController extends Controller
                     'property_id' => $property->id,
                     'name' => $data['name'],
                     'email' => $data['email'],
-                    'contact_no' => $data['contactno'],
+                    'contact_no' => $data['contact'],
                     'source_id' => $source->id,
                     'budget' => $data['budget'],
                     'status' => 0, // New lead
