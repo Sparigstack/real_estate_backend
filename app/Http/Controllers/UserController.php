@@ -95,27 +95,17 @@ class UserController extends Controller
         if ($userDetails) {
             // Check if client_id and client_secret_key are missing, generate if needed
             if (empty($userDetails->client_id)) {
-                $clientId = uniqid('client_', true);
-                $userDetails->client_id = encrypt($clientId); // Encrypt before saving
+                $userDetails->client_id = uniqid('client_', true);
             }
             
             if (empty($userDetails->client_secret_key)) {
-                $clientSecret = bin2hex(random_bytes(16)); // Generate a random 32-character key
-                $userDetails->client_secret_key = encrypt($clientSecret); 
+                $userDetails->client_secret_key = bin2hex(random_bytes(16)); // Generate a random 32-character key
             }
 
         // Save the new values if they were generated
         $userDetails->save();
-
-        // Decrypt the values to send back to the frontend
-        $clientId = decrypt($userDetails->client_id);
-        $clientSecretKey = decrypt($userDetails->client_secret_key);
             return response()->json([
-                'msg' => [
-                    'user' => $userDetails,
-                    'client_id' => $clientId,
-                    'client_secret_key' => $clientSecretKey,
-                ]
+                'msg' => $userDetails
             ], 200);
         } else {
             return response()->json([
