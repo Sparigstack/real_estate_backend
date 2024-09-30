@@ -151,8 +151,8 @@ class LeadController extends Controller
                         'contact_no' => $contactno,
                         'source_id' => $sourceid,
                         'budget' => $budget,
-                        'status' => "0", //0-new, 1-negotiation, 2-in contact, 3-highly interested, 4-closed
-                        'type' => "0" //manual
+                        'status' => 0, //0-new, 1-negotiation, 2-in contact, 3-highly interested, 4-closed
+                        'type' => 0 //manual
                     ]);
 
                     // Return success response
@@ -179,7 +179,7 @@ class LeadController extends Controller
                         'status' => 'error',
                         'msg' => 'Lead not found.',
                         'data' => null
-                    ], 404);
+                    ], 200);
                 }
 
                 // Check if another lead with the same email and updated property_id exists
@@ -329,12 +329,11 @@ class LeadController extends Controller
     }
 
 
-    //rest api/webform  call 
-    public function generateLead(Request $request, $source)
+    //rest api
+    public function generateLead(Request $request)
     {
+        try {
 
-        //source=1 means rest api ,2=webform
-        if ($source == 1) {
             // Validate client_id and client_secret
             $client_id = $request->header('client_id');
             $client_secret_key = $request->header('client_secret_key');
@@ -344,21 +343,157 @@ class LeadController extends Controller
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Client ID and Client Secret are required.'
-                ], 401);
+                ], 200);
             }
-
 
             // Find the user with the given client_id and client_secret
             $user = User::where('client_id', $client_id)
                 ->where('client_secret_key', $client_secret_key)
                 ->first();
 
+
             if (!$user) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Invalid Client ID or Client Secret.'
-                ], 401);
+                ], 200);
             }
+
+
+
+            // Validate JSON input for lead creation
+            $validatedData = $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|max:255',
+                'contact' => 'required|string|max:15',
+                'budget' => 'required|numeric',
+                'source' => 'required|string|max:255', // Example: "call"
+                'property' => 'required|string|max:255', // Property could be validated more specifically if needed
+            ]);
+
+            // Find property ID by property name (assuming 'property' is a name, not ID)
+            $property = UserProperty::whereRaw('LOWER(name) = ?', [strtolower($validatedData['property'])])->first();
+
+            if (!$property) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Property not found.'
+                ], 200);
+            }
+
+            // Check if the lead with the same email and property already exists
+            $existingLead = Lead::where('email', $validatedData['email'])
+                ->where('property_id', $property->id)
+                ->first();
+
+            if ($existingLead) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Lead already exists.'
+                ], 200); // Conflict HTTP status code
+            }
+
+            $sourceId = LeadSource::whereRaw('LOWER(name) = ?', [strtolower($validatedData['source'])])->value('id');
+            // Create the new lead
+            $lead = Lead::create([
+                'property_id' => $property->id,
+                'name' => $validatedData['name'],
+                'email' => $validatedData['email'],
+                'contact_no' => $validatedData['contact'],
+                'source_id' => $sourceId,
+                'budget' => $validatedData['budget'],
+                'status' => 0,  // Default to new lead
+                'type' => 2, // 0 for manual,1 csv, 2 rest api
+            ]);
+
+            // Return success response
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Lead created successfully.',
+                'data' => $lead
+            ], 200); // Created HTTP status code
+
+        } catch (\Exception $e) {
+            // Log the error
+            $errorFrom = 'restapidetails';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'msg' => 'Something went wrong',
+            ], 400);
+        }
+    }
+
+
+
+    //web form api
+    public function webFormLead(Request $request)
+    {
+        try {
+            // Validate inputs
+            $validatedData = $request->validate([
+                'propertyinterest' => 'required|integer',  // Assuming propertyinterest is an integer (property_id)
+                'name' => 'required|string|max:255',       // Name is required and must be a string
+                'email' => 'required|email|max:255',       // Email is required and must be valid
+                'contactno' => 'required|string|max:15',   // Contact number is required, can be a string
+                'source' => 'required|integer',            // Source ID is required (1-reference, 2-social media, etc.)
+                'budget' => 'required|numeric',            // Budget is optional and must be a number if provided
+            ]);
+
+            // Retrieve validated data from the request
+            $propertyid = $validatedData['propertyinterest'];
+            $name = $validatedData['name'];
+            $email = $validatedData['email'];
+            $contactno = $validatedData['contactno'];
+            $sourceid = $validatedData['source'];
+            $budget = $request->input('budget'); // Budget remains nullable
+
+            // Check if the same email and property combination already exists
+            $existingLead = Lead::where('email', $email)
+                ->where('property_id', $propertyid)
+                ->first();
+
+
+            if (!$existingLead) {
+                // Create a new lead record for manual or web form entry //0 or 2
+                $lead = Lead::create([
+                    'property_id' => $propertyid,
+                    'name' => $name,
+                    'email' => $email,
+                    'contact_no' => $contactno,
+                    'source_id' => $sourceid,
+                    'budget' => $budget,
+                    'status' => 0, //0-new, 1-negotiation, 2-in contact, 3-highly interested, 4-closed
+                    'type' => 3 //web form
+                ]);
+
+                // Return success response
+                return response()->json([
+                    'status' => 'success',
+                    'msg' => 'Lead added successfully.',
+                    'data' => $lead
+                ], 200);
+            } else {
+                return response()->json([
+                    'status' => 'success',
+                    'msg' => 'Lead already exists.',
+                    'data' => null
+                ], 200);
+            }
+        } catch (\Exception $e) {
+            // Log the error
+            $errorFrom = 'webformdetails';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'msg' => 'Something went wrong',
+            ], 400);
         }
     }
 }
