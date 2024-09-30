@@ -11,6 +11,7 @@ use App\Models\UserProperty;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 
 class LeadController extends Controller
@@ -267,6 +268,8 @@ class LeadController extends Controller
             while (($columns = fgetcsv($csvFile)) !== false) {
                 $data = array_combine($escapedHeader, $columns);
 
+                 // Debug: print the current row
+                 Log::info('CSV row: ', $data);
                 // Case-insensitive check if property interest exists in user_properties
                 $property = UserProperty::whereRaw('LOWER(name) = ?', [strtolower($data['property'])])->first();
                 if (!$property) {
@@ -277,7 +280,7 @@ class LeadController extends Controller
                 // Case-insensitive check if source exists, insert if not
                 $source = LeadSource::whereRaw('LOWER(name) = ?', [strtolower($data['source'])])->first();
                 if (!$source) {
-                    $source = LeadSource::create(['name' => ucfirst($data['source'])]);
+                    $source = LeadSource::find(5); // Assign to "others"
                 }
 
 
@@ -494,6 +497,45 @@ class LeadController extends Controller
                 'status' => 'error',
                 'msg' => 'Something went wrong',
             ], 400);
+        }
+    }
+
+    public function updateLeadNotes(Request $request){
+        // Validate the incoming request data
+        $validator = Validator::make($request->all(), [
+            'leadid' => 'required|integer|exists:leads,id', // Make sure leadid exists in leads table
+            'notes' => 'required|string|max:500',
+        ]);
+
+        // If validation fails, return the error messages
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+            ], 400);
+        }
+
+        try {
+            // Find the lead by id and update the notes
+            $lead = Lead::find($request->input('leadid'));
+            $lead->notes = $request->input('notes');
+            $lead->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Lead notes updated successfully',
+            ], 200);
+        } catch (\Exception $e) {
+            // Log the error and return a response
+            $errorFrom = 'updateLeadNotes';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Something went wrong. Please try again.',
+            ], 500);
         }
     }
 }
