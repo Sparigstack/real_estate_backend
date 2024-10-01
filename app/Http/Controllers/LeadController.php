@@ -58,9 +58,9 @@ class LeadController extends Controller
 
                 //limit page vise
                 if($limit != 'null'){
-                    $allLeads->take($limit);
+                    $allLeads->limit($limit);
                 }
-                $allLeads = $allLeads->get();
+                $allLeads = $allLeads->paginate();
     
                 return $allLeads;
             } else {
