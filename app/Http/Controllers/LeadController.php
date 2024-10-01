@@ -17,13 +17,51 @@ use Illuminate\Support\Facades\Log;
 class LeadController extends Controller
 {
 
-    public function getLeads($uid)
-    {
+    public function getLeads($uid,$skey,$sort,$sortbykey,$offset,$limit)
+    { 
+     
         try {
-            if (isset($uid)) {
+            if ($uid != 'null') {
                 $allLeads = Lead::with('userproperty', 'leadSource')->whereHas('userproperty', function ($query) use ($uid) {
                     $query->where('user_id', $uid);
-                })->get();
+                });
+
+                //search query
+                if($skey != 'null'){
+                    $allLeads->where(function ($q) use ($skey) {
+                        $q->where('name', 'like', "%{$skey}%")
+                            ->orWhere('email', 'like', "%{$skey}%")
+                            ->orWhereHas('leadSource', function ($q) use ($skey) {
+                                $q->where('name', 'like', "%{$skey}%");
+                            })
+                            ->orWhereHas('userproperty', function ($q) use ($skey) {
+                                $q->where('name', 'like', "%{$skey}%");
+                            });
+                    });
+                }
+
+                //sortby key
+                if($sortbykey != 'null'){
+                    if (in_array($sortbykey, ['name', 'email', 'budget'])) {
+                        $allLeads->orderBy($sortbykey, $sort);
+                    } elseif ($sortbykey === 'source') {
+                        $allLeads->orderBy(LeadSource::select('name')->whereColumn('lead_sources.id', 'leads.source_id'), $sort);
+                    } elseif ($sortbykey === 'property') {
+                        $allLeads->orderBy(UserProperty::select('name')->whereColumn('user_properties.id', 'leads.property_id'), $sort);
+                    }
+                }
+                
+                //page offset
+                if($offset != 'null'){
+                    $allLeads->skip($offset);
+                }
+
+                //limit page vise
+                if($limit != 'null'){
+                    $allLeads->take($limit);
+                }
+                $allLeads = $allLeads->get();
+    
                 return $allLeads;
             } else {
                 return null;
@@ -45,7 +83,7 @@ class LeadController extends Controller
     public function getUserProperties($uid)
     {
         try {
-            if (isset($uid)) {
+            if ($uid != 'null') {
                 $allUserProperties = UserProperty::where('user_id', $uid)->get();
                 return $allUserProperties;
             } else {
@@ -88,7 +126,7 @@ class LeadController extends Controller
     public function fetchLeadDetail(Request $request, $uid, $lid)
     {
         try {
-            if (isset($uid) && isset($lid)) {
+            if ($uid != 'null' && $lid != 'null') {
                 $fetchLeadDetail = Lead::with('userproperty', 'leadSource')->whereHas('userproperty', function ($query) use ($uid) {
                     $query->where('user_id', $uid);
                 })->where('id', $lid)->first();
@@ -268,8 +306,8 @@ class LeadController extends Controller
             while (($columns = fgetcsv($csvFile)) !== false) {
                 $data = array_combine($escapedHeader, $columns);
 
-                 // Debug: print the current row
-                 Log::info('CSV row: ', $data);
+                // Debug: print the current row
+                Log::info('CSV row: ', $data);
                 // Case-insensitive check if property interest exists in user_properties
                 $property = UserProperty::whereRaw('LOWER(name) = ?', [strtolower($data['property'])])->first();
                 if (!$property) {
@@ -500,7 +538,8 @@ class LeadController extends Controller
         }
     }
 
-    public function updateLeadNotes(Request $request){
+    public function updateLeadNotes(Request $request)
+    {
         // Validate the incoming request data
         $validator = Validator::make($request->all(), [
             'leadid' => 'required|integer|exists:leads,id', // Make sure leadid exists in leads table

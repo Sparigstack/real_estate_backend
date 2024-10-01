@@ -24,7 +24,7 @@ Route::middleware('auth:api')->group(function (){
     Route::get('/get-wing-details/{propertyId}', [PropertyController::class, 'getWingDetails']);
 
     //leads call
-    Route::get('/get-leads/{uid}', [LeadController::class, 'getLeads']);  
+    Route::get('/get-leads/{uid}&{skey}&{sort}&{sortbykey}&{offset}&{limit}', [LeadController::class, 'getLeads']);  
     Route::get('/fetch-lead-detail/{uid}/{lid}', [LeadController::class, 'fetchLeadDetail']); 
     Route::post('/add-edit-leads', [LeadController::class, 'addOrEditLeads']); 
     Route::post('/add-leads-csv', [LeadController::class, 'addLeadsCsv']); 
