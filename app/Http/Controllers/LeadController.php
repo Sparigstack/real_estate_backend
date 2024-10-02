@@ -17,9 +17,9 @@ use Illuminate\Support\Facades\Log;
 class LeadController extends Controller
 {
 
-    public function getLeads($uid,$skey,$sort,$sortbykey,$offset,$limit)
-    { 
-     
+    public function getLeads($uid, $skey, $sort, $sortbykey, $offset, $limit)
+    {
+
         try {
             if ($uid != 'null') {
                 $allLeads = Lead::with('userproperty', 'leadSource')->whereHas('userproperty', function ($query) use ($uid) {
@@ -27,7 +27,7 @@ class LeadController extends Controller
                 });
 
                 //search query
-                if($skey != 'null'){
+                if ($skey != 'null') {
                     $allLeads->where(function ($q) use ($skey) {
                         $q->where('name', 'like', "%{$skey}%")
                             ->orWhere('email', 'like', "%{$skey}%")
@@ -41,7 +41,7 @@ class LeadController extends Controller
                 }
 
                 //sortby key
-                if($sortbykey != 'null'){
+                if ($sortbykey != 'null') {
                     if (in_array($sortbykey, ['name', 'email', 'budget'])) {
                         $allLeads->orderBy($sortbykey, $sort);
                     } elseif ($sortbykey === 'source') {
@@ -50,18 +50,18 @@ class LeadController extends Controller
                         $allLeads->orderBy(UserProperty::select('name')->whereColumn('user_properties.id', 'leads.property_id'), $sort);
                     }
                 }
-                
+
                 //page offset
-                if($offset != 'null'){
+                if ($offset != 'null') {
                     $allLeads->skip($offset);
                 }
 
                 //limit page vise
-                if($limit != 'null'){
+                if ($limit != 'null') {
                     $allLeads->limit($limit);
                 }
                 $allLeads = $allLeads->paginate();
-    
+
                 return $allLeads;
             } else {
                 return null;
@@ -75,7 +75,7 @@ class LeadController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'msg' => 'Not found',
+                'message' => 'Not found',
             ], 400);
         }
     }
@@ -98,7 +98,7 @@ class LeadController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'msg' => 'Not found',
+                'message' => 'Not found',
             ], 400);
         }
     }
@@ -118,7 +118,7 @@ class LeadController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'msg' => 'Not found',
+                'message' => 'Not found',
             ], 400);
         }
     }
@@ -143,7 +143,7 @@ class LeadController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'msg' => 'Not found',
+                'message' => 'Not found',
             ], 400);
         }
     }
@@ -197,13 +197,13 @@ class LeadController extends Controller
                     // Return success response
                     return response()->json([
                         'status' => 'success',
-                        'msg' => 'Lead added successfully.',
+                        'message' => 'Lead added successfully.',
                         'data' => $lead
                     ], 200);
                 } else {
                     return response()->json([
                         'status' => 'success',
-                        'msg' => 'Lead already exists.',
+                        'message' => 'Lead already exists.',
                         'data' => null
                     ], 200);
                 }
@@ -216,7 +216,7 @@ class LeadController extends Controller
                     // Return error if lead not found
                     return response()->json([
                         'status' => 'error',
-                        'msg' => 'Lead not found.',
+                        'message' => 'Lead not found.',
                         'data' => null
                     ], 200);
                 }
@@ -230,7 +230,7 @@ class LeadController extends Controller
                 if ($duplicateLead) {
                     return response()->json([
                         'status' => 'error',
-                        'msg' => 'Lead already exists.',
+                        'message' => 'Lead already exists.',
                         'data' => null
                     ], 200);
                 }
@@ -250,7 +250,7 @@ class LeadController extends Controller
                 // Return success response for updating the lead
                 return response()->json([
                     'status' => 'success',
-                    'msg' => 'Lead updated successfully.',
+                    'message' => 'Lead updated successfully.',
                     'data' => $lead
                 ], 200);
             }
@@ -263,7 +263,7 @@ class LeadController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'msg' => 'Something went wrong',
+                'message' => 'Something went wrong',
             ], 400);
         }
     }
@@ -352,7 +352,7 @@ class LeadController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'msg' => 'Leads added successfully from CSV file.',
+                'message' => 'Leads added successfully from CSV file.',
                 'data' => $leads
             ], 200);
         } catch (\Exception $e) {
@@ -364,7 +364,7 @@ class LeadController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'msg' => 'Something went wrong',
+                'message' => 'Something went wrong',
             ], 400);
         }
     }
@@ -374,7 +374,6 @@ class LeadController extends Controller
     public function generateLead(Request $request)
     {
         try {
-
             // Validate client_id and client_secret
             $client_id = $request->header('client_id');
             $client_secret_key = $request->header('client_secret_key');
@@ -383,7 +382,7 @@ class LeadController extends Controller
             if (!$client_id || !$client_secret_key) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Client ID and Client Secret are required.'
+                    'message' => 'Missing or Invalid Data.'
                 ], 200);
             }
 
@@ -392,22 +391,19 @@ class LeadController extends Controller
                 ->where('client_secret_key', $client_secret_key)
                 ->first();
 
-
             if (!$user) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Invalid Client ID or Client Secret.'
+                    'message' => 'Invalid Authentication.'
                 ], 200);
             }
-
-
 
             // Validate JSON input for lead creation
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|max:255',
                 'contact' => 'required|string|max:15',
-                'budget' => 'required|numeric',
+                'budget' => 'required|numeric', // Ensure budget is required and numeric
                 'source' => 'required|string|max:255', // Example: "call"
                 'property' => 'required|string|max:255', // Property could be validated more specifically if needed
             ]);
@@ -431,10 +427,12 @@ class LeadController extends Controller
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Lead already exists.'
-                ], 200); // Conflict HTTP status code
+                ], 200);
             }
 
+            // Find source ID
             $sourceId = LeadSource::whereRaw('LOWER(name) = ?', [strtolower($validatedData['source'])])->value('id');
+
             // Create the new lead
             $lead = Lead::create([
                 'property_id' => $property->id,
@@ -444,16 +442,20 @@ class LeadController extends Controller
                 'source_id' => $sourceId,
                 'budget' => $validatedData['budget'],
                 'status' => 0,  // Default to new lead
-                'type' => 2, // 0 for manual,1 csv, 2 rest api
+                'type' => 2, // 0 for manual, 1 CSV, 2 REST API
             ]);
 
             // Return success response
             return response()->json([
                 'status' => 'success',
                 'message' => 'Lead created successfully.',
-                'data' => $lead
-            ], 200); // Created HTTP status code
-
+            ], 200);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Handle validation errors and return a proper response
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Missing or Invalid Data.',
+            ], 200);
         } catch (\Exception $e) {
             // Log the error
             $errorFrom = 'restapidetails';
@@ -463,10 +465,11 @@ class LeadController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'msg' => 'Something went wrong',
+                'message' => 'Something went wrong',
             ], 400);
         }
     }
+
 
 
 
@@ -514,13 +517,13 @@ class LeadController extends Controller
                 // Return success response
                 return response()->json([
                     'status' => 'success',
-                    'msg' => 'Lead added successfully.',
+                    'message' => 'Lead added successfully.',
                     'data' => $lead
                 ], 200);
             } else {
                 return response()->json([
                     'status' => 'success',
-                    'msg' => 'Lead already exists.',
+                    'message' => 'Lead already exists.',
                     'data' => null
                 ], 200);
             }
@@ -533,7 +536,7 @@ class LeadController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'msg' => 'Something went wrong',
+                'message' => 'Something went wrong',
             ], 400);
         }
     }
