@@ -51,16 +51,7 @@ class LeadController extends Controller
                     }
                 }
 
-                //page offset
-                if ($offset != 'null') {
-                    $allLeads->skip($offset);
-                }
-
-                //limit page vise
-                if ($limit != 'null') {
-                    $allLeads->limit($limit);
-                }
-                $allLeads = $allLeads->paginate();
+                $allLeads = $allLeads->paginate($limit, ['*'], 'page', $offset);
 
                 return $allLeads;
             } else {
