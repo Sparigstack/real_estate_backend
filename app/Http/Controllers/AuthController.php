@@ -22,6 +22,15 @@ class AuthController extends Controller
         try {
             $otp = rand(100000, 999999);
             $checkUserOtp = UserOtp::where('email', $email)->where('expire_at', '>', now())->first();
+           
+            // Remove expired OTPs
+            UserOtp::where('email', $email)
+            ->where(function ($query) {
+                $query->where('expire_at', '<', now())
+                      ->orWhere('verified', '1')
+                      ->orWhereNotNull('deleted_at');
+            })
+            ->forceDelete();
             if ($checkUserOtp) {
                 try {
                     // Mail::to($email)->send(new GetOtpMail($checkUserOtp->otp));

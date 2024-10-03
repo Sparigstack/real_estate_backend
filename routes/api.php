@@ -15,8 +15,12 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::get('/get-user-details/{uid}', [UserController::class, 'getUserDetails']);
     Route::get('/user-profile/{uid}', [UserController::class, 'userProfile']);
     Route::post('/add-update-user-profile', [UserController::class, 'addUpdateUserProfile']);
+
+    //properties call
     Route::get('/get-property-types/{typeFlag}', [PropertyController::class, 'getPropertyTypes']);
     Route::post('/add-property-details', [PropertyController::class, 'addPropertyDetails']);
+    Route::get('/get-property-details/{pid}', [PropertyController::class, 'getPropertyDetails']);
+    Route::get('/get-user-property-details/{uid}', [PropertyController::class, 'getUserPropertyDetails']);
     Route::get('/get-property-statuses/{statusFlag}', [PropertyController::class, 'getPropertyStatues']);
     Route::get('/get-property-amenities', [PropertyController::class, 'getPropertyAmenities']);
     Route::post('/add-wing-details', [PropertyController::class, 'addWingDetails']);
