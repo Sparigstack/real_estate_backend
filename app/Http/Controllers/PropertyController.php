@@ -32,16 +32,20 @@ class PropertyController extends Controller
             $propertyTypeFlag = $request->input('propertyTypeFlag');
             $propertySubTypeFlag = $request->input('propertySubTypeFlag');
             $address = $request->input('address');
-            $numberOfWings = $request->input('numberOfWings');
+            $propertyImg  = $request->input('property_img'); //base64
             $description = $request->input('description');
             $userId = $request->input('userId');
             $pincode = $request->input('pincode');
 
-            if ($propertyTypeFlag == 1) {
+
                 if ($reraRegisteredNumber) {
-                    $checkRegisterNumber = UserProperty::where('user_id', $userId)
-                        ->where('rera_registered_no', $reraRegisteredNumber)
+                    // $checkRegisterNumber = UserProperty::where('user_id', $userId)
+                    //     ->where('rera_registered_no', $reraRegisteredNumber)
+                    //     ->first();
+
+                    $checkRegisterNumber = UserProperty::where('rera_registered_no', $reraRegisteredNumber)
                         ->first();
+
 
                     if ($checkRegisterNumber) {
                         return response()->json([
@@ -60,20 +64,17 @@ class PropertyController extends Controller
                 $userProperty->rera_registered_no = $reraRegisteredNumber;
                 $userProperty->address = $address;
                 $userProperty->pincode = $pincode;
+                $userProperty->property_img = $propertyImg;
                 $userProperty->property_step_status = 1;
                 $userProperty->save();
 
-                $propertyDetails = new PropertyDetail();
-                $propertyDetails->user_property_id = $userProperty->id;
-                $propertyDetails->total_wings = $numberOfWings;
-                $propertyDetails->save();
 
                 return response()->json([
                     'status' => 'success',
                     'msg' => null,
                     'propertyId' => $userProperty->id
                 ], 200);
-            }
+
         } catch (\Exception $e) {
             $errorFrom = 'addPropertyDetails';
             $errorMessage = $e->getMessage();
