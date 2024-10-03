@@ -51,7 +51,8 @@ class PropertyController extends Controller
                         return response()->json([
                             'status' => 'error',
                             'msg' => 'Property with this registered number already exists.',
-                            'propertyId' => null
+                            'propertyId' => null,
+                            'propertyName' => null
                         ], 400);
                     }
                 }
@@ -72,7 +73,8 @@ class PropertyController extends Controller
                 return response()->json([
                     'status' => 'success',
                     'msg' => null,
-                    'propertyId' => $userProperty->id
+                    'propertyId' => $userProperty->id,
+                    'propertyName' => $userProperty->name
                 ], 200);
 
         } catch (\Exception $e) {
