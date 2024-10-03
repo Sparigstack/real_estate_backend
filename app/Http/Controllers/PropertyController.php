@@ -278,7 +278,7 @@ class PropertyController extends Controller
     {
         try {
             if ($pid != 'null') {
-                $propertyDetails = UserProperty::where('id', $pid)->get();
+                $propertyDetails = UserProperty::where('id', $pid)->first();
                 return $propertyDetails;
             } else {
                 return null;
