@@ -47,5 +47,7 @@ Route::get('/get-user-properties/{uid}', [LeadController::class, 'getUserPropert
 //rest api/webform api for leads
 Route::post('/generate-lead', [LeadController::class, 'generateLead']); 
 Route::post('/web-form-lead', [LeadController::class, 'webFormLead']); 
+Route::get('/get-state-details', [PropertyController::class, 'getStateDetails']); 
+Route::get('/get-state-with-cities-details/{id}', [PropertyController::class, 'getStateWithCities']); 
 
 

@@ -13,7 +13,8 @@ use Illuminate\Http\Request;
 use App\Helper;
 use App\Models\Status;
 use App\Models\Amenity;
-
+use App\Models\Country;
+use App\Models\State;
 
 
 class PropertyController extends Controller
@@ -32,7 +33,7 @@ class PropertyController extends Controller
             $propertyTypeFlag = $request->input('propertyTypeFlag');
             $propertySubTypeFlag = $request->input('propertySubTypeFlag');
             $address = $request->input('address');
-            $propertyImg  = $request->input('property_img'); //base64
+            $propertyImg = $request->input('property_img'); //base64
             $description = $request->input('description');
             $userId = $request->input('userId');
             $pincode = $request->input('pincode');
@@ -229,7 +230,7 @@ class PropertyController extends Controller
 
 
             foreach ($floorDetailsArray as $index => $floorDetail) {
-                $currentStartNumber = (string)$unitStartNumber;
+                $currentStartNumber = (string) $unitStartNumber;
                 $unitLength = strlen($currentStartNumber);
                 if ($unitLength == 3) {
                     $currentFloorStartNumber = $index * 100 + $unitStartNumber;
@@ -244,7 +245,7 @@ class PropertyController extends Controller
                         $currentFloorStartNumber++;
                     }
                 } else {
-                    $currentFloorStartNumber =  $unitStartNumber;
+                    $currentFloorStartNumber = $unitStartNumber;
                     foreach ($floorDetail['unitDetails'] as $UnitDetail) {
                         UnitDetail::where('id', $UnitDetail['unitId'])->update(['name' => $currentFloorStartNumber, 'unit_size' => $UnitDetail['unitSize']]);
                         $currentFloorStartNumber++;
@@ -313,12 +314,12 @@ class PropertyController extends Controller
                 return response()->json([
                     'commercial_properties' => $commercialProperties,
                     'residential_properties' => $residentialProperties,
-                ],200);
+                ], 200);
             } else {
                 return response()->json([
                     'commercial_properties' => null,
                     'residential_properties' => null,
-                ],200);
+                ], 200);
             }
         } catch (\Exception $e) {
             // Log the error
@@ -332,5 +333,16 @@ class PropertyController extends Controller
                 'message' => 'Not found',
             ], 400);
         }
+    }
+
+    public function getStateDetails()
+    {
+            $getAllState = State::get();
+           return $getAllState;
+    }
+
+    public function getStateWithCities($id){
+             $getStateWithCities = State::with('cities')->where('id',$id)->first();
+             return $getStateWithCities;
     }
 }
