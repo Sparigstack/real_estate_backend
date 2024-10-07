@@ -344,12 +344,100 @@ class PropertyController extends Controller
 
     public function getStateDetails()
     {
-            $getAllState = State::get();
-           return $getAllState;
+        $getAllState = State::get();
+        return $getAllState;
     }
 
-    public function getStateWithCities($id){
-             $getStateWithCities = State::with('cities')->where('id',$id)->first();
-             return $getStateWithCities;
+    public function getStateWithCities($id)
+    {
+        $getStateWithCities = State::with('cities')->where('id', $id)->first();
+        return $getStateWithCities;
+    }
+
+    public function getAreaWithStates($sid)
+    {
+        $getAreaWithStates = UserProperty::where('state_id', $sid)
+            ->distinct('area')
+            ->pluck('area');
+        return $getAreaWithStates;
+    }
+
+
+    public function getAreaWithCities($cid)
+    {
+        $getAreaWithStates = UserProperty::where('city_id', $cid)
+            ->distinct('area')
+            ->pluck('area');
+        return $getAreaWithStates;
+    }
+
+    public function filterProperties($uid, $propertytype, $skey, $stateid, $cityid, $area)
+    {
+        try {
+
+            if ($uid != 'null') {
+                // Build the query for filtering properties
+                $query = UserProperty::where('user_id', $uid);
+
+                // Filter by property type
+                if ($propertytype != 'null') {
+                    if ($propertytype == 1) { // Commercial
+                        $query->whereIn('property_id', Property::where('parent_id', 1)->pluck('id'));
+                    } elseif ($propertytype == 2) { // Residential
+                        $query->whereIn('property_id', Property::where('parent_id', 2)->pluck('id'));
+                    }
+                }
+
+
+                // return $query->get();
+                // Search by search string in the name or description
+                if ($skey != 'null') {
+                    $query->where(function ($q) use ($skey) {
+                        $q->where('name', 'like', '%' . $skey . '%')
+                            ->orWhere('description', 'like', '%' . $skey . '%')
+                            ->orWhereHas('city', function ($q) use ($skey) {
+                                $q->where('name', 'like', '%' . $skey . '%');
+                            })
+                            ->orWhereHas('state', function ($q) use ($skey) {
+                                $q->where('name', 'like', '%' . $skey . '%');
+                            })
+                            ->orWhere('area', 'like', '%' . $skey . '%');
+                    });
+                }
+
+                // Filter by state ID
+                if ($stateid != 'null') {
+                    $query->where('state_id', $stateid);
+                }
+
+                // Filter by city ID
+                if ($cityid != 'null') {
+                    $query->where('city_id', $cityid);
+                }
+
+                // Filter by area
+                if ($area != 'null') {
+                    $query->where('area', 'like', '%' . $area . '%');
+                }
+
+                // Execute the query and get the results
+                $properties = $query->get();
+
+                return $properties;
+            } else {
+                return  null;
+            }
+        } catch (\Exception $e) {
+            // Log the error
+            $errorFrom = 'filterProperties';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error filtering properties',
+            ], 400);
+        }
     }
 }

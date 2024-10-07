@@ -26,7 +26,11 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/add-wing-details', [PropertyController::class, 'addWingDetails']);
     Route::post('/add-unit-details', [PropertyController::class, 'addUnitDetails']);
     Route::get('/get-wing-details/{propertyId}', [PropertyController::class, 'getWingDetails']);
-    Route::get('/filter-properties/{uid}', [PropertyController::class, 'filterProperties']);
+    Route::get('/filter-properties/{uid}&{propertytype}&{skey}&{stateid}&{cityid}&{area}', [PropertyController::class, 'filterProperties']);
+    Route::get('/get-state-details', [PropertyController::class, 'getStateDetails']); 
+    Route::get('/get-state-with-cities-details/{id}', [PropertyController::class, 'getStateWithCities']); 
+    Route::get('/get-area-with-state-details/{sid}', [PropertyController::class, 'getAreaWithStates']); 
+    Route::get('/get-area-with-cities-details/{cid}', [PropertyController::class, 'getAreaWithCities']); 
 
     //leads call
     Route::get('/get-leads/{uid}&{skey}&{sort}&{sortbykey}&{offset}&{limit}', [LeadController::class, 'getLeads']);  
@@ -48,7 +52,6 @@ Route::get('/get-user-properties/{uid}', [LeadController::class, 'getUserPropert
 //rest api/webform api for leads
 Route::post('/generate-lead', [LeadController::class, 'generateLead']); 
 Route::post('/web-form-lead', [LeadController::class, 'webFormLead']); 
-Route::get('/get-state-details', [PropertyController::class, 'getStateDetails']); 
-Route::get('/get-state-with-cities-details/{id}', [PropertyController::class, 'getStateWithCities']); 
+
 
 
