@@ -308,7 +308,7 @@ class PropertyController extends Controller
     {
         try {
             if ($uid != 'null') {
-                $userProperties = UserProperty::where('user_id', $uid)->get();
+                $userProperties = UserProperty::with(['state', 'city'])->where('user_id', $uid)->get();
 
                 // Get IDs of Commercial and Residential properties (and their subtypes)
                 $commercialPropertyIds = Property::where('parent_id', 1)->orWhere('id', 1)->pluck('id')->toArray(); // '1' for Commercial and its subtypes
