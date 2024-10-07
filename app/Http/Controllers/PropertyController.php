@@ -306,6 +306,7 @@ class PropertyController extends Controller
 
     public function getUserPropertyDetails($uid)
     {
+
         try {
             if ($uid != 'null') {
                 $userProperties = UserProperty::where('user_id', $uid)->get();

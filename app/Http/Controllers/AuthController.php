@@ -10,6 +10,7 @@ use Hash;
 use App\Helper;
 use Twilio\Rest\Client;
 use App\Mail\GetOtpMail;
+use App\Models\UserProperty;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
@@ -111,6 +112,7 @@ class AuthController extends Controller
         {
         $otp = $request->input('otp');
         $email = $request->input('email');
+        $flag=0;
 
             $checkUserDetails = UserOtp::where('email', $email)->where('otp', $otp)->first();
             if ($checkUserDetails) {
@@ -133,11 +135,20 @@ class AuthController extends Controller
                         $token = $newUser->createToken('access_token')->accessToken;
                     }
                     $checkUserDetails->delete();
+
+                    
+                    //check if this user have any property if commercial or residential then send flag =1
+                    $userPropertyCount=UserProperty::where('user_id',$userId)->count();
+                    if($userPropertyCount>0){
+                        $flag=1;
+                    }
+
                     return response()->json([
                         'status' => 'success',
                         'msg' => null,
                         'token' => $token,
-                        'userId' => $userId
+                        'userId' => $userId,
+                        'userProperty'=> $flag,
                     ], 200);
                 } else {
                     $checkUserDetails->delete();
@@ -145,7 +156,8 @@ class AuthController extends Controller
                         'status' => 'error',
                         'msg' => null,
                         'token' => null,
-                        'userId' => null
+                        'userId' => null,
+                        'userProperty'=> $flag,
                     ], 400);
                 }
             } else {
@@ -153,7 +165,8 @@ class AuthController extends Controller
                     'status' => 'error',
                     'msg' => 'Invalid Otp. Please try again.',
                     'token' => null,
-                    'userId' => null
+                    'userId' => null,
+                    'userProperty'=> $flag,
                 ], 400);
             }
         }

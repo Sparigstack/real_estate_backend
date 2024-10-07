@@ -26,6 +26,7 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/add-wing-details', [PropertyController::class, 'addWingDetails']);
     Route::post('/add-unit-details', [PropertyController::class, 'addUnitDetails']);
     Route::get('/get-wing-details/{propertyId}', [PropertyController::class, 'getWingDetails']);
+    Route::get('/filter-properties/{uid}', [PropertyController::class, 'filterProperties']);
 
     //leads call
     Route::get('/get-leads/{uid}&{skey}&{sort}&{sortbykey}&{offset}&{limit}', [LeadController::class, 'getLeads']);  
