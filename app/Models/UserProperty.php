@@ -9,6 +9,9 @@ class UserProperty extends Model
 {
     use HasFactory;
 
+
+    protected $appends = ['state_name', 'city_name'];
+    
     protected $fillable = [
         'user_id',
         'property_id',
@@ -54,6 +57,18 @@ class UserProperty extends Model
     public function city()
     {
         return $this->belongsTo(City::class, 'city_id');
+    }
+
+    // Accessor for state name
+    public function getStateNameAttribute()
+    {
+        return $this->state ? $this->state->name : null;
+    }
+
+    // Accessor for city name
+    public function getCityNameAttribute()
+    {
+        return $this->city ? $this->city->name : null;
     }
 
 }
