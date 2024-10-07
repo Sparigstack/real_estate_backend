@@ -12,4 +12,8 @@ class State extends Model
     {
         return $this->hasMany(City::class,'state_id','id');
     }
+    public function userProperties()
+    {
+        return $this->hasMany(UserProperty::class, 'state_id');
+    }
 }

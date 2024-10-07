@@ -45,5 +45,15 @@ class UserProperty extends Model
     {
         return $this->hasMany(UnitDetail::class,'user_property_id','id');
     }
+    public function state()
+    {
+        return $this->belongsTo(State::class, 'state_id');
+    }
+
+    // Define the relationship to the City model
+    public function city()
+    {
+        return $this->belongsTo(City::class, 'city_id');
+    }
 
 }

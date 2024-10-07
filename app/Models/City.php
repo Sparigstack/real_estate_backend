@@ -8,5 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 class City extends Model
 {
     use HasFactory;
+
+    public function userProperties()
+    {
+        return $this->hasMany(UserProperty::class, 'city_id');
+    }
     
 }

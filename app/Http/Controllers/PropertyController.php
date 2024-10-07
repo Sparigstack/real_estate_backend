@@ -37,6 +37,9 @@ class PropertyController extends Controller
             $description = $request->input('description');
             $userId = $request->input('userId');
             $pincode = $request->input('pincode');
+            $stateId = $request->input('state');
+            $cityId = $request->input('city');
+            $area = $request->input('area');
 
 
             if ($reraRegisteredNumber) {
@@ -66,6 +69,9 @@ class PropertyController extends Controller
             $userProperty->rera_registered_no = $reraRegisteredNumber;
             $userProperty->address = $address;
             $userProperty->pincode = $pincode;
+            $userProperty->state_id = $stateId;
+            $userProperty->city_id = $cityId;
+            $userProperty->area = $area;
             $userProperty->property_img = $propertyImg;
             $userProperty->property_step_status = 1;
             $userProperty->save();
