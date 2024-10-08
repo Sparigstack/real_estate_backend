@@ -354,14 +354,6 @@ class PropertyController extends Controller
         return $getStateWithCities;
     }
 
-    public function getAreaWithStates($uid,$sid)
-    {
-        $getAreaWithStates = UserProperty::where('user_id',$uid)->where('state_id', $sid)
-            ->distinct('area')
-            ->pluck('area');
-        return $getAreaWithStates;
-    }
-
 
     public function getAreaWithCities($uid,$cid)
     {

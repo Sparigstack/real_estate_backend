@@ -10,7 +10,7 @@ use App\Http\Controllers\LeadController;
 Route::post('/register-user', [AuthController::class, 'registerUser']);
 Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 
-// Route::middleware('auth:api')->group(function (){
+Route::middleware('auth:api')->group(function (){
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/get-user-details/{uid}', [UserController::class, 'getUserDetails']);
     Route::get('/user-profile/{uid}', [UserController::class, 'userProfile']);
@@ -29,8 +29,7 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::get('/filter-properties/{uid}&{propertytype}&{skey}&{stateid}&{cityid}&{area}', [PropertyController::class, 'filterProperties']);
     Route::get('/get-state-details', [PropertyController::class, 'getStateDetails']); 
     Route::get('/get-state-with-cities-details/{id}', [PropertyController::class, 'getStateWithCities']); 
-    Route::get('/get-area-with-state-details/{uid}/{sid}', [PropertyController::class, 'getAreaWithStates']); 
-    Route::get('/get-area-with-cities-details/{uid/{cid}', [PropertyController::class, 'getAreaWithCities']); 
+    Route::get('/get-area-with-cities-details/{uid}/{cid}', [PropertyController::class, 'getAreaWithCities']); 
 
     //leads call
     Route::get('/get-leads/{uid}&{skey}&{sort}&{sortbykey}&{offset}&{limit}', [LeadController::class, 'getLeads']);  
@@ -40,7 +39,7 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/update-lead-notes', [LeadController::class, 'updateLeadNotes']);
 
     Route::post('/lead-messages/send', [LeadController::class, 'sendBulkMessages']); 
-// });
+});
 
 
 
