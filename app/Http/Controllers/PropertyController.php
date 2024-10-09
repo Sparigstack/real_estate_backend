@@ -61,6 +61,7 @@ class PropertyController extends Controller
                 }
             }
 
+
             $userProperty = new UserProperty();
             $userProperty->user_id = $userId;
             $userProperty->property_id = $propertySubTypeFlag;
@@ -72,9 +73,37 @@ class PropertyController extends Controller
             $userProperty->state_id = $stateId;
             $userProperty->city_id = $cityId;
             $userProperty->area = $area;
-            $userProperty->property_img = $propertyImg;
+            // $userProperty->property_img = $propertyImg;
             $userProperty->property_step_status = 1;
             $userProperty->save();
+
+            // Handle image saving
+            if ($propertyImg) {
+                // Define folder path
+                $folderPath = public_path("properties/$userId/{$userProperty->id}");
+
+                // Ensure directory exists
+                if (!file_exists($folderPath)) {
+                    mkdir($folderPath, 0777, true);
+                }
+
+                // Decode base64 image
+                $image_parts = explode(";base64,", $propertyImg);
+                $image_type_aux = explode("image/", $image_parts[0]);
+                $image_type = $image_type_aux[1];
+                $image_base64 = base64_decode($image_parts[1]);
+
+                // Create unique file name
+                $fileName = uniqid() . '.' . $image_type;
+
+                // Save the image in the defined folder
+                $filePath = $folderPath . '/' . $fileName;
+                file_put_contents($filePath, $image_base64);
+
+                // Save file path relative to the public folder
+                $userProperty->property_img = "properties/$userId/{$userProperty->id}/$fileName";
+                $userProperty->save();
+            }
 
 
             return response()->json([
@@ -355,9 +384,9 @@ class PropertyController extends Controller
     }
 
 
-    public function getAreaWithCities($uid,$cid)
+    public function getAreaWithCities($uid, $cid)
     {
-        $getAreaWithStates = UserProperty::where('user_id',$uid)->where('city_id', $cid)
+        $getAreaWithStates = UserProperty::where('user_id', $uid)->where('city_id', $cid)
             ->distinct('area')
             ->pluck('area');
         return $getAreaWithStates;
