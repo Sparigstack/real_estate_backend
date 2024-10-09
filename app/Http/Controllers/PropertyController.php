@@ -392,61 +392,48 @@ class PropertyController extends Controller
         return $getAreaWithStates;
     }
 
-    public function filterProperties($uid, $propertytype, $skey, $stateid, $cityid, $area)
+    public function getAllProperties($uid, $stateid, $cityid, $area)
     {
         try {
 
             if ($uid != 'null') {
-                // Build the query for filtering properties
-                $query = UserProperty::where('user_id', $uid);
-
-                // Filter by property type
-                if ($propertytype != 'null') {
-                    if ($propertytype == 1) { // Commercial
-                        $query->whereIn('property_id', Property::where('parent_id', 1)->pluck('id'));
-                    } elseif ($propertytype == 2) { // Residential
-                        $query->whereIn('property_id', Property::where('parent_id', 2)->pluck('id'));
-                    }
-                }
-
-
-                // return $query->get();
-                // Search by search string in the name or description
-                if ($skey != 'null') {
-                    $query->where(function ($q) use ($skey) {
-                        $q->where('name', 'like', '%' . $skey . '%')
-                            ->orWhere('description', 'like', '%' . $skey . '%')
-                            ->orWhereHas('city', function ($q) use ($skey) {
-                                $q->where('name', 'like', '%' . $skey . '%');
-                            })
-                            ->orWhereHas('state', function ($q) use ($skey) {
-                                $q->where('name', 'like', '%' . $skey . '%');
-                            })
-                            ->orWhere('area', 'like', '%' . $skey . '%');
-                    });
-                }
-
-                // Filter by state ID
+                // Base queries for all Commercial and Residential properties
+                $commercialQuery = UserProperty::where('user_id', $uid)
+                    ->whereIn('property_id', Property::where('parent_id', 1)->pluck('id'));
+    
+                $residentialQuery = UserProperty::where('user_id', $uid)
+                    ->whereIn('property_id', Property::where('parent_id', 2)->pluck('id'));
+    
+                // Apply filters if provided
                 if ($stateid != 'null') {
-                    $query->where('state_id', $stateid);
+                    $commercialQuery->where('state_id', $stateid);
+                    $residentialQuery->where('state_id', $stateid);
                 }
-
-                // Filter by city ID
+    
                 if ($cityid != 'null') {
-                    $query->where('city_id', $cityid);
+                    $commercialQuery->where('city_id', $cityid);
+                    $residentialQuery->where('city_id', $cityid);
                 }
-
-                // Filter by area
+    
                 if ($area != 'null') {
-                    $query->where('area', 'like', '%' . $area . '%');
+                    $commercialQuery->where('area', 'like', '%' . $area . '%');
+                    $residentialQuery->where('area', 'like', '%' . $area . '%');
                 }
-
-                // Execute the query and get the results
-                $properties = $query->get();
-
-                return $properties;
+    
+                // Execute the queries and get the results
+                $commercialProperties = $commercialQuery->get();
+                $residentialProperties = $residentialQuery->get();
+    
+                // Return combined result arrays
+                return response()->json([
+                    'commercialProperties' => $commercialProperties, // Contains both filtered/unfiltered
+                    'residentialProperties' => $residentialProperties // Contains both filtered/unfiltered
+                ], 200);
             } else {
-                return  null;
+                return response()->json([
+                    'commercialProperties' => null, // Contains both filtered/unfiltered
+                    'residentialProperties' => null // Contains both filtered/unfiltered
+                ], 200);
             }
         } catch (\Exception $e) {
             // Log the error
