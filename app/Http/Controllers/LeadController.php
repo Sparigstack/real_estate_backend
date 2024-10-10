@@ -391,55 +391,61 @@ class LeadController extends Controller
 
             // Validate JSON input for lead creation
             $validatedData = $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => 'required|email|max:255',
-                'contact' => 'required|string|max:15',
-                'budget' => 'required|numeric', // Ensure budget is required and numeric
-                'source' => 'required|string|max:255', // Example: "call"
-                'property' => 'required|string|max:255', // Property could be validated more specifically if needed
+                'leads' => 'required|array', // Expect an array of leads
+                'leads.*.name' => 'required|string|max:255',
+                'leads.*.email' => 'required|email|max:255',
+                'leads.*.contact' => 'required|string|max:15',
+                'leads.*.budget' => 'required|numeric', // Ensure budget is required and numeric
+                'leads.*.source' => 'required|string|max:255', // Example: "call"
+                'leads.*.property' => 'required|string|max:255', // Property could be validated more specifically if needed
             ]);
 
-            // Find property ID by property name (assuming 'property' is a name, not ID)
-            $property = UserProperty::whereRaw('LOWER(name) = ?', [strtolower($validatedData['property'])])->first();
+            $createdLeads = [];
+            $existingLeads = [];
 
-            if (!$property) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Property not found.'
-                ], 200);
+            foreach ($validatedData['leads'] as $leadData) {
+                // Find property ID by property name
+                $property = UserProperty::whereRaw('LOWER(name) = ?', [strtolower($leadData['property'])])->first();
+
+                if (!$property) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Property not found for ' . $leadData['property'],
+                    ], 200);
+                }
+
+                // Check if the lead with the same email and property already exists
+                $existingLead = Lead::where('email', $leadData['email'])
+                    ->where('property_id', $property->id)
+                    ->first();
+
+                if ($existingLead) {
+                    $existingLeads[] = $leadData['email']; // Collect existing leads
+                    continue; // Skip to the next lead
+                }
+
+                // Find source ID
+                $sourceId = LeadSource::whereRaw('LOWER(name) = ?', [strtolower($leadData['source'])])->value('id');
+
+                // Create the new lead
+                $newLead = Lead::create([
+                    'property_id' => $property->id,
+                    'name' => $leadData['name'],
+                    'email' => $leadData['email'],
+                    'contact_no' => $leadData['contact'],
+                    'source_id' => $sourceId,
+                    'budget' => $leadData['budget'],
+                    'status' => 0,  // Default to new lead
+                    'type' => 2, // 0 for manual, 1 CSV, 2 REST API
+                ]);
+
+                $createdLeads[] = $newLead; // Collect newly created leads
             }
 
-            // Check if the lead with the same email and property already exists
-            $existingLead = Lead::where('email', $validatedData['email'])
-                ->where('property_id', $property->id)
-                ->first();
-
-            if ($existingLead) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Lead already exists.'
-                ], 200);
-            }
-
-            // Find source ID
-            $sourceId = LeadSource::whereRaw('LOWER(name) = ?', [strtolower($validatedData['source'])])->value('id');
-
-            // Create the new lead
-            $lead = Lead::create([
-                'property_id' => $property->id,
-                'name' => $validatedData['name'],
-                'email' => $validatedData['email'],
-                'contact_no' => $validatedData['contact'],
-                'source_id' => $sourceId,
-                'budget' => $validatedData['budget'],
-                'status' => 0,  // Default to new lead
-                'type' => 2, // 0 for manual, 1 CSV, 2 REST API
-            ]);
-
-            // Return success response
+            // Prepare the response
             return response()->json([
                 'status' => 'success',
-                'message' => 'Lead created successfully.',
+                'message' => 'Leads created  successfully.',
             ], 200);
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Handle validation errors and return a proper response
