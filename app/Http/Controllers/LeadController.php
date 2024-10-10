@@ -472,7 +472,7 @@ class LeadController extends Controller
         try {
 
             // Step 1: Validate Google reCAPTCHA
-            $recaptchaResponse = $request->input('g-recaptcha-response');
+            $recaptchaResponse = $request->input('grecaptcha');
             $secretKey = env('recaptcha_secret'); // Make sure to store your secret key in env
 
             // Make an API request to verify the reCAPTCHA response
