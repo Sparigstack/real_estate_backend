@@ -265,6 +265,7 @@ class LeadController extends Controller
         try {
             // Check if a single CSV file is uploaded
             $file = $request->file('file');
+            $propertyId = $request->input('propertyid');
             if (!$file) {
                 return response()->json([
                     'status' => 'error',
@@ -276,7 +277,7 @@ class LeadController extends Controller
             // Open the CSV file
             $csvFile = fopen($file, 'r');
             $header = fgetcsv($csvFile);
-            $expectedHeaders = ['name', 'email', 'contact', 'property', 'source', 'budget'];
+            $expectedHeaders = ['name', 'email', 'contact', 'source', 'budget'];
             $escapedHeader = [];
 
             foreach ($header as $key => $value) {
@@ -300,13 +301,7 @@ class LeadController extends Controller
 
                 // Debug: print the current row
                 Log::info('CSV row: ', $data);
-                // Case-insensitive check if property interest exists in user_properties
-                $property = UserProperty::whereRaw('LOWER(name) = ?', [strtolower($data['property'])])->first();
-                if (!$property) {
-                    // Skip row if property doesn't match
-                    continue;
-                }
-
+             
                 // Case-insensitive check if source exists, insert if not
                 $source = LeadSource::whereRaw('LOWER(name) = ?', [strtolower($data['source'])])->first();
                 if (!$source) {
@@ -316,7 +311,7 @@ class LeadController extends Controller
 
                 // Uniqueness check: If the same email and property_id exist, skip
                 $existingLead = Lead::where('email', $data['email'])
-                    ->where('property_id', $property->id)
+                    ->where('property_id', $propertyId)
                     ->first();
 
                 if ($existingLead) {
@@ -327,7 +322,7 @@ class LeadController extends Controller
 
                 // Create lead record
                 $lead = Lead::create([
-                    'property_id' => $property->id,
+                    'property_id' => $propertyId,
                     'name' => $data['name'],
                     'email' => $data['email'],
                     'contact_no' => $data['contact'],
