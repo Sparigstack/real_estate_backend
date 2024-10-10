@@ -43,11 +43,11 @@ class LeadController extends Controller
 
                 //sortby key
                 if ($sortbykey != 'null') {
-                    if (in_array($sortbykey, ['name', 'email', 'budget','contact_num'])) {
+                    if (in_array($sortbykey, ['name', 'email', 'budget','contact_no'])) {
                         $allLeads->orderBy($sortbykey, $sort);
-                    } elseif ($sortbykey === 'source') {
+                    } elseif ($sortbykey == 'source') {
                         $allLeads->orderBy(LeadSource::select('name')->whereColumn('lead_sources.id', 'leads.source_id'), $sort);
-                    } elseif ($sortbykey === 'property') {
+                    } elseif ($sortbykey == 'property') {
                         $allLeads->orderBy(UserProperty::select('name')->whereColumn('user_properties.id', 'leads.property_id'), $sort);
                     }
                 }
