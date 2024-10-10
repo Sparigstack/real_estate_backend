@@ -12,6 +12,7 @@ use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 
 class LeadController extends Controller
@@ -42,7 +43,7 @@ class LeadController extends Controller
 
                 //sortby key
                 if ($sortbykey != 'null') {
-                    if (in_array($sortbykey, ['name', 'email', 'budget'])) {
+                    if (in_array($sortbykey, ['name', 'email', 'budget','contact_num'])) {
                         $allLeads->orderBy($sortbykey, $sort);
                     } elseif ($sortbykey === 'source') {
                         $allLeads->orderBy(LeadSource::select('name')->whereColumn('lead_sources.id', 'leads.source_id'), $sort);
@@ -474,7 +475,39 @@ class LeadController extends Controller
     public function webFormLead(Request $request)
     {
         try {
-            // Validate inputs
+
+            // Step 1: Validate Google reCAPTCHA
+            $recaptchaResponse = $request->input('g-recaptcha-response');
+            $secretKey = env('recaptcha_secret'); // Make sure to store your secret key in env
+
+            // Make an API request to verify the reCAPTCHA response
+            $recaptcha = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+                'secret' => $secretKey,
+                'response' => $recaptchaResponse,
+            ]);
+
+            $recaptchaResult = json_decode($recaptcha->body());
+
+            // If reCAPTCHA validation fails
+            if (!$recaptchaResult->success) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'reCAPTCHA validation failed.',
+                ], 200);
+            }
+
+            // Step 2: Referrer validation
+            $referer = $request->header('referer'); // Get referer from headers
+            $allowedDomains = ['127.0.0.1', 'localhost'];
+
+            if (!$referer || !in_array(parse_url($referer, PHP_URL_HOST), $allowedDomains)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unauthorized domain.',
+                ], 403);
+            }
+
+             // Step 3: Validate form inputs
             $validatedData = $request->validate([
                 'propertyinterest' => 'required|integer',  // Assuming propertyinterest is an integer (property_id)
                 'name' => 'required|string|max:255',       // Name is required and must be a string
