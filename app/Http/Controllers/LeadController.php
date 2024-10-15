@@ -115,13 +115,11 @@ class LeadController extends Controller
         }
     }
 
-    public function fetchLeadDetail(Request $request, $uid, $lid)
+    public function fetchLeadDetail(Request $request, $pid, $lid)
     {
         try {
-            if ($uid != 'null' && $lid != 'null') {
-                $fetchLeadDetail = Lead::with('userproperty', 'leadSource')->whereHas('userproperty', function ($query) use ($uid) {
-                    $query->where('user_id', $uid);
-                })->where('id', $lid)->first();
+            if ($pid != 'null' && $lid != 'null') {
+                $fetchLeadDetail = Lead::with('userproperty', 'leadSource')->where('property_id', $pid)->where('id', $lid)->first();
                 return $fetchLeadDetail;
             } else {
                 return null;

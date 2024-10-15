@@ -36,7 +36,7 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 
     //leads call
     Route::get('/get-leads/{pid}&{skey}&{sort}&{sortbykey}&{offset}&{limit}', [LeadController::class, 'getLeads']);  
-    Route::get('/fetch-lead-detail/{uid}/{lid}', [LeadController::class, 'fetchLeadDetail']); 
+    Route::get('/fetch-lead-detail/{pid}/{lid}', [LeadController::class, 'fetchLeadDetail']); 
     Route::post('/add-edit-leads', [LeadController::class, 'addOrEditLeads']); 
     Route::post('/add-leads-csv', [LeadController::class, 'addLeadsCsv']); 
     Route::post('/update-lead-notes', [LeadController::class, 'updateLeadNotes']);
