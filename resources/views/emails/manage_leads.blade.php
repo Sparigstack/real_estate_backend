@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -11,6 +12,29 @@
             margin: 0;
             padding: 0;
         }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid #ddd;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f4f4f4;
+        }
+
         .email-container {
             max-width: 600px;
             margin: 20px auto;
@@ -24,43 +48,48 @@
             background-position: center;
             background-opacity: 0.1;
         }
+
         .logo {
             width: 100px;
             margin-bottom: 20px;
             color: #110505;
         }
+
         .content {
             z-index: 1;
             position: relative;
         }
-        .otp {
-            font-size: 24px;
-            font-weight: bold;
-            color: #110505;
-        }
+
         .footer {
             margin-top: 20px;
             font-size: 12px;
             color: #110505;
         }
-        .textContent
-        {
+
+        .textContent {
             color: #110505;
+            text-align: left; /* Align text to the left */
+            margin-top: 20px;
         }
     </style>
 </head>
+
 <body>
     <div class="email-container">
-        <div class="content">
-            <img src="real-estate-logo.svg" alt="Site Logo" class="logo">
-            <h1 class="textContent">Your OTP Code</h1>
-            <p class="textContent">Use the following OTP to complete your authentication:</p>
-            <p class="otp">{{ $otp }}</p>
-            <p class="textContent">This OTP is valid for 3 minutes. Please do not share it with anyone.</p>
-        </div>
+       
+            <img src="{{ $propertyImageUrl }}" alt="Property Image" class="logo">
+            <h2>Leads Import Report: Skipped or Failed Leads Detected for {{ $property->name }} Property</h2>
+
+            <div class="textContent">
+                <p>Hello {{ $property->user->name }},</p>
+                <p>Attached is the CSV file containing the details of skipped or failed leads. Please review the data to understand the reasons for the skipped or failed entries.</p>
+                <p>If you have any questions, feel free to reach out.</p>
+            </div>
+      
         <div class="footer">
             © {{ date('Y') }} All rights reserved.
         </div>
     </div>
 </body>
+
 </html>
