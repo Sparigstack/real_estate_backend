@@ -441,7 +441,7 @@ class LeadController extends Controller
                 fclose($csvHandle);
     
                 // Send the email with the CSV attachment
-                Mail::to('niralis910@gmail.com')->send(new ManageLeads($property, $leadsIssues, $csvFilePath));
+                Mail::to($propertyUserEmail)->send(new ManageLeads($property, $leadsIssues, $csvFilePath));
     
                 // Delete the temporary file after sending the email
                 if (file_exists($csvFilePath)) {
