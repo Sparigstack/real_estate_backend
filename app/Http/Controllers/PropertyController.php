@@ -54,7 +54,7 @@ class PropertyController extends Controller
                 if ($checkRegisterNumber) {
                     return response()->json([
                         'status' => 'error',
-                        'msg' => 'Property with this registered number already exists.',
+                        'message' => 'Property with this registered number already exists.',
                         'propertyId' => null,
                         'propertyName' => null
                     ], 400);
@@ -108,7 +108,7 @@ class PropertyController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'msg' => null,
+                'message' => null,
                 'propertyId' => $userProperty->id,
                 'propertyName' => $userProperty->name
             ], 200);
@@ -119,7 +119,7 @@ class PropertyController extends Controller
             Helper::errorLog($errorFrom, $errorMessage, $priority);
             return response()->json([
                 'status' => 'error',
-                'msg' => 'something went wrong',
+                'message' => 'something went wrong',
             ], 400);
         }
     }
@@ -152,7 +152,7 @@ class PropertyController extends Controller
                 if (isset($checkWing)) {
                     return response()->json([
                         'status' => 'error',
-                        'msg' => 'Same wing name exist.',
+                        'message' => 'Same wing name exist.',
                         'wingId' => null,
                         'floorUnitDetails' => null
                     ], 400);
@@ -186,7 +186,7 @@ class PropertyController extends Controller
                 }
                 return response()->json([
                     'status' => 'success',
-                    'msg' => null,
+                    'message' => null,
                     'wingId' => $wingDetail->id,
                     'floorUnitDetails' => $floorUnitDetails,
                     'floorUnitCounts' => null
@@ -196,7 +196,7 @@ class PropertyController extends Controller
                 if (isset($checkWing)) {
                     return response()->json([
                         'status' => 'error',
-                        'msg' => 'Same wing name exist.',
+                        'message' => 'Same wing name exist.',
                         'wingId' => null,
                         'floorUnitDetails' => null
                     ], 400);
@@ -217,7 +217,7 @@ class PropertyController extends Controller
                 }
                 return response()->json([
                     'status' => 'success',
-                    'msg' => null,
+                    'message' => null,
                     'wingId' => $wingDetail->id,
                     'floorUnitDetails' => null,
                     'floorUnitCounts' => $floorUnitCounts
@@ -240,7 +240,7 @@ class PropertyController extends Controller
 
                 return response()->json([
                     'status' => 'success',
-                    'msg' => null,
+                    'message' => null,
                     'wingId' => $wingId,
                     'floorUnitDetails' => $floorUnitDetails,
                     'floorUnitCounts' => null
@@ -253,7 +253,7 @@ class PropertyController extends Controller
             Helper::errorLog($errorFrom, $errorMessage, $priority);
             return response()->json([
                 'status' => 'error',
-                'msg' => 'something went wrong',
+                'message' => 'something went wrong',
             ], 400);
         }
     }
@@ -290,7 +290,7 @@ class PropertyController extends Controller
             }
             return response()->json([
                 'status' => 'success',
-                'msg' => 'Unit details added successfully.',
+                'message' => 'Unit details added successfully.',
             ], 200);
         } catch (\Exception $e) {
             $errorFrom = 'addUnitDetails';
@@ -299,7 +299,7 @@ class PropertyController extends Controller
             Helper::errorLog($errorFrom, $errorMessage, $priority);
             return response()->json([
                 'status' => 'error',
-                'msg' => 'something went wrong',
+                'message' => 'something went wrong',
             ], 400);
         }
     }

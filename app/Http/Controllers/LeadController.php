@@ -194,7 +194,7 @@ class LeadController extends Controller
                     ], 200);
                 } else {
                     return response()->json([
-                        'status' => 'success',
+                        'status' => 'error',
                         'message' => 'Lead already exists.',
                         'data' => null
                     ], 200);
@@ -548,7 +548,7 @@ class LeadController extends Controller
             // Prepare the response
             return response()->json([
                 'status' => 'success',
-                'message' => 'Leads created  successfully.',
+                'message' => 'Leads created successfully.',
             ], 200);
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Handle validation errors and return a proper response
@@ -654,7 +654,7 @@ class LeadController extends Controller
                 ], 200);
             } else {
                 return response()->json([
-                    'status' => 'success',
+                    'status' => 'error',
                     'message' => 'Lead already exists.',
                     'data' => null
                 ], 200);

@@ -17,11 +17,11 @@ class UserController extends Controller
     $companyDetails = CompanyDetail::with('user')->where('user_id', $uid)->first();
     if ($companyDetails) {
         return response()->json([
-            'msg' => $companyDetails
+            'message' => $companyDetails
         ], 200);
     } else {
         return response()->json([
-            'msg' => null,
+            'message' => null,
         ], 200);
     }
 }
@@ -105,11 +105,11 @@ class UserController extends Controller
         // Save the new values if they were generated
         $userDetails->save();
             return response()->json([
-                'msg' => $userDetails
+                'message' => $userDetails
             ], 200);
         } else {
             return response()->json([
-                'msg' => null,
+                'message' => null,
             ], 400);
         }
     }
