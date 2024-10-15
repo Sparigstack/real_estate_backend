@@ -36,10 +36,8 @@ class LeadController extends Controller
                     $allLeads->where(function ($q) use ($skey) {
                         $q->where('name', 'like', "%{$skey}%")
                             ->orWhere('email', 'like', "%{$skey}%")
+                            ->orWhere('contact_no', 'like', "%{$skey}%")
                             ->orWhereHas('leadSource', function ($q) use ($skey) {
-                                $q->where('name', 'like', "%{$skey}%");
-                            })
-                            ->orWhereHas('userproperty', function ($q) use ($skey) {
                                 $q->where('name', 'like', "%{$skey}%");
                             });
                     });
@@ -51,9 +49,7 @@ class LeadController extends Controller
                         $allLeads->orderBy($sortbykey, $sort);
                     } elseif ($sortbykey == 'source') {
                         $allLeads->orderBy(LeadSource::select('name')->whereColumn('lead_sources.id', 'leads.source_id'), $sort);
-                    } elseif ($sortbykey == 'property') {
-                        $allLeads->orderBy(UserProperty::select('name')->whereColumn('user_properties.id', 'leads.property_id'), $sort);
-                    }
+                    } 
                 }
 
                 $allLeads = $allLeads->paginate($limit, ['*'], 'page', $offset);
