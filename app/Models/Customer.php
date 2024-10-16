@@ -7,9 +7,16 @@ use Illuminate\Database\Eloquent\Model;
 class Customer extends Model
 {
     use HasFactory;
+    protected $fillable = ['property_id', 'lead_unit_id', 'name', 'email', 'contact_no', 'profile_pic'];
 
-    public function properties()
+
+    public function property()
     {
-        return $this->hasMany(CustomerProperty::class,'customer_id','id');
+        return $this->belongsTo(UserProperty::class);
+    }
+
+    public function leadUnit()
+    {
+        return $this->belongsTo(LeadUnit::class);
     }
 }
