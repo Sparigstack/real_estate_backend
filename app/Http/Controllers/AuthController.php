@@ -84,12 +84,12 @@ class AuthController extends Controller
             if ($response == 'success') {
                 return response()->json([
                     'status' => 'success',
-                    'msg' => 'otp sent successfully',
+                    'message' => 'otp sent successfully',
                 ], 200);
             } else {
                 return response()->json([
                     'status' => 'error',
-                    'msg' => 'something went wrong',
+                    'message' => 'something went wrong',
                 ], 400);
             }
 
@@ -100,7 +100,7 @@ class AuthController extends Controller
             Helper::errorLog($errorFrom, $errorMessage, $priority);
             return response()->json([
                 'status' => 'error',
-                'msg' => 'something went wrong',
+                'message' => 'something went wrong',
             ], 400);
         }
     }
@@ -145,7 +145,7 @@ class AuthController extends Controller
 
                     return response()->json([
                         'status' => 'success',
-                        'msg' => null,
+                        'message' => null,
                         'token' => $token,
                         'userId' => $userId,
                         'userProperty'=> $flag,
@@ -154,7 +154,7 @@ class AuthController extends Controller
                     $checkUserDetails->delete();
                     return response()->json([
                         'status' => 'error',
-                        'msg' => null,
+                        'message' => null,
                         'token' => null,
                         'userId' => null,
                         'userProperty'=> $flag,
@@ -163,7 +163,7 @@ class AuthController extends Controller
             } else {
                 return response()->json([
                     'status' => 'error',
-                    'msg' => 'Invalid Otp. Please try again.',
+                    'message' => 'Invalid Otp. Please try again.',
                     'token' => null,
                     'userId' => null,
                     'userProperty'=> $flag,
@@ -178,7 +178,7 @@ class AuthController extends Controller
             Helper::errorLog($errorFrom, $errorMessage, $priority);
             return response()->json([
                 'status' => 'error',
-                'msg' => 'something went wrong',
+                'message' => 'something went wrong',
             ],400);
         }
     }

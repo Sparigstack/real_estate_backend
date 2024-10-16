@@ -78,10 +78,10 @@
     <div class="email-container">
        
             <img src="{{ $propertyImageUrl }}" alt="Property Image" class="logo">
-            <h2>Leads Import Report: Skipped or Failed Leads Detected for {{ $property->name }} Property</h2>
+            <h3>Leads Import Report: Skipped or Failed Leads Detected for {{ ucfirst($property->name) }} Property</h3>
 
             <div class="textContent">
-                <p>Hello {{ $property->user->name }},</p>
+                <p>Hello {{ ucfirst($property->user->name) }},</p>
                 <p>Attached is the CSV file containing the details of skipped or failed leads. Please review the data to understand the reasons for the skipped or failed entries.</p>
                 <p>If you have any questions, feel free to reach out.</p>
             </div>
