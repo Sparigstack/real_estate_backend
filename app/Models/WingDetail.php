@@ -15,7 +15,7 @@ class WingDetail extends Model
     ];
     public function userProperty()
     {
-        return $this->belongsTo(UserProperty::class,'user_property_id','id');
+        return $this->belongsTo(UserProperty::class,'property_id','id');
     }
     public function floorDetails()
     {

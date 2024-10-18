@@ -137,11 +137,22 @@ class PropertyController extends Controller
     }
 
 
+    public function getWingsWithProperty($pid)
+    {
+
+        $fetchWings = WingDetail::where('property_id', $pid)->get();
+        if ($fetchWings) {
+            return  $fetchWings;
+        } else {
+            return null;
+        }
+    }
+
     public function addWingDetails(Request $request)
     {
         try {
-           //
-            
+            //
+
         } catch (\Exception $e) {
             $errorFrom = 'addWingDetails';
             $errorMessage = $e->getMessage();
@@ -276,16 +287,12 @@ class PropertyController extends Controller
     // }
     public function addUnitDetails(Request $request)
     {
-        try {
-            $unitStartNumber = $request->input('unitStartNumber');
-            $floorDetailsArray = $request->input('floorUnitDetails');
+
         try {
             $unitStartNumber = $request->input('unitStartNumber');
             $floorDetailsArray = $request->input('floorUnitDetails');
 
 
-            foreach ($floorDetailsArray as $index => $floorDetail) {
-                $currentStartNumber = (string) $unitStartNumber;
             foreach ($floorDetailsArray as $index => $floorDetail) {
                 $currentStartNumber = (string) $unitStartNumber;
                 $unitLength = strlen($currentStartNumber);
@@ -338,9 +345,22 @@ class PropertyController extends Controller
         try {
             if ($pid != 'null') {
                 $propertyDetails = UserProperty::where('id', $pid)->first();
-                return $propertyDetails;
-            } else {
-                return null;
+                // return $propertyDetails;
+
+                // Fetch the property details along with wings
+                $propertyDetails = UserProperty::with('wingDetails')->where('id', $pid)->first();
+
+                if ($propertyDetails) {
+                    // Check if the property has any wings
+                    $wingsflag = $propertyDetails->wingDetails->isNotEmpty() ? 1 : 0;
+
+                    // Add wingsflag to the property details
+                    $propertyDetails->wingsflag = $wingsflag;
+
+                    return $propertyDetails;
+                } else {
+                    return null;
+                }
             }
         } catch (\Exception $e) {
             // Log the error
@@ -423,30 +443,30 @@ class PropertyController extends Controller
                 // Base queries for all Commercial and Residential properties
                 $commercialQuery = UserProperty::where('user_id', $uid)
                     ->whereIn('property_id', Property::where('parent_id', 1)->pluck('id'));
-    
+
                 $residentialQuery = UserProperty::where('user_id', $uid)
                     ->whereIn('property_id', Property::where('parent_id', 2)->pluck('id'));
-    
+
                 // Apply filters if provided
                 if ($stateid != 'null') {
                     $commercialQuery->where('state_id', $stateid);
                     $residentialQuery->where('state_id', $stateid);
                 }
-    
+
                 if ($cityid != 'null') {
                     $commercialQuery->where('city_id', $cityid);
                     $residentialQuery->where('city_id', $cityid);
                 }
-    
+
                 if ($area != 'null') {
                     $commercialQuery->where('area', 'like', '%' . $area . '%');
                     $residentialQuery->where('area', 'like', '%' . $area . '%');
                 }
-    
+
                 // Execute the queries and get the results
                 $commercialProperties = $commercialQuery->get();
                 $residentialProperties = $residentialQuery->get();
-    
+
                 // Return combined result arrays
                 return response()->json([
                     'commercialProperties' => $commercialProperties, // Contains both filtered/unfiltered
