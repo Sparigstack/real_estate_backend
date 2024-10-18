@@ -137,14 +137,51 @@ class PropertyController extends Controller
     }
 
 
-    public function getWingsWithProperty($pid)
+    public function getPropertyWingsBasicDetails($pid)
     {
 
-        $fetchWings = WingDetail::where('property_id', $pid)->get();
-        if ($fetchWings) {
-            return  $fetchWings;
-        } else {
-            return null;
+        try {
+            // Fetch wings associated with the property
+            $fetchWings = WingDetail::with(['unitDetails']) // Eager load unit details
+                ->where('property_id', $pid)
+                ->get();
+    
+            // Prepare the response structure
+            $response = [
+                'building_wings_count' => 0,
+                'total_units' => 0,
+                'wings' => [],
+            ];
+    
+            if ($fetchWings->isNotEmpty()) {
+                // Update the response structure with actual data
+                $response['building_wings_count'] = $fetchWings->count();
+                $response['total_units'] = $fetchWings->sum(function ($wing) {
+                    return $wing->unitDetails->count(); // Count of units for each wing
+                });
+                $response['wings'] = $fetchWings->map(function ($wing) {
+                    return [
+                        'wing_id' => $wing->id,
+                        'wing_name' => $wing->name,
+                        'total_floors' => $wing->total_floors,
+                        'total_units' => $wing->unitDetails->count(), // Count units in this wing
+                    ];
+                });
+            } 
+    
+            return response()->json($response);
+        } catch (\Exception $e) {
+            // Log the error
+            $errorFrom = 'getPropertyWingsBasicDetails';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+    
+            // Return a consistent response structure with an error message
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while fetching wings details',
+            ], 400); // Return 500 status code for internal server error
         }
     }
 
