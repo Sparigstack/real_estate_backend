@@ -26,7 +26,7 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     
     // Route::get('/get-property-statuses/{statusFlag}', [PropertyController::class, 'getPropertyStatues']);
     // Route::get('/get-property-amenities', [PropertyController::class, 'getPropertyAmenities']);
-    // Route::post('/add-wing-details', [PropertyController::class, 'addWingDetails']);
+    Route::post('/add-wing-details', [PropertyController::class, 'addWingDetails']);
     // Route::post('/add-unit-details', [PropertyController::class, 'addUnitDetails']);
     // Route::get('/get-wing-details/{propertyId}', [PropertyController::class, 'getWingDetails']);
     Route::get('/get-all-properties/{uid}&{stateid}&{cityid}&{area}', [PropertyController::class, 'getAllProperties']);
