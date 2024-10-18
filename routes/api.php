@@ -31,14 +31,14 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 
     // Route::post('/add-unit-details', [PropertyController::class, 'addUnitDetails']);
     // Route::get('/get-wing-details/{propertyId}', [PropertyController::class, 'getWingDetails']);
+  //  Route::post('/add-similar-wing', [PropertyController::class, 'addSimilarWing']);
+
     Route::get('/get-all-properties/{uid}&{stateid}&{cityid}&{area}', [PropertyController::class, 'getAllProperties']);
     Route::get('/get-state-details', [PropertyController::class, 'getStateDetails']); 
     Route::get('/get-state-with-cities-details/{id}', [PropertyController::class, 'getStateWithCities']); 
     Route::get('/get-area-with-cities-details/{uid}/{cid}', [PropertyController::class, 'getAreaWithCities']); 
-    Route::post('/add-unit-details', [PropertyController::class, 'addUnitDetails']);
-    Route::get('/get-wing-details/{propertyId}', [PropertyController::class, 'getWingDetails']);
-    Route::post('/add-similar-wing', [PropertyController::class, 'addSimilarWing']);
 
+    
 
     //leads call
     Route::get('/get-leads/{pid}&{skey}&{sort}&{sortbykey}&{offset}&{limit}', [LeadController::class, 'getLeads']);  
