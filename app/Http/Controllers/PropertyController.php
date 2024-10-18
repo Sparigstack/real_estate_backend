@@ -187,8 +187,36 @@ class PropertyController extends Controller
 
     public function addWingDetails(Request $request)
     {
-        try {
-            //
+
+            try {
+                // Validate the incoming request data
+                $validatedData = $request->validate([
+                    'totalWings' => 'required|integer|min:1',
+                    'propertyId' => 'required|exists:user_properties,id',
+                    'wingsArray' => 'required|array',
+                    'wingsArray.*.wingName' => 'required|string|max:255',
+                ]);
+        
+                // Prepare an array to hold the wing details
+                $wingDetails = [];
+        
+                // Loop through the wings array and prepare the data for insertion
+                foreach ($validatedData['wingsArray'] as $wing) {
+                    $wingDetails[] = [
+                        'property_id' => $validatedData['propertyId'],
+                        'name' => $wing['wingName'],
+                        'total_floors' => 0, // Set default or add logic to specify total floors
+                    ];
+                }
+        
+                // Insert the wing details into the database
+                WingDetail::insert($wingDetails);
+        
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Wings added successfully',
+                    'totalWingsAdded' => count($wingDetails),
+                ], 200); // Return 201 status for created resource
 
         } catch (\Exception $e) {
             $errorFrom = 'addWingDetails';
