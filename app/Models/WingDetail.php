@@ -9,7 +9,7 @@ class WingDetail extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'user_property_id',
+        'property_id',
         'name',
         'total_floors'
     ];

@@ -10,7 +10,7 @@ class FloorDetail extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_property_id',
+        'property_id',
         'wing_id',
         'floor_size',
         'pent_house_status'
