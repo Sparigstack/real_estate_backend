@@ -21,18 +21,24 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/add-property-details', [PropertyController::class, 'addPropertyDetails']);
     Route::get('/get-property-details/{pid}', [PropertyController::class, 'getPropertyDetails']);
     
+    
     //remove this call later
     Route::get('/get-user-property-details/{uid}', [PropertyController::class, 'getUserPropertyDetails']);
     
     // Route::get('/get-property-statuses/{statusFlag}', [PropertyController::class, 'getPropertyStatues']);
     // Route::get('/get-property-amenities', [PropertyController::class, 'getPropertyAmenities']);
     Route::post('/add-wing-details', [PropertyController::class, 'addWingDetails']);
+
     // Route::post('/add-unit-details', [PropertyController::class, 'addUnitDetails']);
     // Route::get('/get-wing-details/{propertyId}', [PropertyController::class, 'getWingDetails']);
     Route::get('/get-all-properties/{uid}&{stateid}&{cityid}&{area}', [PropertyController::class, 'getAllProperties']);
     Route::get('/get-state-details', [PropertyController::class, 'getStateDetails']); 
     Route::get('/get-state-with-cities-details/{id}', [PropertyController::class, 'getStateWithCities']); 
     Route::get('/get-area-with-cities-details/{uid}/{cid}', [PropertyController::class, 'getAreaWithCities']); 
+    Route::post('/add-unit-details', [PropertyController::class, 'addUnitDetails']);
+    Route::get('/get-wing-details/{propertyId}', [PropertyController::class, 'getWingDetails']);
+    Route::post('/add-similar-wing', [PropertyController::class, 'addSimilarWing']);
+
 
     //leads call
     Route::get('/get-leads/{pid}&{skey}&{sort}&{sortbykey}&{offset}&{limit}', [LeadController::class, 'getLeads']);  
@@ -56,6 +62,7 @@ Route::get('/get-user-properties/{uid}', [LeadController::class, 'getUserPropert
 //rest api/webform api for leads
 Route::post('/generate-lead', [LeadController::class, 'generateLead']); 
 Route::post('/web-form-lead', [LeadController::class, 'webFormLead']); 
+
 
 
 

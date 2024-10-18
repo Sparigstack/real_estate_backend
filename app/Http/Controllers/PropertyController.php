@@ -140,7 +140,7 @@ class PropertyController extends Controller
     public function addWingDetails(Request $request)
     {
         try {
-           
+           //
             
         } catch (\Exception $e) {
             $errorFrom = 'addWingDetails';
@@ -279,8 +279,13 @@ class PropertyController extends Controller
         try {
             $unitStartNumber = $request->input('unitStartNumber');
             $floorDetailsArray = $request->input('floorUnitDetails');
+        try {
+            $unitStartNumber = $request->input('unitStartNumber');
+            $floorDetailsArray = $request->input('floorUnitDetails');
 
 
+            foreach ($floorDetailsArray as $index => $floorDetail) {
+                $currentStartNumber = (string) $unitStartNumber;
             foreach ($floorDetailsArray as $index => $floorDetail) {
                 $currentStartNumber = (string) $unitStartNumber;
                 $unitLength = strlen($currentStartNumber);
@@ -323,6 +328,7 @@ class PropertyController extends Controller
 
     public function getWingDetails($propertyId)
     {
+        $WingDetails = WingDetail::with('floorDetails.unitDetails')->where('user_property_id', $propertyId)->get();
         $WingDetails = WingDetail::with('floorDetails.unitDetails')->where('user_property_id', $propertyId)->get();
         return $WingDetails;
     }
