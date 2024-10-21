@@ -22,8 +22,8 @@ class WingController extends Controller
     public function getWingsBasicDetails($wid)
 {
     $fetchWings = WingDetail::with(['floorDetails' => function ($query) {
-            $query->orderBy('id', 'desc'); // Order by ID in descending order
-            $query->with('unitDetails'); // Eager load unit details
+            $query->orderBy('id', 'desc'); 
+            $query->with('unitDetails'); 
         }])
         ->withCount(['unitDetails', 'floorDetails'])
         ->where('id', $wid)
@@ -57,6 +57,7 @@ class WingController extends Controller
                         $unitDetail->property_id = $propertyId;
                         $unitDetail->wing_id = $wingId;
                         $unitDetail->floor_id = $floorDetail->id;
+                        $unitDetail->name = sprintf('%d%02d', $floorNumber, $unitIndex);
                         $unitDetail->save();
                     }
                 } else {
@@ -68,6 +69,7 @@ class WingController extends Controller
                                 $unitDetail->property_id = $propertyId;
                                 $unitDetail->wing_id = $wingId;
                                 $unitDetail->floor_id = $floorDetail->id;
+                                $unitDetail->name = sprintf('%d%02d', $floorNumber, $unitIndex);
                                 $unitDetail->save();
                             }
                         }
