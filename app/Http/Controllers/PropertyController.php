@@ -231,8 +231,6 @@ class PropertyController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'Wings added successfully',
-                'totalWings' => $propertyDetails->total_wings,
-                'wingsArray' => $addedWings,
             ], 200);
         } catch (\Exception $e) {
             $errorFrom = 'addWingDetails';
