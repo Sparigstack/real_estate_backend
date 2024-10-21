@@ -19,7 +19,7 @@ class WingDetail extends Model
     }
     public function floorDetails()
     {
-        return $this->hasMany(FloorDetail::class,'wing_id','id');
+        return $this->hasMany(FloorDetail::class,'wing_id','id')->with('unitDetails');
     }
     public function unitDetails()
     {

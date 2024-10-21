@@ -20,13 +20,18 @@ use App\Models\State;
 class WingController extends Controller
 {
     public function getWingsBasicDetails($wid)
-    {
-        $fetchWings = WingDetail::with(['unitDetails', 'floorDetails'])
-            ->withCount(['unitDetails', 'floorDetails'])
-            ->where('id', $wid)
-            ->first();
-        return $fetchWings->makeHidden(['property_id', 'created_at', 'updated_at']);
-    }
+{
+    $fetchWings = WingDetail::with(['floorDetails' => function ($query) {
+            $query->orderBy('id', 'desc'); // Order by ID in descending order
+            $query->with('unitDetails'); // Eager load unit details
+        }])
+        ->withCount(['unitDetails', 'floorDetails'])
+        ->where('id', $wid)
+        ->first();
+
+    return $fetchWings ? $fetchWings->makeHidden(['property_id', 'created_at', 'updated_at', 'unit_details']) : null;
+}
+
 
     public function AddWingsFloorDetails(Request $request)
     {
