@@ -24,7 +24,7 @@ class WingController extends Controller
         $fetchWings = WingDetail::with(['unitDetails', 'floorDetails'])
             ->withCount(['unitDetails', 'floorDetails'])
             ->where('id', $wid)
-            ->get();
+            ->first();
         return $fetchWings->makeHidden(['property_id', 'created_at', 'updated_at']);
     }
 
