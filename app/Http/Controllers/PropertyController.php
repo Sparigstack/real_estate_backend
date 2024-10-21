@@ -516,7 +516,7 @@ class PropertyController extends Controller
 
     public function getAllProperties($uid, $stateid, $cityid, $area)
     {
-        try {
+        // try {
 
             if ($uid != 'null') {
                 // Base queries for all Commercial and Residential properties
@@ -557,17 +557,17 @@ class PropertyController extends Controller
                     'residentialProperties' => null // Contains both filtered/unfiltered
                 ], 200);
             }
-        } catch (\Exception $e) {
-            // Log the error
-            $errorFrom = 'filterProperties';
-            $errorMessage = $e->getMessage();
-            $priority = 'high';
-            Helper::errorLog($errorFrom, $errorMessage, $priority);
+        // } catch (\Exception $e) {
+        //     // Log the error
+        //     $errorFrom = 'filterProperties';
+        //     $errorMessage = $e->getMessage();
+        //     $priority = 'high';
+        //     Helper::errorLog($errorFrom, $errorMessage, $priority);
 
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Error filtering properties',
-            ], 400);
-        }
+        //     return response()->json([
+        //         'status' => 'error',
+        //         'message' => 'Error filtering properties',
+        //     ], 400);
+        // }
     }
 }

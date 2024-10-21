@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LeadController;
-
+use App\Http\Controllers\WingController;
 
 Route::post('/register-user', [AuthController::class, 'registerUser']);
 Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
@@ -47,8 +47,12 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/add-edit-leads', [LeadController::class, 'addOrEditLeads']); 
     Route::post('/add-leads-csv', [LeadController::class, 'addLeadsCsv']); 
     Route::post('/update-lead-notes', [LeadController::class, 'updateLeadNotes']);
-
-    Route::post('/lead-messages/send', [LeadController::class, 'sendBulkMessages']); 
+    Route::post('/lead-messages/send', [LeadController::class, 'sendBulkMessages']);
+    
+    //wings call
+    Route::get('/get-wings-basic-details/{wid}', [WingController::class, 'getWingsBasicDetails']); 
+    Route::post('/add-wings-floor-details', [WingController::class, 'AddWingsFloorDetails']);
+    
 // });
 
 
