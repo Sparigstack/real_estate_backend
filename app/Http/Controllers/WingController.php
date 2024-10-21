@@ -99,13 +99,16 @@ class WingController extends Controller
         try {
             $wingDetails = $request->input('wingDetails');
             $wingId = $request->input('wingId');
-            foreach($wingDetails as $data)
-            {
-                  foreach($data['unit_details'] as $unitData)
-                  {
-                      UnitDetail::where('id', $unitData['unitId'])->update(['name' => $unitData['name'], 'square_feet' =>$unitData['square_feet'], 'price' =>$unitData['price']]);
-                  }
+            foreach ($wingDetails as $data) {
+                foreach ($data['unit_details'] as $unitData) {
+                    UnitDetail::where('id', $unitData['unitId'])->update(['name' => $unitData['name'], 'square_feet' => $unitData['square_feet'], 'price' => $unitData['price']]);
+                }
             }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => null,
+            ], 200);
         } catch (\Exception $e) {
             $errorFrom = 'bulkUpdatesForWingsDetails';
             $errorMessage = $e->getMessage();
@@ -133,11 +136,17 @@ class WingController extends Controller
             } elseif ($actionId == 2) // unit delete
             {
                 UnitDetail::where('id', $unitId)->forceDelete();
-            }elseif($actionId == 3) // wing delete
+            } elseif ($actionId == 3) // wing delete
             {
                 UnitDetail::where('floor_id', $floorId)->forceDelete();
                 FloorDetail::where('id', $floorId)->forceDelete();
             }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => null,
+            ], 200);
+
         } catch (\Exception $e) {
             $errorFrom = 'updateWingDetails';
             $errorMessage = $e->getMessage();
@@ -153,7 +162,7 @@ class WingController extends Controller
 
     public function getunitBasicDetails($uid)
     {
-        $fetchUnitDetails  = UnitDetail::where('id',$uid)->first();
+        $fetchUnitDetails = UnitDetail::where('id', $uid)->first();
         return $fetchUnitDetails;
     }
 }
