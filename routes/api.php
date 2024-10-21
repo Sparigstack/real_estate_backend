@@ -51,8 +51,10 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     
     //wings call
     Route::get('/get-wings-basic-details/{wid}', [WingController::class, 'getWingsBasicDetails']); 
-    Route::post('/add-wings-floor-details', [WingController::class, 'AddWingsFloorDetails']);
-    
+    Route::post('/add-wings-floor-details', [WingController::class, 'addWingsFloorDetails']);
+    Route::post('/bulk-updates-for-wings-details', [WingController::class, 'bulkUpdatesForWingsDetails']);
+    Route::post('/update-wing-details', [WingController::class, 'updateWingDetails']);
+    Route::get('/get-unit-basic-details/{uid}', [WingController::class, 'getunitBasicDetails']); 
 // });
 
 
