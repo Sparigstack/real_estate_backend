@@ -206,8 +206,7 @@ class WingController extends Controller
             {
                 // First, get the Wing ID associated with the floor
                 $wingId = FloorDetail::where('id', $floorId)->value('wing_id');
-                UnitDetail::where('floor_id', $floorId)->forceDelete();
-                FloorDetail::where('id', $floorId)->forceDelete();
+               
                 WingDetail::where('id', $wingId)->decrement('total_floors');
 
 
@@ -238,10 +237,12 @@ class WingController extends Controller
                             $oldUnitNumber = (int)$unit->name; // Assuming name is stored as a string of integers
                             //   echo $oldUnitNumber;
                             $newUnitNumber = sprintf('%d%02d', (int)($newUnitNumberPrefix / 100), ($oldUnitNumber % 100)); // Keep the last two digits the same
-                            // echo $newUnitNumber . ' ' . $unit->id;
                             $unit->update(['name' => $newUnitNumber]);
                         }
                     }
+
+                    UnitDetail::where('floor_id', $floorId)->forceDelete();
+                    FloorDetail::where('id', $floorId)->forceDelete();  
                 }
 
                 // // Fetch all floors for the wing in ascending order
@@ -285,6 +286,7 @@ class WingController extends Controller
                 'message' => null,
             ], 200);
         } catch (\Exception $e) {
+
             $errorFrom = 'updateWingDetails';
             $errorMessage = $e->getMessage();
             $priority = 'high';
