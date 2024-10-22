@@ -104,7 +104,9 @@ class WingController extends Controller
             $propertyId = $request->input('propertyId');
             $sameUnitCount = $request->input('sameUnitCount');
 
-            WingDetail::where('id',$wingId)->update(['total_floors' =>$numberOfFloors]);
+            $floorCountOfWing=WingDetail::where('id',$wingId)->pluck('total_floors')->first();
+            // return $floorCountOfWing;
+            WingDetail::where('id',$wingId)->update(['total_floors' =>$floorCountOfWing+$numberOfFloors]);
             for ($floorNumber = 1; $floorNumber <= $numberOfFloors; $floorNumber++) {
                 $floorDetail = new FloorDetail();
                 $floorDetail->property_id = $propertyId;
@@ -187,16 +189,16 @@ class WingController extends Controller
             $actionId = $request->input('actionId');
             $unitId = $request->input('unitId');
             $floorId = $request->input('floorId');
-            $name = $request->input('name');
+            // $name = $request->input('name');
             $unitSize = $request->input('unitSize');
             $price = $request->input('price');
             if ($actionId == 1) // unit update
             {
-                UnitDetail::where('id', $unitId)->update(['name' => $name, 'square_feet' => $unitSize, 'price' => $price]);
+                UnitDetail::where('id', $unitId)->update(['square_feet' => $unitSize, 'price' => $price]);
             } elseif ($actionId == 2) // unit delete
             {
                 UnitDetail::where('id', $unitId)->forceDelete();
-            } elseif ($actionId == 3) // wing delete
+            } elseif ($actionId == 3) // floor delete
             {
                 UnitDetail::where('floor_id', $floorId)->forceDelete();
                 FloorDetail::where('id', $floorId)->forceDelete();
