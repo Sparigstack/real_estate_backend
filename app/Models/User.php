@@ -65,4 +65,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(CompanyDetail::class,'user_id','id');
     }
+
+    public function planDetails()
+    {
+        return $this->hasOne(PlanUsageLog::class,'user_id','id');
+    }
 }
