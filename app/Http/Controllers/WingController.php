@@ -104,14 +104,18 @@ class WingController extends Controller
             $propertyId = $request->input('propertyId');
             $sameUnitCount = $request->input('sameUnitCount');
 
-            $floorCountOfWing=WingDetail::where('id',$wingId)->pluck('total_floors')->first();
-            // return $floorCountOfWing;
-            WingDetail::where('id',$wingId)->update(['total_floors' =>$floorCountOfWing+$numberOfFloors]);
+            $floorCountOfWing = WingDetail::where('id', $wingId)->pluck('total_floors')->first();
+            WingDetail::where('id', $wingId)->update(['total_floors' => $floorCountOfWing + $numberOfFloors]);
+
+
+            $floorCountOfWing = $floorCountOfWing + 1;
+
             for ($floorNumber = 1; $floorNumber <= $numberOfFloors; $floorNumber++) {
                 $floorDetail = new FloorDetail();
                 $floorDetail->property_id = $propertyId;
                 $floorDetail->wing_id = $wingId;
                 $floorDetail->save();
+
 
                 if ($sameUnitsFlag == 1) {
                     for ($unitIndex = 1; $unitIndex <= $sameUnitCount; $unitIndex++) {
@@ -119,7 +123,7 @@ class WingController extends Controller
                         $unitDetail->property_id = $propertyId;
                         $unitDetail->wing_id = $wingId;
                         $unitDetail->floor_id = $floorDetail->id;
-                        $unitDetail->name = sprintf('%d%02d', $floorNumber, $unitIndex);
+                        $unitDetail->name = sprintf('%d%02d', $floorCountOfWing, $unitIndex);
                         $unitDetail->save();
                     }
                 } else {
@@ -130,19 +134,19 @@ class WingController extends Controller
                                 $unitDetail->property_id = $propertyId;
                                 $unitDetail->wing_id = $wingId;
                                 $unitDetail->floor_id = $floorDetail->id;
-                                $unitDetail->name = sprintf('%d%02d', $floorNumber, $unitIndex);
+                                $unitDetail->name = sprintf('%d%02d', $floorCountOfWing, $unitIndex);
                                 $unitDetail->save();
                             }
                         }
                     }
                 }
+                $floorCountOfWing++;
             }
 
             return response()->json([
                 'status' => 'success',
                 'message' => null,
             ], 200);
-
         } catch (\Exception $e) {
             $errorFrom = 'AddWingsFloorDetails';
             $errorMessage = $e->getMessage();
@@ -200,15 +204,55 @@ class WingController extends Controller
                 UnitDetail::where('id', $unitId)->forceDelete();
             } elseif ($actionId == 3) // floor delete
             {
+                // First, get the Wing ID associated with the floor
+                $wingId = FloorDetail::where('id', $floorId)->value('wing_id');
                 UnitDetail::where('floor_id', $floorId)->forceDelete();
                 FloorDetail::where('id', $floorId)->forceDelete();
+                WingDetail::where('id', $wingId)->decrement('total_floors');
+
+
+                // // Fetch all floors for the wing in ascending order
+                // $floors = FloorDetail::where('wing_id', $wingId)
+                // ->orderBy('id') // Assuming 'id' is a unique identifier for sorting
+                // ->pluck('id')
+                // ->toArray();
+
+                // // Find the index of the floor to be deleted
+                // $floorIndex = array_search($floorId, $floors);
+
+                // // If the floor index is found, you can calculate its position (1-based index)
+                // if ($floorIndex !== false) {
+                //     $deletingfloorPosition = $floorIndex + 1; // Convert to 1-based index
+
+                //     // Update unit names for floors above the deleted floor
+                // for ($i = $floorIndex + 1; $i < count($floors); $i++) {
+                //     $currentFloorId = $floors[$i];
+
+                //     // Fetch units for the current floor
+                //     $units = UnitDetail::where('floor_id', $currentFloorId)->get();
+                    
+                //     // Update the unit names to shift them down
+                //     foreach ($units as $unit) {
+                //         // Assuming the unit names follow the format 'FloorNumberUnitIndex'
+                //         // We need to adjust the name based on the new position
+                //         $newUnitName = sprintf('%d%02d', $deletingfloorPosition, (intval(substr($unit->name, -2)) + 1)); // Shift unit numbers down
+                //         $unit->name = $newUnitName;
+                //         $unit->save();
+                //     }
+                // }
+
+                } else {
+                    $deletingfloorPosition = null; // Floor not found, handle as needed
+                }
+                // return  $deletingfloorPosition;
+
+              
             }
 
             return response()->json([
                 'status' => 'success',
                 'message' => null,
             ], 200);
-
         } catch (\Exception $e) {
             $errorFrom = 'updateWingDetails';
             $errorMessage = $e->getMessage();
