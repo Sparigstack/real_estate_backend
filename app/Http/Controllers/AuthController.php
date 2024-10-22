@@ -13,7 +13,7 @@ use App\Mail\GetOtpMail;
 use App\Models\UserProperty;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
-
+use App\Http\Controllers\PlanController;
 
 class AuthController extends Controller
 {
@@ -69,7 +69,6 @@ class AuthController extends Controller
             return 'Something Went Wrong';
         }
     }
-
 
     public function registerUser(Request $request)
     {
@@ -140,11 +139,24 @@ class AuthController extends Controller
                         $token = $userExist->createToken('access_token')->accessToken;
                         $userId = $userExist->id;
                     } else {
+
                         $newUser = new User();
                         $newUser->email = $email;
                         $newUser->name = $checkUserDetails->username;
                         $newUser->save();
                         $userId = $newUser->id;
+
+                        $requestData = [
+                            'userId' => $userId,
+                            'planId' => 1
+                        ];
+                
+                        // Create a new Request instance and pass the $requestData array
+                        $purchasePlanRequest = new Request($requestData);
+                
+                        // Call the PlanController's purchasePlan function
+                        $planController = new PlanController();
+                        $response = $planController->purchasePlan($purchasePlanRequest);
                         $token = $newUser->createToken('access_token')->accessToken;
                     }
                     $checkUserDetails->delete();

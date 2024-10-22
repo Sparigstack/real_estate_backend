@@ -10,4 +10,13 @@ class UserPlanDetail extends Model
     use HasFactory;
     protected $fillable = [ 'user_id', 'plan_id', 'payment', 'status'];
 
+    public function planDetails()
+    {
+            return $this->belongsTo(PlanDetail::class, 'plan_id');
+    }
+
+    public function userDetails()
+    {
+            return $this->belongsTo(User::class, 'user_id');
+    }
 }

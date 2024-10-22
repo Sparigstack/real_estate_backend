@@ -60,8 +60,9 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 
     //plan call
     Route::post('/purchase-plan', [PlanController::class, 'purchasePlan']); 
-    Route::get('/add-plan-usage/{uid}&{pid}&{flag}', [PlanController::class, 'addPlanUsageLog']); 
-    
+    Route::get('/add-plan-usage/{uid}&{pid}&{flag}', [PlanController::class, 'addPlanUsageLog']);
+    Route::get('/get-user-plan-details/{uid}', [PlanController::class, 'getUserPlanDetails']);  
+     
     
 // });
 
