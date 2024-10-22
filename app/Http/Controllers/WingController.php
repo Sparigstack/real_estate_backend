@@ -211,6 +211,39 @@ class WingController extends Controller
                 WingDetail::where('id', $wingId)->decrement('total_floors');
 
 
+                $floors = FloorDetail::where('wing_id', $wingId)
+                    ->orderBy('id') // Assuming 'id' is a unique identifier for sorting
+                    ->pluck('id')
+                    ->toArray();
+
+                // Find the index of the floor to be deleted
+                $floorIndex = array_search($floorId, $floors);
+
+
+                // Calculate the position of the floor being deleted
+                if ($floorIndex !== false) {
+                    $deletingfloorPosition = $floorIndex + 1; // Convert to 1-based index
+
+
+                    // Loop through the remaining floors starting from the deleted floor's position
+                    for ($i = $floorIndex + 1; $i < count($floors); $i++) {
+                        $currentFloorId = $floors[$i];
+                        // Calculate new unit number prefix based on deleting floor position
+                        $newUnitNumberPrefix = sprintf('%d', ($deletingfloorPosition) * 100); // Adjust unit prefix accordingly
+
+                        // Update unit names for this floor
+                        $units = UnitDetail::where('floor_id', $currentFloorId)->get();
+
+                        foreach ($units as $unit) {
+                            $oldUnitNumber = (int)$unit->name; // Assuming name is stored as a string of integers
+                            //   echo $oldUnitNumber;
+                            $newUnitNumber = sprintf('%d%02d', (int)($newUnitNumberPrefix / 100), ($oldUnitNumber % 100)); // Keep the last two digits the same
+                            // echo $newUnitNumber . ' ' . $unit->id;
+                            $unit->update(['name' => $newUnitNumber]);
+                        }
+                    }
+                }
+
                 // // Fetch all floors for the wing in ascending order
                 // $floors = FloorDetail::where('wing_id', $wingId)
                 // ->orderBy('id') // Assuming 'id' is a unique identifier for sorting
@@ -230,7 +263,7 @@ class WingController extends Controller
 
                 //     // Fetch units for the current floor
                 //     $units = UnitDetail::where('floor_id', $currentFloorId)->get();
-                    
+
                 //     // Update the unit names to shift them down
                 //     foreach ($units as $unit) {
                 //         // Assuming the unit names follow the format 'FloorNumberUnitIndex'
@@ -241,10 +274,10 @@ class WingController extends Controller
                 //     }
                 // }
 
-              
+
                 // return  $deletingfloorPosition;
 
-              
+
             }
 
             return response()->json([
@@ -268,5 +301,52 @@ class WingController extends Controller
     {
         $fetchUnitDetails = UnitDetail::where('id', $uid)->first();
         return $fetchUnitDetails;
+    }
+
+
+    public function addNewUnitForFloor(Request $request)
+    {
+        try {
+            $floorId = $request->input('floorId');
+
+            // Retrieve floor details to get property_id and wing_id
+            $floor = FloorDetail::findOrFail($floorId);
+            $propertyId = $floor->property_id;
+            $wingId = $floor->wing_id;
+
+            // Find the maximum unit name (number) for this floor
+            $maxUnit = UnitDetail::where('floor_id', $floorId)
+                ->where('property_id', $propertyId)
+                ->where('wing_id', $wingId)
+                ->max('name');
+
+            // Increment the unit number to get the new unit name
+            $newUnitName = $maxUnit ? (int)$maxUnit + 1 : ($floorId * 100 + 1); // assuming units start at floorId*100+1
+
+            // Create the new unit
+            $unit = new UnitDetail();
+            $unit->property_id = $propertyId;
+            $unit->wing_id = $wingId;
+            $unit->floor_id = $floorId;
+            $unit->name = (string)$newUnitName; // Cast to string if necessary
+            // $unit->status_id = 1; // Set default status, adjust as needed
+            $unit->square_feet = 0; // Default square feet, adjust as needed
+            $unit->price = 0; // Default price, adjust as needed
+            $unit->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => null,
+            ], 200);
+        } catch (\Exception $e) {
+            $errorFrom = 'addNewUnitFloor';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'something went wrong',
+            ], 400);
+        }
     }
 }
