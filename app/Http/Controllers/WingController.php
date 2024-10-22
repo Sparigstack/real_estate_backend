@@ -104,11 +104,11 @@ class WingController extends Controller
             $propertyId = $request->input('propertyId');
             $sameUnitCount = $request->input('sameUnitCount');
 
+            WingDetail::where('id',$wingId)->update(['total_floors' =>$numberOfFloors]);
             for ($floorNumber = 1; $floorNumber <= $numberOfFloors; $floorNumber++) {
                 $floorDetail = new FloorDetail();
                 $floorDetail->property_id = $propertyId;
                 $floorDetail->wing_id = $wingId;
-                $floorDetail->total_floors = $numberOfFloors;
                 $floorDetail->save();
 
                 if ($sameUnitsFlag == 1) {
