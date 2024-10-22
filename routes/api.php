@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\PlanController;
 use App\Http\Controllers\WingController;
 
 Route::post('/register-user', [AuthController::class, 'registerUser']);
@@ -55,6 +56,12 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/bulk-updates-for-wings-details', [WingController::class, 'bulkUpdatesForWingsDetails']);
     Route::post('/update-wing-details', [WingController::class, 'updateWingDetails']);
     Route::get('/get-unit-basic-details/{uid}', [WingController::class, 'getunitBasicDetails']); 
+
+    //plan call
+    Route::post('/purchase-plan', [PlanController::class, 'purchasePlan']); 
+    Route::get('/check-plan-usage/{uid}&{pid}', [WingController::class, 'checkPlanUsage']); 
+    
+    
 // });
 
 
