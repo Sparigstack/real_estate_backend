@@ -15,7 +15,7 @@ use App\Models\Status;
 use App\Models\Amenity;
 use App\Models\Country;
 use App\Models\State;
-
+use App\Http\Controllers\PlanController;
 
 class PropertyController extends Controller
 {
@@ -28,56 +28,52 @@ class PropertyController extends Controller
     public function addPropertyDetails(Request $request)
     {
         try {
-            $name = $request->input('name');
-            $reraRegisteredNumber = $request->input('reraRegisteredNumber');
-            $propertyTypeFlag = $request->input('propertyTypeFlag');
-            $propertySubTypeFlag = $request->input('propertySubTypeFlag');
-            $address = $request->input('address');
-            $propertyImg = $request->input('property_img'); //base64
-            $description = $request->input('description');
-            $userId = $request->input('userId');
-            $pincode = $request->input('pincode');
-            $stateId = $request->input('state');
-            $cityId = $request->input('city');
-            $area = $request->input('area');
+        $name = $request->input('name');
+        $reraRegisteredNumber = $request->input('reraRegisteredNumber');
+        $propertyTypeFlag = $request->input('propertyTypeFlag');
+        $propertySubTypeFlag = $request->input('propertySubTypeFlag');
+        $address = $request->input('address');
+        $propertyImg = $request->input('property_img'); //base64
+        $description = $request->input('description');
+        $userId = $request->input('userId');
+        $pincode = $request->input('pincode');
+        $stateId = $request->input('state');
+        $cityId = $request->input('city');
+        $area = $request->input('area');
 
 
-            if ($reraRegisteredNumber) {
-                // $checkRegisterNumber = UserProperty::where('user_id', $userId)
-                //     ->where('rera_registered_no', $reraRegisteredNumber)
-                //     ->first();
+        if ($reraRegisteredNumber) {
+            $checkRegisterNumber = UserProperty::where('rera_registered_no', $reraRegisteredNumber)
+                ->first();
 
-                $checkRegisterNumber = UserProperty::where('rera_registered_no', $reraRegisteredNumber)
-                    ->first();
-
-
-                if ($checkRegisterNumber) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Property with this registered number already exists.',
-                        'propertyId' => null,
-                        'propertyName' => null
-                    ], 400);
-                }
+            if ($checkRegisterNumber) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Property with this registered number already exists.',
+                    'propertyId' => null,
+                    'propertyName' => null
+                ], 400);
             }
+        }
 
 
-            $userProperty = new UserProperty();
-            $userProperty->user_id = $userId;
-            $userProperty->property_id = $propertySubTypeFlag;
-            $userProperty->name = $name;
-            $userProperty->description = $description;
-            $userProperty->rera_registered_no = $reraRegisteredNumber;
-            $userProperty->address = $address;
-            $userProperty->pincode = $pincode;
-            $userProperty->state_id = $stateId;
-            $userProperty->city_id = $cityId;
-            $userProperty->area = $area;
-            // $userProperty->property_img = $propertyImg;
-            $userProperty->property_step_status = 1;
+        $userProperty = new UserProperty();
+        $userProperty->user_id = $userId;
+        $userProperty->property_id = $propertySubTypeFlag;
+        $userProperty->name = $name;
+        $userProperty->description = $description;
+        $userProperty->rera_registered_no = $reraRegisteredNumber;
+        $userProperty->address = $address;
+        $userProperty->pincode = $pincode;
+        $userProperty->state_id = $stateId;
+        $userProperty->city_id = $cityId;
+        $userProperty->area = $area;
+        $userProperty->property_step_status = 1;
+
+        $planController = new PlanController();
+        $response = $planController->addPlanUsageLog($userId, 1);
+        if ($response == 'success') {
             $userProperty->save();
-
-            // Handle image saving
             if ($propertyImg) {
                 // Define folder path
                 $folderPath = public_path("properties/$userId/{$userProperty->id}");
@@ -104,14 +100,20 @@ class PropertyController extends Controller
                 $userProperty->property_img = "properties/$userId/{$userProperty->id}/$fileName";
                 $userProperty->save();
             }
-
-
             return response()->json([
                 'status' => 'success',
                 'message' => null,
                 'propertyId' => $userProperty->id,
                 'propertyName' => $userProperty->name
             ], 200);
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Limit reached! Upgrade your plan to create more properties.',
+                'propertyId' => null,
+                'propertyName' => null
+            ], 200);
+        }
         } catch (\Exception $e) {
             $errorFrom = 'addPropertyDetails';
             $errorMessage = $e->getMessage();
@@ -171,142 +173,17 @@ class PropertyController extends Controller
 
             return response()->json($response);
         } catch (\Exception $e) {
-            // Log the error
             $errorFrom = 'getPropertyWingsBasicDetails';
             $errorMessage = $e->getMessage();
             $priority = 'high';
             Helper::errorLog($errorFrom, $errorMessage, $priority);
-
-            // Return a consistent response structure with an error message
             return response()->json([
                 'status' => 'error',
                 'message' => 'An error occurred while fetching wings details',
-            ], 400); // Return 500 status code for internal server error
+            ], 400); 
         }
     }
 
-   
-    // public function addWingDetails(Request $request)
-    // {
-    //     try {
-    //         $wingName = $request->input('wingName');
-    //         $numberOfFloors = $request->input('numberOfFloors');
-    //         $propertyId = $request->input('propertyId');
-    //         $wingId = $request->input('wingId');
-    //         $sameUnitFlag = $request->input('sameUnitFlag');
-    //         $numberOfUnits = $request->input('numberOfUnits');
-    //         $floorUnitCounts = $request->input('floorUnitCounts');
-
-    //         if ($sameUnitFlag == 1) {
-    //             $checkWing = WingDetail::where('user_property_id', $propertyId)->where('name', $wingName)->first();
-    //             if (isset($checkWing)) {
-    //                 return response()->json([
-    //                     'status' => 'error',
-    //                     'message' => 'Same wing name exist.',
-    //                     'wingId' => null,
-    //                     'floorUnitDetails' => null
-    //                 ], 400);
-    //             }
-    //             $wingDetail = new WingDetail();
-    //             $wingDetail->user_property_id = $propertyId;
-    //             $wingDetail->name = $wingName;
-    //             $wingDetail->total_floors = $numberOfFloors;
-    //             $wingDetail->save();
-    //             $floorUnitDetails = [];
-
-    //             for ($i = 1; $i <= $numberOfFloors; $i++) {
-    //                 $floorDetail = new FloorDetail();
-    //                 $floorDetail->user_property_id = $propertyId;
-    //                 $floorDetail->wing_id = $wingDetail->id;
-    //                 $floorDetail->total_units = $numberOfUnits;
-    //                 $floorDetail->save();
-
-    //                 $unitDetails = [];
-    //                 for ($j = 1; $j <= $numberOfUnits; $j++) {
-    //                     $unitDetail = new UnitDetail();
-    //                     $unitDetail->user_property_id = $propertyId;
-    //                     $unitDetail->wing_id = $wingDetail->id;
-    //                     $unitDetail->floor_id = $floorDetail->id;
-    //                     $unitDetail->save();
-
-    //                     $unitDetails[] = ['unitId' => $unitDetail->id];
-    //                 }
-
-    //                 $floorUnitDetails[] = ['floorId' => $floorDetail->id, 'unitDetails' => $unitDetails];
-    //             }
-    //             return response()->json([
-    //                 'status' => 'success',
-    //                 'message' => null,
-    //                 'wingId' => $wingDetail->id,
-    //                 'floorUnitDetails' => $floorUnitDetails,
-    //                 'floorUnitCounts' => null
-    //             ], 200);
-    //         } elseif ($sameUnitFlag == 2) {
-    //             $checkWing = WingDetail::where('user_property_id', $propertyId)->where('name', $wingName)->first();
-    //             if (isset($checkWing)) {
-    //                 return response()->json([
-    //                     'status' => 'error',
-    //                     'message' => 'Same wing name exist.',
-    //                     'wingId' => null,
-    //                     'floorUnitDetails' => null
-    //                 ], 400);
-    //             }
-    //             $wingDetail = new WingDetail();
-    //             $wingDetail->user_property_id = $propertyId;
-    //             $wingDetail->name = $wingName;
-    //             $wingDetail->total_floors = $numberOfFloors;
-    //             $wingDetail->save();
-    //             $floorUnitCounts = [];
-
-    //             for ($i = 1; $i <= $numberOfFloors; $i++) {
-    //                 $floorDetail = new FloorDetail();
-    //                 $floorDetail->user_property_id = $propertyId;
-    //                 $floorDetail->wing_id = $wingDetail->id;
-    //                 $floorDetail->save();
-    //                 $floorUnitCounts[] = ['floorId' => $floorDetail->id, 'unit' => null];
-    //             }
-    //             return response()->json([
-    //                 'status' => 'success',
-    //                 'message' => null,
-    //                 'wingId' => $wingDetail->id,
-    //                 'floorUnitDetails' => null,
-    //                 'floorUnitCounts' => $floorUnitCounts
-    //             ], 200);
-    //         } else {
-    //             $floorUnitDetails = [];
-    //             foreach ($floorUnitCounts as $floorUnitCount) {
-    //                 $floorDetail = FloorDetail::where('id', $floorUnitCount['floorId'])->update(['total_units' => $floorUnitCount['unit']]);
-    //                 $unitDetails = [];
-    //                 for ($j = 1; $j <= $floorUnitCount['unit']; $j++) {
-    //                     $unitDetail = new UnitDetail();
-    //                     $unitDetail->user_property_id = $propertyId;
-    //                     $unitDetail->wing_id = $wingId;
-    //                     $unitDetail->floor_id = $floorUnitCount['floorId'];
-    //                     $unitDetail->save();
-    //                     $unitDetails[] = ['unitId' => $unitDetail->id];
-    //                 }
-    //                 $floorUnitDetails[] = ['floorId' => $floorUnitCount['floorId'], 'unitDetails' => $unitDetails];
-    //             }
-
-    //             return response()->json([
-    //                 'status' => 'success',
-    //                 'message' => null,
-    //                 'wingId' => $wingId,
-    //                 'floorUnitDetails' => $floorUnitDetails,
-    //                 'floorUnitCounts' => null
-    //             ], 200);
-    //         }
-    //     } catch (\Exception $e) {
-    //         $errorFrom = 'addWingDetails';
-    //         $errorMessage = $e->getMessage();
-    //         $priority = 'high';
-    //         Helper::errorLog($errorFrom, $errorMessage, $priority);
-    //         return response()->json([
-    //             'status' => 'error',
-    //             'message' => 'something went wrong',
-    //         ], 400);
-    //     }
-    // }
     public function addUnitDetails(Request $request)
     {
 
@@ -367,25 +244,18 @@ class PropertyController extends Controller
         try {
             if ($pid != 'null') {
                 $propertyDetails = UserProperty::where('id', $pid)->first();
-                // return $propertyDetails;
 
-                // Fetch the property details along with wings
                 $propertyDetails = UserProperty::with('wingDetails')->where('id', $pid)->first();
 
                 if ($propertyDetails) {
-                    // Check if the property has any wings
                     $wingsflag = $propertyDetails->wingDetails->isNotEmpty() ? 1 : 0;
-
-                    // Add wingsflag to the property details
                     $propertyDetails->wingsflag = $wingsflag;
-
                     return $propertyDetails;
                 } else {
                     return null;
                 }
             }
         } catch (\Exception $e) {
-            // Log the error
             $errorFrom = 'getPropertyDetail';
             $errorMessage = $e->getMessage();
             $priority = 'high';
@@ -423,7 +293,6 @@ class PropertyController extends Controller
                 ], 200);
             }
         } catch (\Exception $e) {
-            // Log the error
             $errorFrom = 'getUserPropertyDetail';
             $errorMessage = $e->getMessage();
             $priority = 'high';
@@ -459,58 +328,58 @@ class PropertyController extends Controller
 
     public function getAllProperties($uid, $stateid, $cityid, $area)
     {
-        // try {
+         try {
 
-            if ($uid != 'null') {
-                // Base queries for all Commercial and Residential properties
-                $commercialQuery = UserProperty::where('user_id', $uid)
-                    ->whereIn('property_id', Property::where('parent_id', 1)->pluck('id'));
+        if ($uid != 'null') {
+            // Base queries for all Commercial and Residential properties
+            $commercialQuery = UserProperty::where('user_id', $uid)
+                ->whereIn('property_id', Property::where('parent_id', 1)->pluck('id'));
 
-                $residentialQuery = UserProperty::where('user_id', $uid)
-                    ->whereIn('property_id', Property::where('parent_id', 2)->pluck('id'));
+            $residentialQuery = UserProperty::where('user_id', $uid)
+                ->whereIn('property_id', Property::where('parent_id', 2)->pluck('id'));
 
-                // Apply filters if provided
-                if ($stateid != 'null') {
-                    $commercialQuery->where('state_id', $stateid);
-                    $residentialQuery->where('state_id', $stateid);
-                }
-
-                if ($cityid != 'null') {
-                    $commercialQuery->where('city_id', $cityid);
-                    $residentialQuery->where('city_id', $cityid);
-                }
-
-                if ($area != 'null') {
-                    $commercialQuery->where('area', 'like', '%' . $area . '%');
-                    $residentialQuery->where('area', 'like', '%' . $area . '%');
-                }
-
-                // Execute the queries and get the results
-                $commercialProperties = $commercialQuery->get();
-                $residentialProperties = $residentialQuery->get();
-
-                // Return combined result arrays
-                return response()->json([
-                    'commercialProperties' => $commercialProperties, // Contains both filtered/unfiltered
-                    'residentialProperties' => $residentialProperties // Contains both filtered/unfiltered
-                ], 200);
-            } else {
-                return response()->json([
-                    'commercialProperties' => null, // Contains both filtered/unfiltered
-                    'residentialProperties' => null // Contains both filtered/unfiltered
-                ], 200);
+            // Apply filters if provided
+            if ($stateid != 'null') {
+                $commercialQuery->where('state_id', $stateid);
+                $residentialQuery->where('state_id', $stateid);
             }
-        // } catch (\Exception $e) {
-        //     // Log the error
-        //     $errorFrom = 'filterProperties';
-        //     $errorMessage = $e->getMessage();
-        //     $priority = 'high';
-        //     Helper::errorLog($errorFrom, $errorMessage, $priority);
 
-        //     return response()->json([
-        //         'status' => 'error',
-        //         'message' => 'Error filtering properties',
-        //     ], 400);
-        // }
+            if ($cityid != 'null') {
+                $commercialQuery->where('city_id', $cityid);
+                $residentialQuery->where('city_id', $cityid);
+            }
+
+            if ($area != 'null') {
+                $commercialQuery->where('area', 'like', '%' . $area . '%');
+                $residentialQuery->where('area', 'like', '%' . $area . '%');
+            }
+
+            // Execute the queries and get the results
+            $commercialProperties = $commercialQuery->get();
+            $residentialProperties = $residentialQuery->get();
+
+            // Return combined result arrays
+            return response()->json([
+                'commercialProperties' => $commercialProperties, // Contains both filtered/unfiltered
+                'residentialProperties' => $residentialProperties // Contains both filtered/unfiltered
+            ], 200);
+        } else {
+            return response()->json([
+                'commercialProperties' => null, // Contains both filtered/unfiltered
+                'residentialProperties' => null // Contains both filtered/unfiltered
+            ], 200);
+        }
+        } catch (\Exception $e) {
+            // Log the error
+            $errorFrom = 'filterProperties';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error filtering properties',
+            ], 400);
+        }
     }
 }

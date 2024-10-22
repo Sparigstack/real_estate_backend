@@ -15,7 +15,7 @@ use App\Models\Status;
 use App\Models\Amenity;
 use App\Models\Country;
 use App\Models\State;
-
+use App\Http\Controllers\PlanController;
 
 class WingController extends Controller
 {
@@ -53,7 +53,7 @@ class WingController extends Controller
 
             // Insert wings into the wing_details table
             foreach ($request->wingsArray as $wing) {
-                $newWing =   WingDetail::create([
+                $newWing = WingDetail::create([
                     'property_id' => $propertyId,
                     'name' => $wing['wingName'],
                     'total_floors' => 0, // Set default or handle as needed
@@ -103,46 +103,70 @@ class WingController extends Controller
             $wingId = $request->input('wingId');
             $propertyId = $request->input('propertyId');
             $sameUnitCount = $request->input('sameUnitCount');
+            $userId = $request->input('userId');
 
-            $floorCountOfWing=WingDetail::where('id',$wingId)->pluck('total_floors')->first();
-            // return $floorCountOfWing;
-            WingDetail::where('id',$wingId)->update(['total_floors' =>$floorCountOfWing+$numberOfFloors]);
+            $floorCountOfWing = WingDetail::where('id', $wingId)->pluck('total_floors')->first();
+
+            WingDetail::where('id', $wingId)->update(['total_floors' => $floorCountOfWing + $numberOfFloors]);
+            $errors = null;
             for ($floorNumber = 1; $floorNumber <= $numberOfFloors; $floorNumber++) {
                 $floorDetail = new FloorDetail();
                 $floorDetail->property_id = $propertyId;
                 $floorDetail->wing_id = $wingId;
                 $floorDetail->save();
 
+
                 if ($sameUnitsFlag == 1) {
                     for ($unitIndex = 1; $unitIndex <= $sameUnitCount; $unitIndex++) {
-                        $unitDetail = new UnitDetail();
-                        $unitDetail->property_id = $propertyId;
-                        $unitDetail->wing_id = $wingId;
-                        $unitDetail->floor_id = $floorDetail->id;
-                        $unitDetail->name = sprintf('%d%02d', $floorNumber, $unitIndex);
-                        $unitDetail->save();
+                        $planController = new PlanController();
+                        $response = $planController->addPlanUsageLog($userId, 2);
+
+                        if ($response == 'success') {
+                            $unitDetail = new UnitDetail();
+                            $unitDetail->property_id = $propertyId;
+                            $unitDetail->wing_id = $wingId;
+                            $unitDetail->floor_id = $floorDetail->id;
+                            $unitDetail->name = sprintf('%d%02d', $floorNumber, $unitIndex);
+                            $unitDetail->save();
+                        } else {
+                            $errors = 'Limit reached! Upgrade your plan to create more units.';
+                        }
+
                     }
                 } else {
                     foreach ($unitDetails as $unit) {
                         if ($unit['floorNo'] == $floorNumber) {
                             for ($unitIndex = 1; $unitIndex <= $unit['unitCount']; $unitIndex++) {
-                                $unitDetail = new UnitDetail();
-                                $unitDetail->property_id = $propertyId;
-                                $unitDetail->wing_id = $wingId;
-                                $unitDetail->floor_id = $floorDetail->id;
-                                $unitDetail->name = sprintf('%d%02d', $floorNumber, $unitIndex);
-                                $unitDetail->save();
+                                $planController = new PlanController();
+                                $response = $planController->addPlanUsageLog($userId, 2);
+
+                                if ($response == 'success') {
+                                    $unitDetail = new UnitDetail();
+                                    $unitDetail->property_id = $propertyId;
+                                    $unitDetail->wing_id = $wingId;
+                                    $unitDetail->floor_id = $floorDetail->id;
+                                    $unitDetail->name = sprintf('%d%02d', $floorNumber, $unitIndex);
+                                    $unitDetail->save();
+                                } else {
+                                    $errors = 'Limit reached! Upgrade your plan to create more units.';
+                                }
+
                             }
                         }
                     }
                 }
             }
-
-            return response()->json([
-                'status' => 'success',
-                'message' => null,
-            ], 200);
-
+            if (!empty($errors)) {
+                return response()->json([
+                    'status' => 'error',
+                    'messages' => $errors,
+                ], 400);
+            } else {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => null,
+                ], 200);
+            }
         } catch (\Exception $e) {
             $errorFrom = 'AddWingsFloorDetails';
             $errorMessage = $e->getMessage();
@@ -220,7 +244,6 @@ class WingController extends Controller
             ], 400);
         }
     }
-
 
     public function getunitBasicDetails($uid)
     {
