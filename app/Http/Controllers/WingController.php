@@ -241,9 +241,7 @@ class WingController extends Controller
                 //     }
                 // }
 
-                } else {
-                    $deletingfloorPosition = null; // Floor not found, handle as needed
-                }
+              
                 // return  $deletingfloorPosition;
 
               
