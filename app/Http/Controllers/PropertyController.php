@@ -142,7 +142,7 @@ class PropertyController extends Controller
 
         try {
             // Fetch wings associated with the property
-            $fetchWings = WingDetail::with(['unitDetails']) // Eager load unit details
+            $fetchWings = WingDetail::with(['unitDetails', 'floorDetails']) // Eager load unit details
                 ->where('property_id', $pid)
                 ->get();
 
@@ -185,64 +185,7 @@ class PropertyController extends Controller
         }
     }
 
-    public function addWingDetails(Request $request)
-    {
-
-        try {
-            // Validate the incoming request
-            $request->validate([
-                'totalWings' => 'required|integer|min:1',
-                'propertyId' => 'required|integer|exists:user_properties,id',
-                'wingsArray' => 'required|array',
-                'wingsArray.*.wingName' => 'required|string|max:255',
-            ]);
-
-            // Retrieve the property ID from the user_properties table
-            $userProperty = UserProperty::findOrFail($request->propertyId);
-            $propertyId = $userProperty->id;
-
-            // Insert wings into the wing_details table
-            foreach ($request->wingsArray as $wing) {
-                $newWing =   WingDetail::create([
-                    'property_id' => $propertyId,
-                    'name' => $wing['wingName'],
-                    'total_floors' => 0, // Set default or handle as needed
-                ]);
-
-                // Collect the details of the added wing
-                $addedWings[] = [
-                    'wingId' => $newWing->id,
-                    'wingName' => $newWing->name,
-                    'totalFloors' => $newWing->total_floors,
-                ];
-            }
-
-            // Update the property_details table with total wings
-            $propertyDetails = PropertyDetail::firstOrCreate(
-                ['property_id' => $request->propertyId],
-                ['total_wings' => 0] // Initialize total_wings if not exists
-            );
-
-            // Increment total_wings by the number of wings added
-            $propertyDetails->total_wings += $request->totalWings;
-            $propertyDetails->save();
-
-            // Return success response
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Wings added successfully',
-            ], 200);
-        } catch (\Exception $e) {
-            $errorFrom = 'addWingDetails';
-            $errorMessage = $e->getMessage();
-            $priority = 'high';
-            Helper::errorLog($errorFrom, $errorMessage, $priority);
-            return response()->json([
-                'status' => 'error',
-                'message' => 'something went wrong',
-            ], 400);
-        }
-    }
+   
     // public function addWingDetails(Request $request)
     // {
     //     try {

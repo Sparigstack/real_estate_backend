@@ -38,6 +38,8 @@ class AuthController extends Controller
                 } catch (\Exception $e) {
                     Log::error("Mail sending failed: " . $e->getMessage());
                 }
+
+                User::where('email', $email)->update(['name' =>$username]);
             } else {
                 $otpExpire = UserOtp::where('email', $email)->where('expire_at', '<', now())->first();
                 if ($otpExpire) {
@@ -50,6 +52,7 @@ class AuthController extends Controller
                 $userOtp->username = $username;
                 $userOtp->expire_at = now()->addMinutes(3);
                 $userOtp->save();
+                User::where('email', $email)->update(['name' =>$username]);
                 try {
                     // Mail::to($email)->send(new GetOtpMail($otp));
                 } catch (\Exception $e) {
@@ -82,12 +85,12 @@ class AuthController extends Controller
             $validatedData = $validator->validated();
             $checkUser = User::where('email', $validatedData['email'])->first();
 
-            if ($checkUser && $checkUser->name !== $validatedData['username']) {
-                return response()->json([
-                    'status' => 'error',
-                    'msg' => 'Username and email do not match',
-                ], 400);
-            }
+            // if ($checkUser && $checkUser->name !== strtolower($validatedData['username'])) {
+            //     return response()->json([
+            //         'status' => 'error',
+            //         'message' => 'Username and email do not match',
+            //     ], 400);
+            // }
 
 
             $response = $this->generateAndSendOtp($validatedData['email'], $validatedData['username']);
@@ -133,6 +136,7 @@ class AuthController extends Controller
                         if ($userExist->tokens()) {
                             $userExist->tokens()->delete();
                         }
+                        $userExist->update(['name' =>$checkUserDetails->username]);
                         $token = $userExist->createToken('access_token')->accessToken;
                         $userId = $userExist->id;
                     } else {
