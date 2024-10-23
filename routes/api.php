@@ -5,7 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WingController;
+
 
 Route::post('/register-user', [AuthController::class, 'registerUser']);
 Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
@@ -57,6 +59,10 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/update-wing-details', [WingController::class, 'updateWingDetails']);
     Route::get('/get-unit-basic-details/{uid}', [WingController::class, 'getunitBasicDetails']); 
     Route::post('/add-new-unit', [WingController::class, 'addNewUnitForFloor']);
+
+
+    //units call
+    Route::get('/unit-lead-customer-info/{uid}', [UnitController::class, 'getUnitLeadDetails']); 
 // });
 
 

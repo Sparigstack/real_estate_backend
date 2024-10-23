@@ -25,4 +25,8 @@ class Lead extends Model
     {
         return $this->belongsTo(LeadSource::class, 'source_id', 'id');
     }
+    public function leadUnits()
+    {
+        return $this->hasMany(LeadUnit::class);
+    }
 }

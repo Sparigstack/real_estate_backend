@@ -21,17 +21,59 @@ class WingController extends Controller
 {
     public function getWingsBasicDetails($wid)
     {
-        $fetchWings = WingDetail::with([
-            'floorDetails' => function ($query) {
-                $query->orderBy('id', 'desc');
-                $query->with('unitDetails');
-            }
-        ])
-            ->withCount(['unitDetails', 'floorDetails'])
-            ->where('id', $wid)
-            ->first();
+        // $fetchWings = WingDetail::with([
+        //     'floorDetails' => function ($query) {
+        //         $query->orderBy('id', 'desc');
+        //         $query->with('unitDetails');
+        //     }
+        // ])
+        //     ->withCount(['unitDetails', 'floorDetails'])
+        //     ->where('id', $wid)
+        //     ->first();
 
-        return $fetchWings ? $fetchWings->makeHidden(['property_id', 'created_at', 'updated_at']) : null;
+        $fetchWings = WingDetail::with([
+            'floorDetails.unitDetails' => function ($query) {
+                // Eager load the related lead units
+                $query->with(['leadUnits.lead' => function ($query) {
+                    // Select necessary fields from the lead
+                    $query->select('id', 'name');
+                }]);
+            }
+            // 'floorDetails.unitDetails.leadUnits' => function ($query) {
+            //     $query->select('id', 'lead_id', 'unit_id');
+            // },
+            // 'floorDetails.unitDetails.paymentTransactions' => function ($query) {
+            //     $query->select('id', 'unit_id', 'amount', 'payment_type','booking_status'); // Include relevant fields
+            // }
+        ])
+        ->withCount(['unitDetails', 'floorDetails'])
+        ->where('id', $wid)
+        ->first();
+        
+
+        // Prepare the response
+    if ($fetchWings) {
+        // Calculate total leads per unit
+        foreach ($fetchWings->floorDetails as $floor) {
+            foreach ($floor->unitDetails as $unit) {
+                $unitLeads = $unit->leadUnits;
+
+                // Count leads and structure the array to include lead names and booking statuses
+                $unit->total_leads_count = $unitLeads->count();
+                $unit->lead_details = $unitLeads->map(function ($leadUnit) {
+                    return [
+                        'lead_id' => $leadUnit->lead_id,
+                        'lead_name' => $leadUnit->lead->name,
+                        'booking_status' => $leadUnit->booking_status,
+                    ];
+                });
+            }
+        }
+        return $fetchWings->makeHidden(['property_id', 'created_at', 'updated_at']);
+    }
+
+    return null;
+        // return $fetchWings ? $fetchWings->makeHidden(['property_id', 'created_at', 'updated_at']) : null;
     }
 
 
