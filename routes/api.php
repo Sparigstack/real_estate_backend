@@ -64,6 +64,7 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     //units call
     Route::get('/unit-lead-customer-info/{uid}', [UnitController::class, 'getUnitLeadDetails']); 
     Route::get('/get-lead-name-with-detail/{pid}', [UnitController::class, 'getLeadNames']); 
+    Route::post('/lead-attach-with-units', [UnitController::class, 'addLeadsAttachingWithUnits']); 
 // });
 
 
