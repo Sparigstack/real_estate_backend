@@ -8,7 +8,7 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WingController;
 use App\Http\Controllers\ChequeScanController;
-use App\Http\Controllers\imgDetectionController;
+
 
 
 Route::post('/register-user', [AuthController::class, 'registerUser']);
@@ -82,7 +82,6 @@ Route::get('/get-user-properties/{uid}', [LeadController::class, 'getUserPropert
 Route::post('/generate-lead', [LeadController::class, 'generateLead']); 
 Route::post('/web-form-lead', [LeadController::class, 'webFormLead']); 
 Route::post('/detect-cheque', [ChequeScanController::class, 'detectCheque']); 
-Route::post('/detect-cheque-tb', [imgDetectionController::class, 'processDocument']); 
 
 
 
