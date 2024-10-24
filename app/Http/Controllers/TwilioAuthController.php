@@ -115,7 +115,7 @@ class TwilioAuthController extends Controller
     //         }
     //         return response()->json([
     //             'status' => 'error',
-    //             'msg' => 'invalid  verification code'
+    //             'message' => 'invalid  verification code'
     //         ]);
 
     //     } catch (\Exception $e) {

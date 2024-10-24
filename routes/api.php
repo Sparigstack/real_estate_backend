@@ -5,9 +5,11 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WingController;
 use App\Http\Controllers\ChequeScanController;
 use App\Http\Controllers\imgDetectionController;
+
 
 Route::post('/register-user', [AuthController::class, 'registerUser']);
 Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
@@ -30,7 +32,7 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     // Route::get('/get-property-statuses/{statusFlag}', [PropertyController::class, 'getPropertyStatues']);
     // Route::get('/get-property-amenities', [PropertyController::class, 'getPropertyAmenities']);
     Route::get('/get-property-wings-basic-details/{pid}', [PropertyController::class, 'getPropertyWingsBasicDetails']);
-    Route::post('/add-wing-details', [PropertyController::class, 'addWingDetails']);
+    
 
     // Route::post('/add-unit-details', [PropertyController::class, 'addUnitDetails']);
     // Route::get('/get-wing-details/{propertyId}', [PropertyController::class, 'getWingDetails']);
@@ -52,11 +54,19 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/lead-messages/send', [LeadController::class, 'sendBulkMessages']);
     
     //wings call
+    Route::post('/add-wing-details', [WingController::class, 'addWingDetails']);
     Route::get('/get-wings-basic-details/{wid}', [WingController::class, 'getWingsBasicDetails']); 
     Route::post('/add-wings-floor-details', [WingController::class, 'addWingsFloorDetails']);
     Route::post('/bulk-updates-for-wings-details', [WingController::class, 'bulkUpdatesForWingsDetails']);
     Route::post('/update-wing-details', [WingController::class, 'updateWingDetails']);
     Route::get('/get-unit-basic-details/{uid}', [WingController::class, 'getunitBasicDetails']); 
+    Route::post('/add-new-unit', [WingController::class, 'addNewUnitForFloor']);
+
+
+    //units call
+    Route::get('/get-leads-info/{uid}', [UnitController::class, 'getAllUnitLeadDetails']); 
+    Route::get('/get-lead-name-with-detail/{pid}', [UnitController::class, 'getLeadNames']); 
+    Route::post('/lead-attach-with-units', [UnitController::class, 'addLeadsAttachingWithUnits']); 
 // });
 
 

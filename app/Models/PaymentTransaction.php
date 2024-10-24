@@ -9,7 +9,17 @@ class PaymentTransaction extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['customer_id', 'unit_id', 'property_id', 'payment_type', 'amount', 'transaction_notes'];
+    protected $casts = [
+        'booking_date' => 'date',
+        'payment_due_date' => 'date',
+    ];
+    // protected $table="unit_details";
+    protected $fillable = [
+        'customer_id', 'unit_id', 'property_id', 
+        'booking_date', 'payment_due_date', 
+        'token_amt', 'amount', 'payment_type', 
+        'transaction_notes'
+    ];
 
     public function customer()
     {
