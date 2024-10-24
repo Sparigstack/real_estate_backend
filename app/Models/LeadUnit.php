@@ -10,12 +10,9 @@ class LeadUnit extends Model
     use HasFactory;
 
     protected $table="lead_unit";
-    protected $fillable = ['lead_id', 'unit_id', 'booking_status'];
+    protected $fillable = ['interested_lead_id', 'unit_id', 'booking_status','allotted_lead_id'];
 
-    public function lead()
-    {
-        return $this->belongsTo(Lead::class);
-    }
+  
 
     public function unit()
     {
@@ -25,5 +22,14 @@ class LeadUnit extends Model
     public function paymentTransaction()
     {
         return $this->hasOne(PaymentTransaction::class, 'unit_id', 'unit_id');
+    }
+    public function allottedLead()
+    {
+        return $this->belongsTo(Lead::class, 'allotted_lead_id');
+    }
+
+    public function interestedLeads()
+    {
+        return Lead::whereIn('id', explode(',', $this->interested_lead_id))->get();
     }
 }

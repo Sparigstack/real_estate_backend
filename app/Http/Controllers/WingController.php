@@ -31,48 +31,78 @@ class WingController extends Controller
         //     ->where('id', $wid)
         //     ->first();
 
+
+        // 'floorDetails' => function ($query) {
+        //     // Order by 'id' in descending order
+        //     $query->orderBy('id', 'desc')
+        //           ->with(['unitDetails' => function ($query) {
+        //               // Eager load the related lead units and their associated leads
+        //               $query->with(['leadUnits.lead' => function ($query) {
+        //                   // Select necessary fields from the lead
+        //                   $query->select('id', 'name');
+        //               }]);
+        //           }]);
+        // }
+
+        // 'floorDetails.unitDetails.leadUnits' => function ($query) {
+        //     $query->select('id', 'lead_id', 'unit_id');
+        // },
+        // 'floorDetails.unitDetails.paymentTransactions' => function ($query) {
+        //     $query->select('id', 'unit_id', 'amount', 'payment_type','booking_status'); // Include relevant fields
+        // }
+
         $fetchWings = WingDetail::with([
             'floorDetails.unitDetails' => function ($query) {
-                // Eager load the related lead units
-                $query->with(['leadUnits.lead' => function ($query) {
-                    // Select necessary fields from the lead
-                    $query->select('id', 'name');
-                }]);
+                // Eager load the related lead units and their associated allotted lead
+                $query->with([
+                    'leadUnits' => function ($query) {
+                        // Fetch allotted_lead relationship in the lead units
+                        $query->with('allottedLead:id,name');
+                    }
+                ]);
             }
-            // 'floorDetails.unitDetails.leadUnits' => function ($query) {
-            //     $query->select('id', 'lead_id', 'unit_id');
-            // },
-            // 'floorDetails.unitDetails.paymentTransactions' => function ($query) {
-            //     $query->select('id', 'unit_id', 'amount', 'payment_type','booking_status'); // Include relevant fields
-            // }
         ])
-        ->withCount(['unitDetails', 'floorDetails'])
-        ->where('id', $wid)
-        ->first();
-        
+            ->withCount(['unitDetails', 'floorDetails'])
+            ->where('id', $wid)
+            ->first();
 
         // Prepare the response
-    if ($fetchWings) {
-        // Calculate total leads per unit
-        foreach ($fetchWings->floorDetails as $floor) {
-            foreach ($floor->unitDetails as $unit) {
-                $unitLeads = $unit->leadUnits;
+        if ($fetchWings) {
+            foreach ($fetchWings->floorDetails as $floor) {
+                foreach ($floor->unitDetails as $unit) {
+                    $unitLeads = $unit->leadUnits;
 
-                // Count leads and structure the array to include lead names and booking statuses
-                $unit->total_leads_count = $unitLeads->count();
-                $unit->lead_details = $unitLeads->map(function ($leadUnit) {
-                    return [
-                        'lead_id' => $leadUnit->lead_id,
-                        'lead_name' => $leadUnit->lead->name,
-                        'booking_status' => $leadUnit->booking_status,
-                    ];
-                });
+                    // Calculate total interested leads count by exploding and counting interested_lead_id
+                    $unit->interested_lead_count = $unitLeads->sum(function ($leadUnit) {
+                        return count(explode(',', $leadUnit->interested_lead_id));
+                    });
+
+
+                    // Modify lead_units to include 'allotted_lead_name' and remove 'allotted_lead' object
+                    $unit->lead_units = $unitLeads->map(function ($leadUnit) {
+                        // dd($leadUnit->allottedLead->name);
+                        return [
+                            'id' => $leadUnit->id,
+                            'interested_lead_id' => $leadUnit->interested_lead_id,
+                            'allotted_lead_id' => $leadUnit->allotted_lead_id,
+                            'unit_id' => $leadUnit->unit_id,
+                            'booking_status' => $leadUnit->booking_status,
+                            'created_at' => $leadUnit->created_at,
+                            'updated_at' => $leadUnit->updated_at,
+                            'allotted_lead_name' => $leadUnit->allottedLead->name ?? null, // Directly include allotted_lead_name
+                        ];
+                    });
+
+                    // No need for lead_details, it has been removed
+                    unset($unit->leadUnits);
+                }
             }
-        }
-        return $fetchWings->makeHidden(['property_id', 'created_at', 'updated_at']);
-    }
 
-    return null;
+            // Return the modified result without hidden fields
+            return $fetchWings->makeHidden(['property_id', 'created_at', 'updated_at']);
+        }
+
+        return null;
         // return $fetchWings ? $fetchWings->makeHidden(['property_id', 'created_at', 'updated_at']) : null;
     }
 
@@ -246,27 +276,27 @@ class WingController extends Controller
                 // UnitDetail::where('id', $unitId)->forceDelete();
 
                 $deletedUnit = UnitDetail::where('id', $unitId)->first();
-            if ($deletedUnit) {
-                $deletedUnitNumber = (int)$deletedUnit->name; // Assuming the name is a string number like '302'
-                $floorId = $deletedUnit->floor_id;
+                if ($deletedUnit) {
+                    $deletedUnitNumber = (int)$deletedUnit->name; // Assuming the name is a string number like '302'
+                    $floorId = $deletedUnit->floor_id;
 
-                // Delete the unit
-                $deletedUnit->forceDelete();
+                    // Delete the unit
+                    $deletedUnit->forceDelete();
 
-                // Fetch the units on the same floor with unit numbers greater than the deleted one
-                $unitsToShift = UnitDetail::where('floor_id', $floorId)
-                    ->where('name', '>', $deletedUnitNumber) // Get units with names (numbers) greater than the deleted one
-                    ->orderBy('name') // Order by name to handle shifts sequentially
-                    ->get();
+                    // Fetch the units on the same floor with unit numbers greater than the deleted one
+                    $unitsToShift = UnitDetail::where('floor_id', $floorId)
+                        ->where('name', '>', $deletedUnitNumber) // Get units with names (numbers) greater than the deleted one
+                        ->orderBy('name') // Order by name to handle shifts sequentially
+                        ->get();
 
-                // Shift the unit numbers
-                foreach ($unitsToShift as $unit) {
-                    $oldUnitNumber = (int)$unit->name;
-                    $newUnitNumber = $oldUnitNumber - 1; // Decrement the unit number
-                    $unit->update(['name' => $newUnitNumber]);
-                    // echo "   " .$unit->id."-".$newUnitNumber ." ";
+                    // Shift the unit numbers
+                    foreach ($unitsToShift as $unit) {
+                        $oldUnitNumber = (int)$unit->name;
+                        $newUnitNumber = $oldUnitNumber - 1; // Decrement the unit number
+                        $unit->update(['name' => $newUnitNumber]);
+                        // echo "   " .$unit->id."-".$newUnitNumber ." ";
+                    }
                 }
-            }
 
                 // // Fetch the current floor's units in ascending order
                 // $units = UnitDetail::where('floor_id', $floorId)

@@ -87,7 +87,6 @@ class UnitController extends Controller
                 // Fetch property_id based on the unit
                
                 PaymentTransaction::create([
-                    'customer_id' => 1, // Default customer_id for now
                     'unit_id' => $unitId,
                     'property_id' => $unit->property_id, // Assuming unit has property_id
                     'booking_date' => $bookingDate,
