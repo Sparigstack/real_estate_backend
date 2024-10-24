@@ -35,10 +35,7 @@ class UnitController extends Controller
     
                 // Check if the unit exists
                 if (!$unit) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Unit not found',
-                    ], 200);
+                    return null;
                 }
     
                 // Prepare the response data
@@ -64,15 +61,9 @@ class UnitController extends Controller
                     return $leads; // Return the detailed leads for this lead unit
                 });
     
-                return response()->json([
-                    'status' => 'success',
-                    'message'=>null
-                ], 200);
+                return $leadDetails; 
             } else {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Unit ID cannot be null',
-                ], 200);
+                return null;
             }
         } catch (Exception $e) {
             // Log the error
