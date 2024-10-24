@@ -24,6 +24,69 @@ use Exception;
 
 class UnitController extends Controller
 {
+
+    public function getAllUnitLeadDetails($uid)
+    {
+        try {
+            if ($uid !== 'null') {
+                // Fetch the unit based on the provided uid
+                $unit = UnitDetail::with('leadUnits.allottedLead') // Eager load lead units and their allotted leads
+                            ->find($uid);
+    
+                // Check if the unit exists
+                if (!$unit) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Unit not found',
+                    ], 200);
+                }
+    
+                // Prepare the response data
+                $leadDetails = $unit->leadUnits->flatMap(function ($leadUnit) {
+                    // Get the interested lead IDs and split them into an array
+                    $interestedLeadIds = explode(',', $leadUnit->interested_lead_id);
+    
+                    // Fetch details for each interested lead
+                    $leads = Lead::whereIn('id', $interestedLeadIds)
+                        ->get()
+                        ->map(function ($lead) use ($leadUnit) {
+                            return [
+                                'id' => $lead->id,
+                                'name' => $lead->name,
+                                'email' => $lead->email,
+                                'contact_no' => $lead->contact_no,
+                                'budget' => $lead->budget,
+                                'booking_status' => $leadUnit->booking_status,
+                                // Add any additional lead fields you need
+                            ];
+                        });
+    
+                    return $leads; // Return the detailed leads for this lead unit
+                });
+    
+                return response()->json([
+                    'status' => 'success',
+                    'message'=>null
+                ], 200);
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unit ID cannot be null',
+                ], 200);
+            }
+        } catch (Exception $e) {
+            // Log the error
+            $errorFrom = 'getAllUnitLeadDetails';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
     public function getLeadNames($pid)
     {
 
@@ -85,7 +148,7 @@ class UnitController extends Controller
             // If any of the payment fields are not null, add entry to `payment_transactions`
             if ($bookingDate || $nextPayableAmt || $paymentDueDate || $tokenAmt) {
                 // Fetch property_id based on the unit
-               
+
                 PaymentTransaction::create([
                     'unit_id' => $unitId,
                     'property_id' => $unit->property_id, // Assuming unit has property_id
@@ -97,7 +160,7 @@ class UnitController extends Controller
                     'transaction_notes' => 'New transaction', // Example notes
                 ]);
                 $unit->status_id = 3;
-            }else {
+            } else {
                 // Update unit status to 1 (no payment transaction)
                 $unit->status_id = 1;
             }
