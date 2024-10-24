@@ -32,16 +32,12 @@ class WingController extends Controller
         //     ->first();
 
         $fetchWings = WingDetail::with([
-            'floorDetails' => function ($query) {
-                // Order by 'id' in descending order
-                $query->orderBy('id', 'desc')
-                      ->with(['unitDetails' => function ($query) {
-                          // Eager load the related lead units and their associated leads
-                          $query->with(['leadUnits.lead' => function ($query) {
-                              // Select necessary fields from the lead
-                              $query->select('id', 'name');
-                          }]);
-                      }]);
+            'floorDetails.unitDetails' => function ($query) {
+                // Eager load the related lead units
+                $query->with(['leadUnits.lead' => function ($query) {
+                    // Select necessary fields from the lead
+                    $query->select('id', 'name');
+                }]);
             }
             // 'floorDetails.unitDetails.leadUnits' => function ($query) {
             //     $query->select('id', 'lead_id', 'unit_id');

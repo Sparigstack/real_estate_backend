@@ -77,14 +77,15 @@ class UnitController extends Controller
                 'booking_status' => 0, // Default status, update as needed
             ]);
 
+            $unit = UnitDetail::find($unitId);
+            if (!$unit) {
+                throw new \Exception("Unit not found.");
+            }
+
             // If any of the payment fields are not null, add entry to `payment_transactions`
             if ($bookingDate || $nextPayableAmt || $paymentDueDate || $tokenAmt) {
                 // Fetch property_id based on the unit
-                $unit = UnitDetail::find($unitId);
-                if (!$unit) {
-                    throw new \Exception("Unit not found.");
-                }
-
+               
                 PaymentTransaction::create([
                     'customer_id' => 1, // Default customer_id for now
                     'unit_id' => $unitId,
@@ -93,10 +94,16 @@ class UnitController extends Controller
                     'payment_due_date' => $paymentDueDate,
                     'token_amt' => $tokenAmt,
                     'amount' => $nextPayableAmt,
-                    'payment_type' => 'default', // You can modify this as needed
+                    'payment_type' => 0, // You can modify this as needed
                     'transaction_notes' => 'New transaction', // Example notes
                 ]);
+                $unit->status_id = 3;
+            }else {
+                // Update unit status to 1 (no payment transaction)
+                $unit->status_id = 1;
             }
+
+            $unit->save();
 
             // Return success response
             return response()->json([
