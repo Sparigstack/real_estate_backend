@@ -7,6 +7,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WingController;
+use App\Http\Controllers\ChequeScanController;
+
 
 
 Route::post('/register-user', [AuthController::class, 'registerUser']);
@@ -82,7 +84,7 @@ Route::get('/get-user-properties/{uid}', [LeadController::class, 'getUserPropert
 //rest api/webform api for leads
 Route::post('/generate-lead', [LeadController::class, 'generateLead']); 
 Route::post('/web-form-lead', [LeadController::class, 'webFormLead']); 
-
+Route::post('/detect-cheque', [ChequeScanController::class, 'detectCheque']); 
 
 
 
