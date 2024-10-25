@@ -425,14 +425,14 @@ class UnitController extends Controller
                     'message' => 'Invalid parameters provided.',
                 ], 200);
             }
-        
+
             // Initialize the response data
             $responseData = [];
-        
+
             // Common fields for Lead or Customer type
             $leadUnit = LeadUnit::with(['paymentTransaction' => function ($query) {
-                    $query->orderBy('id', 'desc'); // Order by transaction ID in descending order
-                }])
+                $query->orderBy('id', 'desc'); // Order by transaction ID in descending order
+            }])
                 ->where('unit_id', $uid)
                 ->when($type == 1, function ($query) use ($bid) {
                     return $query->where('allocated_lead_id', $bid);
@@ -441,28 +441,28 @@ class UnitController extends Controller
                     return $query->where('allocated_customer_id', $bid);
                 })
                 ->first();
-        
+
             if (!$leadUnit) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Unit not found for the provided unit ID and lead/customer ID.',
                 ], 404);
             }
-        
+
             // Populate general fields from either Lead or Customer
             $responseData['contact_name'] = $type == 1 ? $leadUnit->allocatedLead->name : $leadUnit->allocatedCustomer->name;
             $responseData['contact_email'] = $type == 1 ? $leadUnit->allocatedLead->email : $leadUnit->allocatedCustomer->email;
             $responseData['contact_number'] = $type == 1 ? $leadUnit->allocatedLead->contact_no : $leadUnit->allocatedCustomer->contact_no;
-        
+
             // Get all payment transactions as a collection
             $paymentTransactions = $leadUnit->paymentTransaction()->orderBy('id', 'desc')->get();
-        
+
             // Set the booking_date and token_amt from the latest transaction, if available
             $latestTransaction = $paymentTransactions->first();
             $responseData['booking_date'] = $latestTransaction->booking_date ?? null;
             $responseData['token_amt'] = $latestTransaction->token_amt ?? null;
             $responseData['total_amt'] = $latestTransaction->amount ?? null;
-        
+
             // Determine the payment schedule
             $paymentSchedule = $paymentTransactions->map(function ($transaction) {
                 return [
@@ -470,7 +470,7 @@ class UnitController extends Controller
                     'payment_due_date' => $transaction->payment_due_date,
                 ];
             });
-        
+
             // Check conditions for payment_schedule array
             if ($paymentTransactions->count() > 1) {
                 // Filter out any entries where both 'next_payable_amt' and 'payment_due_date' are null
@@ -483,7 +483,7 @@ class UnitController extends Controller
                     ? [$paymentSchedule->first()]
                     : [];
             }
-        
+
             return response()->json([
                 'status' => 'success',
                 'data' => $responseData,
@@ -491,6 +491,49 @@ class UnitController extends Controller
         } catch (Exception $e) {
             // Log the error
             $errorFrom = 'getBookedUnitDetail';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
+
+    public function getUnitInterestedLeads($uid)
+    {
+        try {
+            if ($uid != 'null') {
+                // Fetch lead unit by unit ID
+                $leadUnit = LeadUnit::where('unit_id', $uid)->first();
+
+                // Check if the lead unit exists
+                if (!$leadUnit) {
+                    return null;
+                }
+
+                // Get the interested lead IDs from the lead unit
+                $interestedLeadIds = explode(',', $leadUnit->interested_lead_id); // Convert comma-separated string to array
+
+                // Fetch details of interested leads
+                $interestedLeads = Lead::whereIn('id', $interestedLeadIds)->get();
+
+                // Check if any leads were found
+                if ($interestedLeads->isEmpty()) {
+                    return null;
+                }
+
+
+                    return $interestedLeads;
+ 
+            } else {
+                return null;
+            }
+        } catch (Exception $e) {
+            // Log the error
+            $errorFrom = 'getUnitInterestedLeads';
             $errorMessage = $e->getMessage();
             $priority = 'high';
             Helper::errorLog($errorFrom, $errorMessage, $priority);
