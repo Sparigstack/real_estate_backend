@@ -425,10 +425,10 @@ class UnitController extends Controller
                     'message' => 'Invalid parameters provided.',
                 ], 200);
             }
-    
+        
             // Initialize the response data
             $responseData = [];
-    
+        
             // Common fields for Lead or Customer type
             $leadUnit = LeadUnit::with(['paymentTransaction' => function ($query) {
                     $query->orderBy('id', 'desc'); // Order by transaction ID in descending order
@@ -441,36 +441,49 @@ class UnitController extends Controller
                     return $query->where('allocated_customer_id', $bid);
                 })
                 ->first();
-    
+        
             if (!$leadUnit) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Unit not found for the provided unit ID and lead/customer ID.',
                 ], 404);
             }
-    
+        
             // Populate general fields from either Lead or Customer
             $responseData['contact_name'] = $type == 1 ? $leadUnit->allocatedLead->name : $leadUnit->allocatedCustomer->name;
             $responseData['contact_email'] = $type == 1 ? $leadUnit->allocatedLead->email : $leadUnit->allocatedCustomer->email;
             $responseData['contact_number'] = $type == 1 ? $leadUnit->allocatedLead->contact_no : $leadUnit->allocatedCustomer->contact_no;
-    
+        
             // Get all payment transactions as a collection
             $paymentTransactions = $leadUnit->paymentTransaction()->orderBy('id', 'desc')->get();
-    
+        
             // Set the booking_date and token_amt from the latest transaction, if available
             $latestTransaction = $paymentTransactions->first();
             $responseData['booking_date'] = $latestTransaction->booking_date ?? null;
             $responseData['token_amt'] = $latestTransaction->token_amt ?? null;
             $responseData['total_amt'] = $latestTransaction->amount ?? null;
-    
-            // Create an array of next_payable_amt and payment_due_date from all transactions
-            $responseData['payment_schedule'] = $paymentTransactions->map(function ($transaction) {
+        
+            // Determine the payment schedule
+            $paymentSchedule = $paymentTransactions->map(function ($transaction) {
                 return [
                     'next_payable_amt' => $transaction->next_payable_amt,
                     'payment_due_date' => $transaction->payment_due_date,
                 ];
             });
-    
+        
+            // Check conditions for payment_schedule array
+            if ($paymentTransactions->count() > 1) {
+                // Filter out any entries where both 'next_payable_amt' and 'payment_due_date' are null
+                $responseData['payment_schedule'] = $paymentSchedule->filter(function ($entry) {
+                    return !is_null($entry['next_payable_amt']) || !is_null($entry['payment_due_date']);
+                })->values(); // reindex array after filtering
+            } else {
+                // Only one entry, set payment_schedule as an empty array if both fields are null
+                $responseData['payment_schedule'] = $latestTransaction && ($latestTransaction->next_payable_amt !== null || $latestTransaction->payment_due_date !== null)
+                    ? [$paymentSchedule->first()]
+                    : [];
+            }
+        
             return response()->json([
                 'status' => 'success',
                 'data' => $responseData,
