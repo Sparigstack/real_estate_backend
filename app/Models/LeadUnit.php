@@ -25,7 +25,12 @@ class LeadUnit extends Model
     }
     public function allottedLead()
     {
-        return $this->belongsTo(Lead::class, 'allotted_lead_id');
+        return $this->belongsTo(Lead::class, 'allocated_lead_id');
+    }
+
+    public function allottedCustomer()
+    {
+        return $this->belongsTo(Customer::class, 'allocated_customer_id');
     }
 
     public function interestedLeads()

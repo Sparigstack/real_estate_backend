@@ -17,7 +17,7 @@ class PaymentTransaction extends Model
     protected $fillable = [
         'customer_id', 'unit_id', 'property_id', 
         'booking_date', 'payment_due_date', 
-        'token_amt', 'amount', 'payment_type', 
+        'token_amt', 'amount', 'payment_type', 'next_payable_amt',
         'transaction_notes'
     ];
 

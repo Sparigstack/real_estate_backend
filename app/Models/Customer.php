@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Customer extends Model
 {
     use HasFactory;
-    protected $fillable = ['property_id', 'lead_unit_id', 'name', 'email', 'contact_no', 'profile_pic'];
+    protected $fillable = ['property_id', 'unit_id', 'name', 'email', 'contact_no', 'profile_pic'];
 
 
     public function property()
@@ -15,8 +15,8 @@ class Customer extends Model
         return $this->belongsTo(UserProperty::class);
     }
 
-    public function leadUnit()
+    public function unit()
     {
-        return $this->belongsTo(LeadUnit::class);
+        return $this->belongsTo(UnitDetail::class);
     }
 }
