@@ -83,30 +83,31 @@ class WingController extends Controller
 
 
                     // Modify lead_units to include 'allotted_lead_name' and remove 'allotted_lead' object
-                    $unit->lead_units = $unitLeads->map(function ($leadUnit) {
+                    // Map the first lead_unit as an object if it exists
+                $firstLeadUnit = $unitLeads->first();
+                if ($firstLeadUnit) {
+                    $allocatedName = null;
+                    if ($firstLeadUnit->allocated_lead_id) {
+                        $allocatedName = $firstLeadUnit->allocatedLead->name ?? null;
+                    } elseif ($firstLeadUnit->allocated_customer_id) {
+                        $allocatedName = $firstLeadUnit->allocatedCustomer->name ?? null;
+                    }
 
-                        $allocatedName = null;
-
-                        // Check if allocated_lead_id or allocated_customer_id is filled
-                        if ($leadUnit->allocated_lead_id) {
-                            $allocatedName = $leadUnit->allocatedLead->name ?? null;
-                        } elseif ($leadUnit->allocated_customer_id) {
-                            $allocatedName = $leadUnit->allocatedCustomer->name ?? null;
-                        }
-
-                        return [
-                            'id' => $leadUnit->id,
-                            'interested_lead_id' => $leadUnit->interested_lead_id,
-                            'allocated_lead_id' => $leadUnit->allocated_lead_id,
-                            'allocated_customer_id' => $leadUnit->allocated_customer_id,
-                            'unit_id' => $leadUnit->unit_id,
-                            'booking_status' => $leadUnit->booking_status,
-                            'created_at' => $leadUnit->created_at,
-                            'updated_at' => $leadUnit->updated_at,
-                            'allocated_name' => $allocatedName ?? null, // Directly include allotted_lead_name
-                        ];
-                    });
-
+                    // Set lead_units as an object instead of an array
+                    $unit->lead_units = [
+                        'id' => $firstLeadUnit->id,
+                        'interested_lead_id' => $firstLeadUnit->interested_lead_id,
+                        'allocated_lead_id' => $firstLeadUnit->allocated_lead_id,
+                        'allocated_customer_id' => $firstLeadUnit->allocated_customer_id,
+                        'unit_id' => $firstLeadUnit->unit_id,
+                        'booking_status' => $firstLeadUnit->booking_status,
+                        'created_at' => $firstLeadUnit->created_at,
+                        'updated_at' => $firstLeadUnit->updated_at,
+                        'allocated_name' => $allocatedName,
+                    ];
+                } else {
+                    $unit->lead_units = null;
+                }
                     // No need for lead_details, it has been removed
                     unset($unit->leadUnits);
                 }
