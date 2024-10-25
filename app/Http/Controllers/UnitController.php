@@ -483,6 +483,18 @@ class UnitController extends Controller
                     ? [$paymentSchedule->first()]
                     : [];
             }
+            // Include unit details
+            if ($leadUnit->unit) {
+                $unitDetail = $leadUnit->unit;
+                $responseData['unit_details'] = [
+                    'wing_name' => $unitDetail->wingDetail->name ?? null,
+                    'unit_name' => $unitDetail->name ?? null,
+                    'unit_size' => $unitDetail->square_feet ?? null,
+                    'unit_price' => $unitDetail->price ?? null,
+                ];
+            } else {
+                $responseData['unit_details'] = null; // Or handle as needed
+            }
 
             return response()->json([
                 'status' => 'success',
@@ -526,8 +538,7 @@ class UnitController extends Controller
                 }
 
 
-                    return $interestedLeads;
- 
+                return $interestedLeads;
             } else {
                 return null;
             }
