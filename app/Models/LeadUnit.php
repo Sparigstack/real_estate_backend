@@ -23,12 +23,12 @@ class LeadUnit extends Model
     {
         return $this->hasOne(PaymentTransaction::class, 'unit_id', 'unit_id');
     }
-    public function allottedLead()
+    public function allocatedLead()
     {
         return $this->belongsTo(Lead::class, 'allocated_lead_id');
     }
 
-    public function allottedCustomer()
+    public function allocatedCustomer()
     {
         return $this->belongsTo(Customer::class, 'allocated_customer_id');
     }

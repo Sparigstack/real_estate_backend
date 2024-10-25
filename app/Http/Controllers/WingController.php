@@ -57,7 +57,7 @@ class WingController extends Controller
                 $query->with([
                     'leadUnits' => function ($query) {
                         // Fetch allotted_lead relationship in the lead units
-                        $query->with('allottedLead:id,name');
+                        $query->with('allocatedLead:id,name');
                     }
                 ]);
             }
@@ -78,18 +78,32 @@ class WingController extends Controller
                     });
 
 
+
+                    $unit->booking_status = $unitLeads->pluck('booking_status')->first();
+
+
                     // Modify lead_units to include 'allotted_lead_name' and remove 'allotted_lead' object
                     $unit->lead_units = $unitLeads->map(function ($leadUnit) {
-                        // dd($leadUnit->allottedLead->name);
+
+                        $allocatedName = null;
+
+                        // Check if allocated_lead_id or allocated_customer_id is filled
+                        if ($leadUnit->allocated_lead_id) {
+                            $allocatedName = $leadUnit->allocatedLead->name ?? null;
+                        } elseif ($leadUnit->allocated_customer_id) {
+                            $allocatedName = $leadUnit->allocatedCustomer->name ?? null;
+                        }
+
                         return [
                             'id' => $leadUnit->id,
                             'interested_lead_id' => $leadUnit->interested_lead_id,
-                            'allotted_lead_id' => $leadUnit->allotted_lead_id,
+                            'allocated_lead_id' => $leadUnit->allocated_lead_id,
+                            'allocated_customer_id' => $leadUnit->allocated_customer_id,
                             'unit_id' => $leadUnit->unit_id,
                             'booking_status' => $leadUnit->booking_status,
                             'created_at' => $leadUnit->created_at,
                             'updated_at' => $leadUnit->updated_at,
-                            'allotted_lead_name' => $leadUnit->allottedLead->name ?? null, // Directly include allotted_lead_name
+                            'allocated_name' => $allocatedName ?? null, // Directly include allotted_lead_name
                         ];
                     });
 
