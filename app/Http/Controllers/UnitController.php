@@ -425,63 +425,52 @@ class UnitController extends Controller
                     'message' => 'Invalid parameters provided.',
                 ], 200);
             }
-
+    
             // Initialize the response data
             $responseData = [];
-
-            if ($type == 1) { // Type 1: Lead
-                // Fetch the lead unit based on unit ID and allocated lead ID
-                $leadUnit = LeadUnit::with(['allocatedLead', 'paymentTransaction'])
-                    ->where('unit_id', $uid)
-                    ->where('allocated_lead_id', $bid)
-                    ->first();
-
-                if ($leadUnit) {
-                    // Populate the response data
-                    $responseData['booking_date'] = $leadUnit->paymentTransaction->booking_date ?? null;
-                    $responseData['token_amt'] = $leadUnit->paymentTransaction->token_amt ?? null;
-                    $responseData['payment_due_date'] = $leadUnit->paymentTransaction->payment_due_date ?? null;
-                    $responseData['next_payable_amt'] = $leadUnit->paymentTransaction->next_payable_amt ?? null;
-                    $responseData['contact_name'] = $leadUnit->allocatedLead->name ?? null;
-                    $responseData['contact_email'] = $leadUnit->allocatedLead->email ?? null;
-                    $responseData['contact_number'] = $leadUnit->allocatedLead->contact_no ?? null;
-                    $responseData['total_amt'] = $leadUnit->paymentTransaction->amount ?? null;
-                } else {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Lead unit not found for the provided unit ID and lead ID.',
-                    ], 404);
-                }
-            } elseif ($type == 2) { // Type 2: Customer
-                // Fetch the lead unit based on unit ID and allocated customer ID
-                $leadUnit = LeadUnit::with(['allocatedCustomer', 'paymentTransaction'])
-                    ->where('unit_id', $uid)
-                    ->where('allocated_customer_id', $bid)
-                    ->first();
-
-                if ($leadUnit) {
-                    // Populate the response data
-                    $responseData['booking_date'] = $leadUnit->paymentTransaction->booking_date ?? null;
-                    $responseData['token_amt'] = $leadUnit->paymentTransaction->token_amt ?? null;
-                    $responseData['payment_due_date'] = $leadUnit->paymentTransaction->payment_due_date ?? null;
-                    $responseData['next_payable_amt'] = $leadUnit->paymentTransaction->next_payable_amt ?? null;
-                    $responseData['contact_name'] = $leadUnit->allocatedCustomer->name ?? null;
-                    $responseData['contact_email'] = $leadUnit->allocatedCustomer->email ?? null;
-                    $responseData['contact_number'] = $leadUnit->allocatedCustomer->contact_no ?? null;
-                    $responseData['total_amt'] = $leadUnit->paymentTransaction->amount ?? null;
-                } else {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Customer unit not found for the provided unit ID and customer ID.',
-                    ], 404);
-                }
-            } else {
+    
+            // Common fields for Lead or Customer type
+            $leadUnit = LeadUnit::with(['paymentTransaction' => function ($query) {
+                    $query->orderBy('id', 'desc'); // Order by transaction ID in descending order
+                }])
+                ->where('unit_id', $uid)
+                ->when($type == 1, function ($query) use ($bid) {
+                    return $query->where('allocated_lead_id', $bid);
+                })
+                ->when($type == 2, function ($query) use ($bid) {
+                    return $query->where('allocated_customer_id', $bid);
+                })
+                ->first();
+    
+            if (!$leadUnit) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Invalid type provided.',
-                ], 400);
+                    'message' => 'Unit not found for the provided unit ID and lead/customer ID.',
+                ], 404);
             }
-
+    
+            // Populate general fields from either Lead or Customer
+            $responseData['contact_name'] = $type == 1 ? $leadUnit->allocatedLead->name : $leadUnit->allocatedCustomer->name;
+            $responseData['contact_email'] = $type == 1 ? $leadUnit->allocatedLead->email : $leadUnit->allocatedCustomer->email;
+            $responseData['contact_number'] = $type == 1 ? $leadUnit->allocatedLead->contact_no : $leadUnit->allocatedCustomer->contact_no;
+    
+            // Get all payment transactions as a collection
+            $paymentTransactions = $leadUnit->paymentTransaction()->orderBy('id', 'desc')->get();
+    
+            // Set the booking_date and token_amt from the latest transaction, if available
+            $latestTransaction = $paymentTransactions->first();
+            $responseData['booking_date'] = $latestTransaction->booking_date ?? null;
+            $responseData['token_amt'] = $latestTransaction->token_amt ?? null;
+            $responseData['total_amt'] = $latestTransaction->amount ?? null;
+    
+            // Create an array of next_payable_amt and payment_due_date from all transactions
+            $responseData['payment_schedule'] = $paymentTransactions->map(function ($transaction) {
+                return [
+                    'next_payable_amt' => $transaction->next_payable_amt,
+                    'payment_due_date' => $transaction->payment_due_date,
+                ];
+            });
+    
             return response()->json([
                 'status' => 'success',
                 'data' => $responseData,
