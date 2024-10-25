@@ -17,11 +17,11 @@ class UserController extends Controller
     $companyDetails = CompanyDetail::with('user')->where('user_id', $uid)->first();
     if ($companyDetails) {
         return response()->json([
-            'msg' => $companyDetails
+            'message' => $companyDetails
         ], 200);
     } else {
         return response()->json([
-            'msg' => null,
+            'message' => null,
         ], 200);
     }
 }
@@ -87,5 +87,30 @@ class UserController extends Controller
         ],400);
         }
 
+    }
+
+    public function getUserDetails($uid)
+    {
+        $userDetails = User::where('id', $uid)->first();
+        if ($userDetails) {
+            // Check if client_id and client_secret_key are missing, generate if needed
+            if (empty($userDetails->client_id)) {
+                $userDetails->client_id = uniqid('client_', true);
+            }
+            
+            if (empty($userDetails->client_secret_key)) {
+                $userDetails->client_secret_key = bin2hex(random_bytes(16)); // Generate a random 32-character key
+            }
+
+        // Save the new values if they were generated
+        $userDetails->save();
+            return response()->json([
+                'message' => $userDetails
+            ], 200);
+        } else {
+            return response()->json([
+                'message' => null,
+            ], 400);
+        }
     }
 }

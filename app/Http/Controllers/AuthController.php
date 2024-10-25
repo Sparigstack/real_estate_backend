@@ -10,6 +10,7 @@ use Hash;
 use App\Helper;
 use Twilio\Rest\Client;
 use App\Mail\GetOtpMail;
+use App\Models\UserProperty;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
@@ -17,11 +18,20 @@ use Illuminate\Support\Facades\Log;
 class AuthController extends Controller
 {
 
-    public function generateAndSendOtp($email)
+    public function generateAndSendOtp($email,$username)
     {
         try {
             $otp = rand(100000, 999999);
             $checkUserOtp = UserOtp::where('email', $email)->where('expire_at', '>', now())->first();
+           
+            // Remove expired OTPs
+            UserOtp::where('email', $email)
+            ->where(function ($query) {
+                $query->where('expire_at', '<', now())
+                      ->orWhere('verified', '1')
+                      ->orWhereNotNull('deleted_at');
+            })
+            ->forceDelete();
             if ($checkUserOtp) {
                 try {
                     // Mail::to($email)->send(new GetOtpMail($checkUserOtp->otp));
@@ -37,6 +47,7 @@ class AuthController extends Controller
                 $userOtp->otp = $otp;
                 $userOtp->email = $email;
                 $userOtp->verified = false;
+                $userOtp->username = $username;
                 $userOtp->expire_at = now()->addMinutes(3);
                 $userOtp->save();
                 try {
@@ -62,22 +73,23 @@ class AuthController extends Controller
         try {
             $validator = validator($request->all(), [
                 'email' => 'required|string|email|max:255',
+                'username'=> 'required|string|max:45'
             ]);
             if ($validator->fails()) {
                 return response()->json($validator->errors(), 400);
             }
 
             $validatedData = $validator->validated();
-            $response = $this->generateAndSendOtp($validatedData['email']);
+            $response = $this->generateAndSendOtp($validatedData['email'],$validatedData['username']);
             if ($response == 'success') {
                 return response()->json([
                     'status' => 'success',
-                    'msg' => 'otp sent successfully',
+                    'message' => 'otp sent successfully',
                 ], 200);
             } else {
                 return response()->json([
                     'status' => 'error',
-                    'msg' => 'something went wrong',
+                    'message' => 'something went wrong',
                 ], 400);
             }
 
@@ -88,7 +100,7 @@ class AuthController extends Controller
             Helper::errorLog($errorFrom, $errorMessage, $priority);
             return response()->json([
                 'status' => 'error',
-                'msg' => 'something went wrong',
+                'message' => 'something went wrong',
             ], 400);
         }
     }
@@ -100,6 +112,7 @@ class AuthController extends Controller
         {
         $otp = $request->input('otp');
         $email = $request->input('email');
+        $flag=0;
 
             $checkUserDetails = UserOtp::where('email', $email)->where('otp', $otp)->first();
             if ($checkUserDetails) {
@@ -116,32 +129,44 @@ class AuthController extends Controller
                     } else {
                         $newUser = new User();
                         $newUser->email = $email;
+                        $newUser->name = $checkUserDetails->username;
                         $newUser->save();
                         $userId = $newUser->id;
                         $token = $newUser->createToken('access_token')->accessToken;
                     }
                     $checkUserDetails->delete();
+
+                    
+                    //check if this user have any property if commercial or residential then send flag =1
+                    $userPropertyCount=UserProperty::where('user_id',$userId)->count();
+                    if($userPropertyCount>0){
+                        $flag=1;
+                    }
+
                     return response()->json([
                         'status' => 'success',
-                        'msg' => null,
+                        'message' => null,
                         'token' => $token,
-                        'userId' => $userId
+                        'userId' => $userId,
+                        'userProperty'=> $flag,
                     ], 200);
                 } else {
                     $checkUserDetails->delete();
                     return response()->json([
                         'status' => 'error',
-                        'msg' => null,
+                        'message' => null,
                         'token' => null,
-                        'userId' => null
+                        'userId' => null,
+                        'userProperty'=> $flag,
                     ], 400);
                 }
             } else {
                 return response()->json([
                     'status' => 'error',
-                    'msg' => 'Invalid Otp. Please try again.',
+                    'message' => 'Invalid Otp. Please try again.',
                     'token' => null,
-                    'userId' => null
+                    'userId' => null,
+                    'userProperty'=> $flag,
                 ], 400);
             }
         }
@@ -153,7 +178,7 @@ class AuthController extends Controller
             Helper::errorLog($errorFrom, $errorMessage, $priority);
             return response()->json([
                 'status' => 'error',
-                'msg' => 'something went wrong',
+                'message' => 'something went wrong',
             ],400);
         }
     }
