@@ -217,43 +217,68 @@ class UnitController extends Controller
                     ], 200);
                 }
 
-                if (!is_null($leadUnit->allocated_customer_id) && is_null($leadId)) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'This unit is already allocated to a customer.',
-                    ], 200);
-                }
-
-                if (!is_null($leadUnit->allocated_customer_id) && !is_null($leadId)) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'This unit is already allocated to a customer.',
-                    ], 200);
+                // Check if the allocated customer is the same as the one being created or updated
+                if (!is_null($leadUnit->allocated_customer_id)) {
+                    $existingCustomer = Customer::where('id', $leadUnit->allocated_customer_id)->first();
+                    if ($existingCustomer && $existingCustomer->email !== $contactEmail) {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => 'This unit is already allocated to a customer.',
+                        ], 200);
+                    }
                 }
             }
 
             if (is_null($leadId)) {
                 // Lead ID is null, add new customer or update existing allocated_customer_id
-                $customer = Customer::firstOrCreate([
-                    'property_id' => $propertyId,
-                    'unit_id' => $unitId,
-                    'email' => $contactEmail,
-                    'name' => $contactName,
-                    'contact_no' => $contactNumber,
-                ]);
+                // Lead ID is null, add new customer or update existing allocated_customer_id
+                $customer = Customer::where('property_id', $propertyId)
+                    ->where('unit_id', $unitId)
+                    ->where('email', $contactEmail)
+                    ->first();
 
-                if ($leadUnit) {
-                    // Update existing lead_unit with allocated_customer_id
-                    $leadUnit->allocated_customer_id = $customer->id;
-                    $leadUnit->booking_status = 3; // assuming 3 means booked without payment
-                    $leadUnit->save();
+                if ($customer) {
+                    // Update existing customer information if email already exists for this property and unit
+                    $customer->name = $contactName;
+                    $customer->contact_no = $contactNumber;
+                    $customer->save();
+
+                    if ($leadUnit) {
+                        // Update existing lead_unit with allocated_customer_id
+                        $leadUnit->allocated_customer_id = $customer->id;
+                        $leadUnit->booking_status = 3; // assuming 3 means booked without payment
+                        $leadUnit->save();
+                    } else {
+                        // Create new lead_unit if none exists
+                        $leadUnit = new LeadUnit();
+                        $leadUnit->unit_id = $unitId;
+                        $leadUnit->allocated_customer_id = $customer->id;
+                        $leadUnit->booking_status = 3;
+                        $leadUnit->save();
+                    }
                 } else {
-                    // Create new lead_unit if none exists
-                    $leadUnit = new LeadUnit();
-                    $leadUnit->unit_id = $unitId;
-                    $leadUnit->allocated_customer_id = $customer->id;
-                    $leadUnit->booking_status = 3;
-                    $leadUnit->save();
+                    // If no customer exists, create a new one
+                    $customer = Customer::create([
+                        'property_id' => $propertyId,
+                        'unit_id' => $unitId,
+                        'email' => $contactEmail,
+                        'name' => $contactName,
+                        'contact_no' => $contactNumber,
+                    ]);
+
+                    if ($leadUnit) {
+                        // Update existing lead_unit with allocated_customer_id
+                        $leadUnit->allocated_customer_id = $customer->id;
+                        $leadUnit->booking_status = 3; // assuming 3 means booked without payment
+                        $leadUnit->save();
+                    } else {
+                        // Create new lead_unit if none exists
+                        $leadUnit = new LeadUnit();
+                        $leadUnit->unit_id = $unitId;
+                        $leadUnit->allocated_customer_id = $customer->id;
+                        $leadUnit->booking_status = 3;
+                        $leadUnit->save();
+                    }
                 }
             } else {
                 // Lead ID is provided, verify it exists
@@ -390,7 +415,7 @@ class UnitController extends Controller
         }
     }
 
-    public function getBookedUnitDetail($uid, $bid,$type)
+    public function getBookedUnitDetail($uid, $bid, $type)
     {
         try {
             // Check if uid and type are not null
@@ -410,7 +435,7 @@ class UnitController extends Controller
                     ->where('unit_id', $uid)
                     ->where('allocated_lead_id', $bid)
                     ->first();
-    
+
                 if ($leadUnit) {
                     // Populate the response data
                     $responseData['booking_date'] = $leadUnit->paymentTransaction->booking_date ?? null;
@@ -433,7 +458,7 @@ class UnitController extends Controller
                     ->where('unit_id', $uid)
                     ->where('allocated_customer_id', $bid)
                     ->first();
-    
+
                 if ($leadUnit) {
                     // Populate the response data
                     $responseData['booking_date'] = $leadUnit->paymentTransaction->booking_date ?? null;
@@ -456,7 +481,7 @@ class UnitController extends Controller
                     'message' => 'Invalid type provided.',
                 ], 400);
             }
-    
+
             return response()->json([
                 'status' => 'success',
                 'data' => $responseData,
