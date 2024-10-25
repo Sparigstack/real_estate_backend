@@ -321,7 +321,7 @@ class UnitController extends Controller
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Unit not found.',
-                ], 404);
+                ], 200);
             }
 
             // Check if the unit is associated with the provided property_id
@@ -329,7 +329,7 @@ class UnitController extends Controller
                 return response()->json([
                     'status' => 'error',
                     'message' => 'This unit is not associated with the specified property.',
-                ], 400);
+                ], 200);
             }
 
             // Initialize an array to hold all interested lead IDs
