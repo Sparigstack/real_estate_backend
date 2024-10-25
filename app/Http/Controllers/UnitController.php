@@ -398,7 +398,7 @@ class UnitController extends Controller
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Invalid parameters provided.',
-                ], 400);
+                ], 200);
             }
 
             // Initialize the response data
@@ -425,7 +425,7 @@ class UnitController extends Controller
                     return response()->json([
                         'status' => 'error',
                         'message' => 'Lead unit not found.',
-                    ], 404);
+                    ], 200);
                 }
             }
             // Case 2: Type is customer
@@ -449,13 +449,13 @@ class UnitController extends Controller
                     return response()->json([
                         'status' => 'error',
                         'message' => 'Customer unit not found.',
-                    ], 404);
+                    ], 200);
                 }
             } else {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Invalid type provided.',
-                ], 400);
+                ], 200);
             }
 
             return response()->json([
