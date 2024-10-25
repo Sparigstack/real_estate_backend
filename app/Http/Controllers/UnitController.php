@@ -415,8 +415,6 @@ class UnitController extends Controller
                     $responseData['token_amt'] = $leadUnit->paymentTransaction->token_amt ?? null;
                     $responseData['payment_due_date'] = $leadUnit->paymentTransaction->payment_due_date ?? null;
                     $responseData['next_payable_amt'] = $leadUnit->paymentTransaction->next_payable_amt ?? null;
-                    $responseData['unit_id'] = $leadUnit->unit_id;
-                    $responseData['lead_id'] = $leadUnit->allocated_lead_id;
                     $responseData['contact_name'] = $leadUnit->allocatedLead->name ?? null;
                     $responseData['contact_email'] = $leadUnit->allocatedLead->email ?? null;
                     $responseData['contact_number'] = $leadUnit->allocatedLead->contact_no ?? null;
@@ -439,8 +437,6 @@ class UnitController extends Controller
                     $responseData['token_amt'] = $leadUnit->paymentTransaction->token_amt ?? null;
                     $responseData['payment_due_date'] = $leadUnit->paymentTransaction->payment_due_date ?? null;
                     $responseData['next_payable_amt'] = $leadUnit->paymentTransaction->next_payable_amt ?? null;
-                    $responseData['unit_id'] = $leadUnit->unit_id;
-                    $responseData['lead_id'] = null; // No lead for customer type
                     $responseData['contact_name'] = $leadUnit->allocatedCustomer->name ?? null;
                     $responseData['contact_email'] = $leadUnit->allocatedCustomer->email ?? null;
                     $responseData['contact_number'] = $leadUnit->allocatedCustomer->contact_no ?? null;
