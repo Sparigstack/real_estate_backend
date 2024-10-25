@@ -389,4 +389,90 @@ class UnitController extends Controller
             ], 400);
         }
     }
+
+    public function getBookedUnitDetail($uid, $type)
+    {
+        try {
+            // Check if uid and type are not null
+            if ($uid === 'null' || $type === 'null') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid parameters provided.',
+                ], 400);
+            }
+
+            // Initialize the response data
+            $responseData = [];
+
+            // Check type to decide the relationship
+            if ($type == 1) { // Type 1: Lead
+                $leadUnit = LeadUnit::with(['allocatedLead', 'paymentTransaction'])
+                    ->where('allocated_lead_id', $uid)
+                    ->first();
+
+                if ($leadUnit) {
+                    $responseData['booking_date'] = $leadUnit->paymentTransaction->booking_date ?? null;
+                    $responseData['token_amt'] = $leadUnit->paymentTransaction->token_amt ?? null;
+                    $responseData['payment_due_date'] = $leadUnit->paymentTransaction->payment_due_date ?? null;
+                    $responseData['next_payable_amt'] = $leadUnit->paymentTransaction->next_payable_amt ?? null;
+                    $responseData['unit_id'] = $leadUnit->unit_id;
+                    $responseData['lead_id'] = $leadUnit->allocated_lead_id;
+                    $responseData['contact_name'] = $leadUnit->allocatedLead->name ?? null;
+                    $responseData['contact_email'] = $leadUnit->allocatedLead->email ?? null;
+                    $responseData['contact_number'] = $leadUnit->allocatedLead->contact_no ?? null;
+                    $responseData['total_amt'] = $leadUnit->paymentTransaction->amount ?? null;
+                } else {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Lead unit not found.',
+                    ], 404);
+                }
+            }
+            // Case 2: Type is customer
+            else if ($type == 2) {
+                $leadUnit = LeadUnit::with(['allocatedCustomer', 'paymentTransaction'])
+                    ->where('allocated_customer_id', $uid)
+                    ->first();
+
+                if ($leadUnit) {
+                    $responseData['booking_date'] = $leadUnit->paymentTransaction->booking_date ?? null;
+                    $responseData['token_amt'] = $leadUnit->paymentTransaction->token_amt ?? null;
+                    $responseData['payment_due_date'] = $leadUnit->paymentTransaction->payment_due_date ?? null;
+                    $responseData['next_payable_amt'] = $leadUnit->paymentTransaction->next_payable_amt ?? null;
+                    $responseData['unit_id'] = $leadUnit->unit_id;
+                    $responseData['lead_id'] = null; // No lead for customer type
+                    $responseData['contact_name'] = $leadUnit->allocatedCustomer->name ?? null;
+                    $responseData['contact_email'] = $leadUnit->allocatedCustomer->email ?? null;
+                    $responseData['contact_number'] = $leadUnit->allocatedCustomer->contact_no ?? null;
+                    $responseData['total_amt'] = $leadUnit->paymentTransaction->amount ?? null;
+                } else {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Customer unit not found.',
+                    ], 404);
+                }
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid type provided.',
+                ], 400);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $responseData,
+            ], 200);
+        } catch (Exception $e) {
+            // Log the error
+            $errorFrom = 'getBookedUnitDetail';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
 }
