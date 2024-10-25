@@ -390,7 +390,7 @@ class UnitController extends Controller
         }
     }
 
-    public function getBookedUnitDetail($uid, $type)
+    public function getBookedUnitDetail($uid, $bid,$type)
     {
         try {
             // Check if uid and type are not null
@@ -404,13 +404,15 @@ class UnitController extends Controller
             // Initialize the response data
             $responseData = [];
 
-            // Check type to decide the relationship
             if ($type == 1) { // Type 1: Lead
+                // Fetch the lead unit based on unit ID and allocated lead ID
                 $leadUnit = LeadUnit::with(['allocatedLead', 'paymentTransaction'])
-                    ->where('allocated_lead_id', $uid)
+                    ->where('unit_id', $uid)
+                    ->where('allocated_lead_id', $bid)
                     ->first();
-
+    
                 if ($leadUnit) {
+                    // Populate the response data
                     $responseData['booking_date'] = $leadUnit->paymentTransaction->booking_date ?? null;
                     $responseData['token_amt'] = $leadUnit->paymentTransaction->token_amt ?? null;
                     $responseData['payment_due_date'] = $leadUnit->paymentTransaction->payment_due_date ?? null;
@@ -422,17 +424,18 @@ class UnitController extends Controller
                 } else {
                     return response()->json([
                         'status' => 'error',
-                        'message' => 'Lead unit not found.',
-                    ], 200);
+                        'message' => 'Lead unit not found for the provided unit ID and lead ID.',
+                    ], 404);
                 }
-            }
-            // Case 2: Type is customer
-            else if ($type == 2) {
+            } elseif ($type == 2) { // Type 2: Customer
+                // Fetch the lead unit based on unit ID and allocated customer ID
                 $leadUnit = LeadUnit::with(['allocatedCustomer', 'paymentTransaction'])
-                    ->where('allocated_customer_id', $uid)
+                    ->where('unit_id', $uid)
+                    ->where('allocated_customer_id', $bid)
                     ->first();
-
+    
                 if ($leadUnit) {
+                    // Populate the response data
                     $responseData['booking_date'] = $leadUnit->paymentTransaction->booking_date ?? null;
                     $responseData['token_amt'] = $leadUnit->paymentTransaction->token_amt ?? null;
                     $responseData['payment_due_date'] = $leadUnit->paymentTransaction->payment_due_date ?? null;
@@ -444,16 +447,16 @@ class UnitController extends Controller
                 } else {
                     return response()->json([
                         'status' => 'error',
-                        'message' => 'Customer unit not found.',
-                    ], 200);
+                        'message' => 'Customer unit not found for the provided unit ID and customer ID.',
+                    ], 404);
                 }
             } else {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Invalid type provided.',
-                ], 200);
+                ], 400);
             }
-
+    
             return response()->json([
                 'status' => 'success',
                 'data' => $responseData,
