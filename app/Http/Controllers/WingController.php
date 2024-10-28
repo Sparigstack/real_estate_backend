@@ -53,70 +53,93 @@ class WingController extends Controller
 
         $fetchWings = WingDetail::with([
             'floorDetails.unitDetails' => function ($query) {
-                // Eager load the related lead units and their associated allotted lead
                 $query->with([
                     'leadUnits' => function ($query) {
-                        // Fetch allotted_lead relationship in the lead units
                         $query->with('allocatedLead:id,name');
-                    }
+                    },
+                    'paymentTransactions' // Ensure payment transactions are loaded
                 ]);
             }
         ])
-            ->withCount(['unitDetails', 'floorDetails'])
-            ->where('id', $wid)
-            ->first();
-
+        ->withCount(['unitDetails', 'floorDetails'])
+        ->where('id', $wid)
+        ->first();
+    
         // Prepare the response
         if ($fetchWings) {
             foreach ($fetchWings->floorDetails as $floor) {
                 foreach ($floor->unitDetails as $unit) {
                     $unitLeads = $unit->leadUnits;
-
-                    // Calculate total interested leads count by exploding and counting interested_lead_id
+    
+                    // Calculate total interested leads count
                     $unit->interested_lead_count = $unitLeads->sum(function ($leadUnit) {
                         return count(explode(',', $leadUnit->interested_lead_id));
                     });
-
-
-
+    
                     $unit->booking_status = $unitLeads->pluck('booking_status')->first();
-
-
-                    // Modify lead_units to include 'allotted_lead_name' and remove 'allotted_lead' object
-                    // Map the first lead_unit as an object if it exists
-                $firstLeadUnit = $unitLeads->first();
-                if ($firstLeadUnit) {
-                    $allocatedName = null;
-                    if ($firstLeadUnit->allocated_lead_id) {
-                        $allocatedName = $firstLeadUnit->allocatedLead->name ?? null;
-                    } elseif ($firstLeadUnit->allocated_customer_id) {
-                        $allocatedName = $firstLeadUnit->allocatedCustomer->name ?? null;
+    
+                    // Initialize total paid amount
+                    $totalPaidAmount = 0;
+    
+                    // Check payment transactions for this unit
+                    $paymentTransactions = $unit->paymentTransactions;
+    
+                    if ($paymentTransactions->isNotEmpty()) {
+                        // Get the first transaction
+                        $firstTransaction = $paymentTransactions->first();
+    
+                        // Add token_amt from the first transaction if it exists
+                        if ($firstTransaction->token_amt) {
+                            $totalPaidAmount += $firstTransaction->token_amt;
+                        }
+    
+                        // Sum next_payable_amt from the first transaction and all subsequent ones
+                        foreach ($paymentTransactions as $index => $transaction) {
+                            if ($index === 0 && $firstTransaction->next_payable_amt) {
+                                $totalPaidAmount += $firstTransaction->next_payable_amt; // Add next payable amt from first
+                            } elseif ($index > 0 && $transaction->next_payable_amt) {
+                                $totalPaidAmount += $transaction->next_payable_amt; // Add next payable amt from subsequent transactions
+                            }
+                        }
                     }
-
-                    // Set lead_units as an object instead of an array
-                    $unit->lead_units = [
-                        'id' => $firstLeadUnit->id,
-                        'interested_lead_id' => $firstLeadUnit->interested_lead_id,
-                        'allocated_lead_id' => $firstLeadUnit->allocated_lead_id,
-                        'allocated_customer_id' => $firstLeadUnit->allocated_customer_id,
-                        'unit_id' => $firstLeadUnit->unit_id,
-                        'booking_status' => $firstLeadUnit->booking_status,
-                        'created_at' => $firstLeadUnit->created_at,
-                        'updated_at' => $firstLeadUnit->updated_at,
-                        'allocated_name' => $allocatedName,
-                    ];
-                } else {
-                    $unit->lead_units = null;
-                }
+    
+                    // Assign total paid amount to the unit
+                    $unit->total_paid_amount = $totalPaidAmount;
+    
+                    // Modify lead_units to include 'allocated_lead_name' and remove 'allocated_lead' object
+                    $firstLeadUnit = $unitLeads->first();
+                    if ($firstLeadUnit) {
+                        $allocatedName = null;
+                        if ($firstLeadUnit->allocated_lead_id) {
+                            $allocatedName = $firstLeadUnit->allocatedLead->name ?? null;
+                        } elseif ($firstLeadUnit->allocated_customer_id) {
+                            $allocatedName = $firstLeadUnit->allocatedCustomer->name ?? null;
+                        }
+    
+                        // Set lead_units as an object instead of an array
+                        $unit->lead_units = [
+                            'id' => $firstLeadUnit->id,
+                            'interested_lead_id' => $firstLeadUnit->interested_lead_id,
+                            'allocated_lead_id' => $firstLeadUnit->allocated_lead_id,
+                            'allocated_customer_id' => $firstLeadUnit->allocated_customer_id,
+                            'unit_id' => $firstLeadUnit->unit_id,
+                            'booking_status' => $firstLeadUnit->booking_status,
+                            'created_at' => $firstLeadUnit->created_at,
+                            'updated_at' => $firstLeadUnit->updated_at,
+                            'allocated_name' => $allocatedName,
+                        ];
+                    } else {
+                        $unit->lead_units = null;
+                    }
                     // No need for lead_details, it has been removed
                     unset($unit->leadUnits);
                 }
             }
-
+    
             // Return the modified result without hidden fields
             return $fetchWings->makeHidden(['property_id', 'created_at', 'updated_at']);
         }
-
+    
         return null;
         // return $fetchWings ? $fetchWings->makeHidden(['property_id', 'created_at', 'updated_at']) : null;
     }
