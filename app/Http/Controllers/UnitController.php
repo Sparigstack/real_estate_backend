@@ -506,27 +506,22 @@ class UnitController extends Controller
             if ($uid != 'null') {
                 // Fetch lead unit by unit ID
                 $leadUnit = LeadUnit::where('unit_id', $uid)->first();
-
+    
                 // Check if the lead unit exists
                 if (!$leadUnit) {
-                    return null;
+                    return []; // Return an empty array if no lead unit is found
                 }
-
+    
                 // Get the interested lead IDs from the lead unit
                 $interestedLeadIds = explode(',', $leadUnit->interested_lead_id); // Convert comma-separated string to array
-
+    
                 // Fetch details of interested leads
                 $interestedLeads = Lead::whereIn('id', $interestedLeadIds)->get();
-
-                // Check if any leads were found
-                if ($interestedLeads->isEmpty()) {
-                    return null;
-                }
-
-
-                return $interestedLeads;
+    
+                // Return an empty array if no leads were found
+                return $interestedLeads->isEmpty() ? [] : $interestedLeads->toArray();
             } else {
-                return null;
+                return []; // Return an empty array if uid is 'null'
             }
         } catch (Exception $e) {
             // Log the error
