@@ -68,6 +68,8 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/add-unit-booking-detail', [UnitController::class, 'addUnitBookingInfo']);
     Route::post('/add-interested-leads', [UnitController::class, 'addInterestedLeads']); 
     Route::get('/get-unit-interested-leads/{uid}', [UnitController::class, 'getUnitInterestedLeads']); 
+    Route::get('/get-unit-wing-wise/{wid}', [UnitController::class, 'getUnitsBasedOnWing']); 
+    Route::post('/send-reminder/{uid}', [UnitController::class, 'sendReminderToBookedPerson']); 
     Route::get('/get-lead-name-with-detail/{pid}', [UnitController::class, 'getLeadNames']); 
     Route::post('/lead-attach-with-units', [UnitController::class, 'addLeadsAttachingWithUnits']); 
  

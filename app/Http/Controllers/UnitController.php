@@ -197,10 +197,10 @@ class UnitController extends Controller
             $paymentDueDate = $request->input('payment_due_date');
             $nextPayableAmt = $request->input('next_payable_amt');
             $totalAmt = $request->input('total_amt');
-    
+
             // Check if lead_unit entry exists for the given unit_id
             $leadUnit = LeadUnit::where('unit_id', $unitId)->first();
-    
+
             if ($leadUnit) {
                 // Check if allocated_lead_id or allocated_customer_id is already filled
                 if (!is_null($leadUnit->allocated_lead_id) && is_null($leadId)) {
@@ -209,14 +209,14 @@ class UnitController extends Controller
                         'message' => 'This unit is already allocated to a lead.',
                     ], 200);
                 }
-    
+
                 if (!is_null($leadUnit->allocated_lead_id) && !is_null($leadId)) {
                     return response()->json([
                         'status' => 'error',
                         'message' => 'This unit is already allocated to a lead.',
                     ], 200);
                 }
-    
+
                 // Check if the allocated customer is the same as the one being created or updated
                 if (!is_null($leadUnit->allocated_customer_id)) {
                     $existingCustomer = Customer::where('id', $leadUnit->allocated_customer_id)->first();
@@ -228,14 +228,14 @@ class UnitController extends Controller
                     }
                 }
             }
-    
+
             if (is_null($leadId)) {
                 // Lead ID is null, add new customer or update existing allocated_customer_id
                 $customer = Customer::where('property_id', $propertyId)
                     ->where('unit_id', $unitId)
                     ->where('email', $contactEmail)
                     ->first();
-    
+
                 if ($customer) {
                     // Update existing customer information
                     $customer->name = $contactName;
@@ -251,7 +251,7 @@ class UnitController extends Controller
                         'contact_no' => $contactNumber,
                     ]);
                 }
-    
+
                 // Update or create lead_unit with allocated_customer_id
                 $leadUnit = $leadUnit ?: new LeadUnit();
                 $leadUnit->unit_id = $unitId;
@@ -267,21 +267,21 @@ class UnitController extends Controller
                         'message' => 'Lead not found',
                     ], 200);
                 }
-    
+
                 $leadUnit = $leadUnit ?: new LeadUnit();
                 $leadUnit->unit_id = $unitId;
                 $leadUnit->allocated_lead_id = $leadId;
                 $leadUnit->booking_status = 3;
                 $leadUnit->save();
             }
-    
+
             // Check and update unit price if necessary
             $unit = UnitDetail::find($unitId);
             if ($unit && (is_null($unit->price) || $unit->price == 0) && !is_null($totalAmt)) {
                 $unit->price = $totalAmt;
                 $unit->save();
             }
-    
+
             // Determine if a new payment transaction entry is needed
             // If this is the first call, insert a new entry for payment transaction
             // Create the first payment transaction entry
@@ -296,7 +296,7 @@ class UnitController extends Controller
             $paymentTransaction->payment_type = '0'; // assuming manual for now
             $paymentTransaction->transaction_notes = 'Booking entry created';
             $paymentTransaction->save();
-    
+
             // Now create a new payment transaction entry with payment_due_date and next_payable_amt if provided
             if (!is_null($paymentDueDate) && !is_null($nextPayableAmt)) {
                 $paymentTransaction = new PaymentTransaction();
@@ -311,7 +311,7 @@ class UnitController extends Controller
                 $paymentTransaction->transaction_notes = 'Next payment entry created';
                 $paymentTransaction->save();
             }
-    
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Unit booking information saved successfully',
@@ -455,21 +455,21 @@ class UnitController extends Controller
 
             $latestTransaction = $paymentTransactions->first();
             $responseData['total_amt'] = $latestTransaction->amount ?? null;
-    
-            
+
+
             $paymentSchedule = $paymentTransactions->map(function ($transaction, $index) use ($paymentTransactions) {
                 $isFirst = $index === 0;
                 $isLast = $index === $paymentTransactions->count() - 1;
-    
+
                 return [
                     'payment_due_date' => $isFirst ? $transaction->booking_date : $transaction->payment_due_date,
                     'next_payable_amt' => $isFirst ? $transaction->token_amt : $transaction->next_payable_amt,
                     'payment_type' => $isFirst ? 'Down Payment' : 'Last Payment',
                 ];
             });
-    
+
             $responseData['payment_schedule'] = $paymentSchedule;
-    
+
             if ($leadUnit->unit) {
                 $unitDetail = $leadUnit->unit;
                 $responseData['unit_details'] = [
@@ -481,7 +481,7 @@ class UnitController extends Controller
             } else {
                 $responseData['unit_details'] = null;
             }
-    
+
             return response()->json([
                 'status' => 'success',
                 'data' => $responseData,
@@ -506,18 +506,18 @@ class UnitController extends Controller
             if ($uid != 'null') {
                 // Fetch lead unit by unit ID
                 $leadUnit = LeadUnit::where('unit_id', $uid)->first();
-    
+
                 // Check if the lead unit exists
                 if (!$leadUnit) {
                     return []; // Return an empty array if no lead unit is found
                 }
-    
+
                 // Get the interested lead IDs from the lead unit
                 $interestedLeadIds = explode(',', $leadUnit->interested_lead_id); // Convert comma-separated string to array
-    
+
                 // Fetch details of interested leads
                 $interestedLeads = Lead::whereIn('id', $interestedLeadIds)->get();
-    
+
                 // Return an empty array if no leads were found
                 return $interestedLeads->isEmpty() ? [] : $interestedLeads->toArray();
             } else {
@@ -526,6 +526,53 @@ class UnitController extends Controller
         } catch (Exception $e) {
             // Log the error
             $errorFrom = 'getUnitInterestedLeads';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
+
+
+    public function getUnitsBasedOnWing($wid)
+    {
+        try {
+            // Fetch the wing details along with its associated units
+            if ($wid) {
+                // Extract the unit IDs and names
+                $units = UnitDetail::where('wing_id', $wid)
+                    ->select('id', 'name') // Select only the unit ID and name
+                    ->get();
+            } else {
+                $units = []; // Return an empty array if the wing is not found
+            }
+    
+            // Return the units directly as an array
+            return response()->json($units);
+        } catch (Exception $e) {
+            // Log the error
+            $errorFrom = 'getUnitsBasedOnWing';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
+
+    public function sendReminderToBookedPerson($uid)
+    {
+        try {
+        } catch (Exception $e) {
+            // Log the error
+            $errorFrom = 'sendReminderOfDueDate';
             $errorMessage = $e->getMessage();
             $priority = 'high';
             Helper::errorLog($errorFrom, $errorMessage, $priority);
