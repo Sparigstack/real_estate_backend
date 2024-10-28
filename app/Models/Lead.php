@@ -29,6 +29,10 @@ class Lead extends Model
 
     public function leadUnits()
     {
-        return $this->hasMany(LeadUnit::class, 'allotted_lead_id');
+        return $this->hasMany(LeadUnit::class, 'allocated_lead_id');
+    }
+    public function customerUnits()
+    {
+        return $this->hasMany(LeadUnit::class, 'allocated_customer_id');
     }
 }

@@ -28,8 +28,9 @@ class LeadController extends Controller
 
         try {
             if ($pid != 'null') {
-                $allLeads = Lead::with('userproperty', 'leadSource')->where('property_id',$pid);
-
+                // $allLeads = Lead::with('userproperty', 'leadSource')->where('property_id',$pid);
+                $allLeads = Lead::with(['userproperty', 'leadSource', 'leadUnits.unit.wingDetail'])
+                ->where('property_id', $pid);
 
                 //search query
                 if ($skey != 'null') {
@@ -54,6 +55,24 @@ class LeadController extends Controller
 
                 $allLeads = $allLeads->paginate($limit, ['*'], 'page', $offset);
 
+                // Modify the response to include unit name and wing name at the top level
+            foreach ($allLeads as $lead) {
+                $lead->unit_name = null; // Default value
+                $lead->wing_name = null; // Default value
+                
+                if ($lead->leadUnits->isNotEmpty()) {
+                    foreach ($lead->leadUnits as $leadUnit) {
+                        if ($leadUnit->allocated_lead_id) {
+                            $unit = $leadUnit->unit; // Get the related unit details
+                            if ($unit) {
+                                $lead->unit_name = $unit->name; // Assign unit name to lead
+                                $lead->wing_name = $unit->wingDetail->name ?? null; // Assign wing name to lead if exists
+                            }
+                        }
+                    }
+                }
+            }
+                
                 return $allLeads;
             } else {
                 return null;

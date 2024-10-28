@@ -10,7 +10,7 @@ class LeadUnit extends Model
     use HasFactory;
 
     protected $table="lead_unit";
-    protected $fillable = ['interested_lead_id', 'unit_id', 'booking_status','allotted_lead_id'];
+    protected $fillable = ['interested_lead_id', 'unit_id', 'booking_status','allocated_lead_id','allocated_customer_id'];
 
   
 
