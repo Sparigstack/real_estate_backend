@@ -197,10 +197,10 @@ class UnitController extends Controller
             $paymentDueDate = $request->input('payment_due_date');
             $nextPayableAmt = $request->input('next_payable_amt');
             $totalAmt = $request->input('total_amt');
-
+    
             // Check if lead_unit entry exists for the given unit_id
             $leadUnit = LeadUnit::where('unit_id', $unitId)->first();
-
+    
             if ($leadUnit) {
                 // Check if allocated_lead_id or allocated_customer_id is already filled
                 if (!is_null($leadUnit->allocated_lead_id) && is_null($leadId)) {
@@ -209,14 +209,14 @@ class UnitController extends Controller
                         'message' => 'This unit is already allocated to a lead.',
                     ], 200);
                 }
-
+    
                 if (!is_null($leadUnit->allocated_lead_id) && !is_null($leadId)) {
                     return response()->json([
                         'status' => 'error',
                         'message' => 'This unit is already allocated to a lead.',
                     ], 200);
                 }
-
+    
                 // Check if the allocated customer is the same as the one being created or updated
                 if (!is_null($leadUnit->allocated_customer_id)) {
                     $existingCustomer = Customer::where('id', $leadUnit->allocated_customer_id)->first();
@@ -228,14 +228,14 @@ class UnitController extends Controller
                     }
                 }
             }
-
+    
             if (is_null($leadId)) {
                 // Lead ID is null, add new customer or update existing allocated_customer_id
                 $customer = Customer::where('property_id', $propertyId)
                     ->where('unit_id', $unitId)
                     ->where('email', $contactEmail)
                     ->first();
-
+    
                 if ($customer) {
                     // Update existing customer information
                     $customer->name = $contactName;
@@ -251,13 +251,17 @@ class UnitController extends Controller
                         'contact_no' => $contactNumber,
                     ]);
                 }
-
+    
                 // Update or create lead_unit with allocated_customer_id
                 $leadUnit = $leadUnit ?: new LeadUnit();
                 $leadUnit->unit_id = $unitId;
                 $leadUnit->allocated_customer_id = $customer->id;
-                $leadUnit->booking_status = 3; // assuming 3 means booked without payment
+                $leadUnit->booking_status = 4; // Update booking status to 4
                 $leadUnit->save();
+    
+                // Set allocated_id and allocated_type for PaymentTransaction
+                $allocatedId = $customer->id;
+                $allocatedType = 2; // Customer
             } else {
                 // Lead ID is provided, verify it exists
                 $lead = Lead::find($leadId);
@@ -267,51 +271,41 @@ class UnitController extends Controller
                         'message' => 'Lead not found',
                     ], 200);
                 }
-
+    
                 $leadUnit = $leadUnit ?: new LeadUnit();
                 $leadUnit->unit_id = $unitId;
                 $leadUnit->allocated_lead_id = $leadId;
-                $leadUnit->booking_status = 3;
+                $leadUnit->booking_status = 4; // Update booking status to 4
                 $leadUnit->save();
+    
+                // Set allocated_id and allocated_type for PaymentTransaction
+                $allocatedId = $leadId;
+                $allocatedType = 1; // Lead
             }
-
+    
             // Check and update unit price if necessary
             $unit = UnitDetail::find($unitId);
             if ($unit && (is_null($unit->price) || $unit->price == 0) && !is_null($totalAmt)) {
                 $unit->price = $totalAmt;
                 $unit->save();
             }
-
-            // Determine if a new payment transaction entry is needed
-            // If this is the first call, insert a new entry for payment transaction
+    
             // Create the first payment transaction entry
             $paymentTransaction = new PaymentTransaction();
             $paymentTransaction->unit_id = $unitId;
             $paymentTransaction->property_id = $propertyId;
+            $paymentTransaction->allocated_id = $allocatedId; // Set allocated ID
+            $paymentTransaction->allocated_type = $allocatedType; // Set allocated type
             $paymentTransaction->booking_date = $bookingDate; // Use provided booking date
-            $paymentTransaction->payment_due_date = null; // Set to null for the first entry
-            $paymentTransaction->token_amt = $tokenAmt; // Set to null for the first entry
+            $paymentTransaction->payment_due_date = $paymentDueDate; // Set to null for the first entry
+            $paymentTransaction->token_amt = $tokenAmt; // Set to provided token amount
             $paymentTransaction->amount = $totalAmt ?? null;
-            $paymentTransaction->next_payable_amt = null; // Set to null for the first entry
-            $paymentTransaction->payment_type = '0'; // assuming manual for now
+            $paymentTransaction->next_payable_amt = $nextPayableAmt; // Set to null for the first entry
+            $paymentTransaction->payment_status = 1; // Set payment status to 1
+            $paymentTransaction->payment_type = 1; // Assuming manual for now
             $paymentTransaction->transaction_notes = 'Booking entry created';
             $paymentTransaction->save();
-
-            // Now create a new payment transaction entry with payment_due_date and next_payable_amt if provided
-            if (!is_null($paymentDueDate) && !is_null($nextPayableAmt)) {
-                $paymentTransaction = new PaymentTransaction();
-                $paymentTransaction->unit_id = $unitId;
-                $paymentTransaction->property_id = $propertyId;
-                $paymentTransaction->booking_date = $bookingDate; // Set booking date to null for the second entry
-                $paymentTransaction->payment_due_date = $paymentDueDate; // Set to the provided payment due date
-                $paymentTransaction->token_amt = $tokenAmt; // Set to the provided token amount
-                $paymentTransaction->amount = $totalAmt ?? null;
-                $paymentTransaction->next_payable_amt = $nextPayableAmt; // Set to the provided next payable amount
-                $paymentTransaction->payment_type = '0'; // assuming manual for now
-                $paymentTransaction->transaction_notes = 'Next payment entry created';
-                $paymentTransaction->save();
-            }
-
+    
             return response()->json([
                 'status' => 'success',
                 'message' => 'Unit booking information saved successfully',
@@ -582,5 +576,9 @@ class UnitController extends Controller
                 'message' => 'Not found',
             ], 400);
         }
+    }
+
+    public function addLeadsAttachWithUnitsUsingCheque(Request $request){
+
     }
 }

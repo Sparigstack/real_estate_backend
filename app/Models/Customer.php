@@ -19,4 +19,8 @@ class Customer extends Model
     {
         return $this->belongsTo(UnitDetail::class);
     }
+    public function paymentTransactions()
+    {
+        return $this->morphMany(PaymentTransaction::class, 'allocated');
+    }
 }

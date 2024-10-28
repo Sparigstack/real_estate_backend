@@ -23,14 +23,27 @@ class LeadUnit extends Model
     {
         return $this->hasOne(PaymentTransaction::class, 'unit_id', 'unit_id');
     }
-    public function allocatedLead()
+    // public function allocatedLead()
+    // {
+    //     return $this->belongsTo(Lead::class, 'allocated_lead_id');
+    // }
+
+    // public function allocatedCustomer()
+    // {
+    //     return $this->belongsTo(Customer::class, 'allocated_customer_id');
+    // }
+
+    public function allocatedLeads()
     {
-        return $this->belongsTo(Lead::class, 'allocated_lead_id');
+        // Explode the comma-separated string into an array and fetch the leads
+        return Lead::whereIn('id', explode(',', $this->allocated_lead_id))->get();
     }
 
-    public function allocatedCustomer()
+    // Method to retrieve allocated customers as a collection
+    public function allocatedCustomers()
     {
-        return $this->belongsTo(Customer::class, 'allocated_customer_id');
+        // Explode the comma-separated string into an array and fetch the customers
+        return Customer::whereIn('id', explode(',', $this->allocated_customer_id))->get();
     }
 
     public function interestedLeads()

@@ -17,7 +17,7 @@ class PaymentTransaction extends Model
     protected $fillable = [
         'customer_id', 'unit_id', 'property_id', 
         'booking_date', 'payment_due_date', 
-        'token_amt', 'amount', 'payment_type', 'next_payable_amt',
+        'token_amt', 'amount', 'payment_type','payment_status', 'next_payable_amt', 'allocated_id','allocted_type',
         'transaction_notes'
     ];
 
@@ -26,6 +26,10 @@ class PaymentTransaction extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function allocatedEntity()
+    {
+        return $this->morphTo('allocated');
+    }
     public function unit()
     {
         return $this->belongsTo(UnitDetail::class);

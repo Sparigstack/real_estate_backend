@@ -72,6 +72,7 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/send-reminder/{uid}', [UnitController::class, 'sendReminderToBookedPerson']); 
     Route::get('/get-lead-name-with-detail/{pid}', [UnitController::class, 'getLeadNames']); 
     Route::post('/lead-attach-with-units', [UnitController::class, 'addLeadsAttachingWithUnits']); 
+    Route::post('/lead-attach-with-units-using-cheque', [UnitController::class, 'addLeadsAttachWithUnitsUsingCheque']); 
  
 // });
 

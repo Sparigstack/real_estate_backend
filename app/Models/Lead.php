@@ -35,4 +35,9 @@ class Lead extends Model
     {
         return $this->hasMany(LeadUnit::class, 'allocated_customer_id');
     }
+
+    public function paymentTransactions()
+    {
+        return $this->morphMany(PaymentTransaction::class, 'allocated');
+    }
 }
