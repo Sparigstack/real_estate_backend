@@ -460,8 +460,6 @@ class UnitController extends Controller
             $paymentTransactions = $leadUnit->paymentTransaction()->orderBy('id', 'asc')->get();
 
             $latestTransaction = $paymentTransactions->first();
-            $responseData['booking_date'] = $latestTransaction->booking_date ?? null;
-            $responseData['token_amt'] = $latestTransaction->token_amt ?? null;
             $responseData['total_amt'] = $latestTransaction->amount ?? null;
     
             $paymentSchedule = $paymentTransactions->map(function ($transaction, $index) use ($paymentTransactions) {
