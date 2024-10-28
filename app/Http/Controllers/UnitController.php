@@ -417,6 +417,8 @@ class UnitController extends Controller
 
     public function getBookedUnitDetail($uid, $bid, $type)
     {
+
+        //uid ->unit detail id,bid-> customer/lead id, type-> lead/customer
         try {
             // Check if uid and type are not null
             if ($uid === 'null' || $type === 'null') {
@@ -455,35 +457,26 @@ class UnitController extends Controller
             $responseData['contact_number'] = $type == 1 ? $leadUnit->allocatedLead->contact_no : $leadUnit->allocatedCustomer->contact_no;
 
             // Get all payment transactions as a collection
-            $paymentTransactions = $leadUnit->paymentTransaction()->orderBy('id', 'desc')->get();
+            $paymentTransactions = $leadUnit->paymentTransaction()->orderBy('id', 'asc')->get();
 
-            // Set the booking_date and token_amt from the latest transaction, if available
             $latestTransaction = $paymentTransactions->first();
             $responseData['booking_date'] = $latestTransaction->booking_date ?? null;
             $responseData['token_amt'] = $latestTransaction->token_amt ?? null;
             $responseData['total_amt'] = $latestTransaction->amount ?? null;
-
-            // Determine the payment schedule
-            $paymentSchedule = $paymentTransactions->map(function ($transaction) {
+    
+            $paymentSchedule = $paymentTransactions->map(function ($transaction, $index) use ($paymentTransactions) {
+                $isFirst = $index === 0;
+                $isLast = $index === $paymentTransactions->count() - 1;
+    
                 return [
-                    'next_payable_amt' => $transaction->next_payable_amt,
-                    'payment_due_date' => $transaction->payment_due_date,
+                    'payment_due_date' => $isFirst ? $transaction->booking_date : $transaction->payment_due_date,
+                    'next_payable_amt' => $isFirst ? $transaction->token_amt : $transaction->next_payable_amt,
+                    'payment_type' => $isFirst ? 'Down Payment' : 'Last Payment',
                 ];
             });
-
-            // Check conditions for payment_schedule array
-            if ($paymentTransactions->count() > 1) {
-                // Filter out any entries where both 'next_payable_amt' and 'payment_due_date' are null
-                $responseData['payment_schedule'] = $paymentSchedule->filter(function ($entry) {
-                    return !is_null($entry['next_payable_amt']) || !is_null($entry['payment_due_date']);
-                })->values(); // reindex array after filtering
-            } else {
-                // Only one entry, set payment_schedule as an empty array if both fields are null
-                $responseData['payment_schedule'] = $latestTransaction && ($latestTransaction->next_payable_amt !== null || $latestTransaction->payment_due_date !== null)
-                    ? [$paymentSchedule->first()]
-                    : [];
-            }
-            // Include unit details
+    
+            $responseData['payment_schedule'] = $paymentSchedule;
+    
             if ($leadUnit->unit) {
                 $unitDetail = $leadUnit->unit;
                 $responseData['unit_details'] = [
@@ -493,9 +486,9 @@ class UnitController extends Controller
                     'unit_price' => $unitDetail->price ?? null,
                 ];
             } else {
-                $responseData['unit_details'] = null; // Or handle as needed
+                $responseData['unit_details'] = null;
             }
-
+    
             return response()->json([
                 'status' => 'success',
                 'data' => $responseData,
