@@ -344,6 +344,134 @@ class UnitController extends Controller
         }
     }
 
+    public function addUnitPaymentDetail(Request $request)
+    {
+        try {
+            $validatedData = $request->validate([
+                'amount' => 'required|numeric',
+                'date' => 'required|date',
+                'unit_id' => 'required|integer',
+                'payment_id' => 'nullable|integer',
+            ]);
+
+            $amount = $validatedData['amount'];
+            $paymentDate = $validatedData['date'];
+            $unitId = $validatedData['unit_id'];
+            $paymentId = $validatedData['payment_id'];
+
+            // Retrieve the LeadUnit associated with the unit_id
+            $leadUnit = LeadUnit::where('unit_id', $unitId)->first();
+
+            if (!$leadUnit) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Lead Unit not found.',
+                ], 200);
+            }
+
+            $lastPaymentTransaction = PaymentTransaction::where('unit_id', $unitId)
+                ->orderBy('created_at', 'desc') // Get the most recent transaction
+                ->first();
+
+            if ($paymentId != null) {
+                // Update existing payment record
+                $paymentTransaction = PaymentTransaction::find($paymentId);
+
+                if (!$paymentTransaction) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Payment transaction not found.',
+                    ], 200);
+                }
+
+                // Update payment details
+                $paymentTransaction->next_payable_amt = $amount; // Assuming amount is the next payable amount
+                $paymentTransaction->payment_due_date = $paymentDate;
+                $paymentTransaction->payment_status = 2;
+                $paymentTransaction->save();
+            } else {
+
+                // Create a new payment record or update existing one based on conditions
+                $previousPayments = PaymentTransaction::where('unit_id', $unitId)->get();
+                // return $previousPayments;
+                $existingPayment = $previousPayments->first();
+
+                // Check if booking_date and token_amt are both null and have only one previous entry
+                if ((is_null($existingPayment->booking_date) && is_null($existingPayment->token_amt)) && $previousPayments->count() == 1) {
+                    // Update the existing payment entry
+                    $existingPayment->token_amt = $amount; // Update token_amt
+                    $existingPayment->booking_date = $paymentDate; // Update booking_date
+                    $existingPayment->save();
+                    return response()->json([
+                        'status' => 'success',
+                        'message' => 'Payment details updated successfully.',
+                    ], 200);
+                } else {
+                    // Create a new payment record
+                    // Retrieve the last payment transaction for the unit
+
+
+                    $paymentTransaction = new PaymentTransaction();
+                    $paymentTransaction->unit_id = $unitId;
+                    $paymentTransaction->payment_due_date = $paymentDate; // The new payment amount
+                    $paymentTransaction->next_payable_amt = $amount; // Set the initial amount
+
+                    if ($lastPaymentTransaction) {
+                        // Populate fields from the last payment transaction if it exists
+                        $paymentTransaction->booking_date = $lastPaymentTransaction->booking_date ?? null; // Use the last booking date
+                        $paymentTransaction->token_amt = $lastPaymentTransaction->token_amt ??  null; // Use the last token amount
+                        $paymentTransaction->property_id = $lastPaymentTransaction->property_id ?? null; // Use the last payment due date
+                        $paymentTransaction->allocated_id = $lastPaymentTransaction->allocated_id ?? null;
+                        $paymentTransaction->allocated_type = $lastPaymentTransaction->allocated_type ?? null;
+                        $paymentTransaction->amount = $lastPaymentTransaction->amount;
+                        $paymentTransaction->payment_type = 1;
+                        $paymentTransaction->transaction_notes = "New payment added";
+                    }
+
+                    // Set the initial payment status
+                    $paymentTransaction->payment_status = now()->gt($paymentDate) ? 2 : 1;
+                    $paymentTransaction->save();
+                }
+            }
+
+
+            // Retrieve all payment transactions for the unit
+            $paymentTransactions = PaymentTransaction::where('unit_id', $unitId)->get();
+
+            // Calculate the total for next_payable_amt
+            $totalNextPayableAmt = $paymentTransactions->sum('next_payable_amt');
+
+            // Retrieve the first payment transaction to include token_amt
+            $firstPaymentTransaction = $paymentTransactions->first();
+            if ($firstPaymentTransaction) {
+                // Add the token_amt of the first entry to the total next_payable_amt
+                $totalNextPayableAmt += $firstPaymentTransaction->token_amt;
+            }
+
+            // Update LeadUnit booking status if totalNextPayableAmt reaches or exceeds the required amount
+            if ($lastPaymentTransaction && $totalNextPayableAmt >= $lastPaymentTransaction->amount) {
+                $leadUnit->booking_status = 3; // Mark as confirmed
+                $leadUnit->save();
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Payment details added/updated successfully.',
+            ], 200);
+        } catch (Exception $e) {
+            // Log the error
+            $errorFrom = 'addUnitPaymentDetail';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
+
     public function addInterestedLeads(Request $request)
     {
         try {
@@ -493,12 +621,12 @@ class UnitController extends Controller
                 if ($transaction->token_amt || $transaction->next_payable_amt || $transaction->booking_date || $transaction->payment_due_date) {
                     // Only add the object if it has at least one non-null value
                     $paymentScheduleEntry = [
-                        'payment_id'=>$transaction->id,
+                        'payment_id' => $transaction->id,
                         'payment_due_date' => $index == 0 ? $transaction->booking_date : $transaction->payment_due_date,
                         'next_payable_amt' => $index == 0 ? $transaction->token_amt : $transaction->next_payable_amt,
                         'payment_status' => $transaction->payment_status,
                     ];
-            
+
                     // Check if either next_payable_amt or payment_due_date is not null
                     if (!is_null($paymentScheduleEntry['next_payable_amt']) || !is_null($paymentScheduleEntry['payment_due_date'])) {
                         $responseData['payment_schedule'][] = $paymentScheduleEntry;

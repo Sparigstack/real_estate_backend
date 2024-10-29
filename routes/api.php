@@ -66,6 +66,7 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     //units call
     Route::get('/get-booked-unit-detail/{uid}/{bid}/{type}', [UnitController::class, 'getBookedUnitDetail']); 
     Route::post('/add-unit-booking-detail', [UnitController::class, 'addUnitBookingInfo']);
+    Route::post('/add-unit-payment-detail', [UnitController::class, 'addUnitPaymentDetail']);
     Route::post('/add-interested-leads', [UnitController::class, 'addInterestedLeads']); 
     Route::get('/get-unit-interested-leads/{uid}', [UnitController::class, 'getUnitInterestedLeads']); 
     Route::get('/get-unit-wing-wise/{wid}', [UnitController::class, 'getUnitsBasedOnWing']); 
