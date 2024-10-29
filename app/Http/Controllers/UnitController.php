@@ -493,6 +493,7 @@ class UnitController extends Controller
                 if ($transaction->token_amt || $transaction->next_payable_amt || $transaction->booking_date || $transaction->payment_due_date) {
                     // Only add the object if it has at least one non-null value
                     $paymentScheduleEntry = [
+                        'payment_id'=>$transaction->id,
                         'payment_due_date' => $index == 0 ? $transaction->booking_date : $transaction->payment_due_date,
                         'next_payable_amt' => $index == 0 ? $transaction->token_amt : $transaction->next_payable_amt,
                         'payment_status' => $transaction->payment_status,
