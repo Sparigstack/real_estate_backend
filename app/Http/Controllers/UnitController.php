@@ -271,7 +271,7 @@ class UnitController extends Controller
 
             // Check and update unit price if necessary
             $unit = UnitDetail::find($unitId);
-            if ($unit && (is_null($unit->price) || $unit->price == 0) && !is_null($totalAmt)) {
+            if ($unit && !is_null($totalAmt)) {
                 $unit->price = $totalAmt;
                 $unit->save();
             }
