@@ -401,6 +401,7 @@ class UnitController extends Controller
                     // Update the existing payment entry
                     $existingPayment->token_amt = $amount; // Update token_amt
                     $existingPayment->booking_date = $paymentDate; // Update booking_date
+                    $existingPayment->payment_status = 2;
                     $existingPayment->save();
                     return response()->json([
                         'status' => 'success',
@@ -425,11 +426,12 @@ class UnitController extends Controller
                         $paymentTransaction->allocated_type = $lastPaymentTransaction->allocated_type ?? null;
                         $paymentTransaction->amount = $lastPaymentTransaction->amount;
                         $paymentTransaction->payment_type = 1;
-                        $paymentTransaction->transaction_notes = "New payment added";
+                        $paymentTransaction->transaction_notes = "payment added";
+                        $paymentTransaction->payment_status = now()->gt($paymentDate) ? 2 : 1;
                     }
 
                     // Set the initial payment status
-                    $paymentTransaction->payment_status = now()->gt($paymentDate) ? 2 : 1;
+                    
                     $paymentTransaction->save();
                 }
             }
