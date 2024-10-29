@@ -118,6 +118,7 @@ class WingController extends Controller
                             $allocatedLeads = Lead::whereIn('id', $leadIds)->get(['id', 'name']);
                             foreach ($allocatedLeads as $lead) {
                                 $allocatedEntities[] = [
+                                    'allocated_customer_id' => null,
                                     'allocated_lead_id' => $lead->id,
                                     'allocated_name' => $lead->name
                                 ];
@@ -131,6 +132,7 @@ class WingController extends Controller
                             foreach ($allocatedCustomers as $customer) {
                                 $allocatedEntities[] = [
                                     'allocated_customer_id' => $customer->id,
+                                    'allocated_lead_id' => null,
                                     'allocated_name' => $customer->name
                                 ];
                             }
