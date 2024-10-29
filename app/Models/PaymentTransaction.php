@@ -28,7 +28,11 @@ class PaymentTransaction extends Model
 
     public function allocatedEntity()
     {
-        return $this->morphTo('allocated');
+        if($this->allocated_type == 2){
+            return $this->belongsTo(Customer::class,'allocated_id','id');
+        }else{
+            return $this->belongsTo(Lead::class,'allocated_id','id');
+        }
     }
     public function unit()
     {

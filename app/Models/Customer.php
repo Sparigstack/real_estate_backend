@@ -21,6 +21,6 @@ class Customer extends Model
     }
     public function paymentTransactions()
     {
-        return $this->morphMany(PaymentTransaction::class, 'allocated');
+        return $this->hasMany(PaymentTransaction::class, 'allocated_id');
     }
 }

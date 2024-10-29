@@ -14,7 +14,10 @@ use App\Helper;
 use App\Models\Status;
 use App\Models\Amenity;
 use App\Models\Country;
+use App\Models\Customer;
+use App\Models\Lead;
 use App\Models\State;
+
 
 
 class WingController extends Controller
@@ -104,42 +107,40 @@ class WingController extends Controller
                     // Assign total paid amount to the unit
                     $unit->total_paid_amount = $totalPaidAmount;
 
-                    // Fetch allocated entity name based on allocated_type in paymentTransactions
-                    // if ($firstTransaction->allocatedEntity) {
-                    //     $allocatedName = $firstTransaction->allocatedEntity->name ?? null;
-                    // }
-                    
                     // Set lead_units as an object with allocated_name
-                    $unit->allocated_name="xyz";
 
 
+                    $allocatedEntities = [];
+                    foreach ($unitLeads as $leadUnit) {
+                        // Retrieve and format leads
+                        if ($leadUnit->allocated_lead_id) {
+                            $leadIds = explode(',', $leadUnit->allocated_lead_id);
+                            $allocatedLeads = Lead::whereIn('id', $leadIds)->get(['id', 'name']);
+                            foreach ($allocatedLeads as $lead) {
+                                $allocatedEntities[] = [
+                                    'allocated_lead_id' => $lead->id,
+                                    'allocated_name' => $lead->name
+                                ];
+                            }
+                        }
+        
+                        // Retrieve and format customers
+                        if ($leadUnit->allocated_customer_id) {
+                            $customerIds = explode(',', $leadUnit->allocated_customer_id);
+                            $allocatedCustomers = Customer::whereIn('id', $customerIds)->get(['id', 'name']);
+                            foreach ($allocatedCustomers as $customer) {
+                                $allocatedEntities[] = [
+                                    'allocated_customer_id' => $customer->id,
+                                    'allocated_name' => $customer->name
+                                ];
+                            }
+                        }
+                    }
+        
+                    // Assign the aggregated allocated entities array to each unit
+                    $unit->allocated_entities = $allocatedEntities;
     
-                    // Modify lead_units to include 'allocated_lead_name' and remove 'allocated_lead' object
-                    // $firstLeadUnit = $unitLeads->first();
-                    // if ($firstLeadUnit) {
-                    //     $allocatedName = null;
-                    //     if ($firstLeadUnit->allocated_lead_id) {
-                    //         $allocatedName = $firstLeadUnit->allocatedLead->name ?? null;
-                    //     } elseif ($firstLeadUnit->allocated_customer_id) {
-                    //         $allocatedName = $firstLeadUnit->allocatedCustomer->name ?? null;
-                    //     }
-    
-                    //     // Set lead_units as an object instead of an array
-                    //     $unit->lead_units = [
-                    //         'id' => $firstLeadUnit->id,
-                    //         'interested_lead_id' => $firstLeadUnit->interested_lead_id,
-                    //         'allocated_lead_id' => $firstLeadUnit->allocated_lead_id,
-                    //         'allocated_customer_id' => $firstLeadUnit->allocated_customer_id,
-                    //         'unit_id' => $firstLeadUnit->unit_id,
-                    //         'booking_status' => $firstLeadUnit->booking_status,
-                    //         'created_at' => $firstLeadUnit->created_at,
-                    //         'updated_at' => $firstLeadUnit->updated_at,
-                    //         'allocated_name' => $allocatedName,
-                    //     ];
-                    // } else {
-                    //     $unit->lead_units = null;
-                    // }
-                    // No need for lead_details, it has been removed
+                   
                     unset($unit->leadUnits);
                 }
             }
