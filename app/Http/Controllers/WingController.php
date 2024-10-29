@@ -314,41 +314,45 @@ class WingController extends Controller
     public function updateWingDetails(Request $request)
     {
         try {
-            $actionId = $request->input('actionId');
+            // $actionId = $request->input('actionId');
             $unitId = $request->input('unitId');
-            $floorId = $request->input('floorId');
+            // $floorId = $request->input('floorId');
             // $name = $request->input('name');
             $unitSize = $request->input('unitSize');
             $price = $request->input('price');
-            if ($actionId == 1) // unit update
-            {
-                UnitDetail::where('id', $unitId)->update(['square_feet' => $unitSize, 'price' => $price]);
-            } elseif ($actionId == 2) // unit delete
-            {
-                // UnitDetail::where('id', $unitId)->forceDelete();
+            UnitDetail::where('id', $unitId)->update(['square_feet' => $unitSize, 'price' => $price]);
+            // if ($actionId == 1) // unit update
+            // {
+            //     UnitDetail::where('id', $unitId)->update(['square_feet' => $unitSize, 'price' => $price]);
+            // } elseif ($actionId == 2) // unit delete
+            // {
+            //     // UnitDetail::where('id', $unitId)->forceDelete();
 
-                $deletedUnit = UnitDetail::where('id', $unitId)->first();
-                if ($deletedUnit) {
-                    $deletedUnitNumber = (int)$deletedUnit->name; // Assuming the name is a string number like '302'
-                    $floorId = $deletedUnit->floor_id;
 
-                    // Delete the unit
-                    $deletedUnit->forceDelete();
+            //     //actual code
+            //     $deletedUnit = UnitDetail::where('id', $unitId)->first();
+            //     if ($deletedUnit) {
+            //         $deletedUnitNumber = (int)$deletedUnit->name; // Assuming the name is a string number like '302'
+            //         $floorId = $deletedUnit->floor_id;
 
-                    // Fetch the units on the same floor with unit numbers greater than the deleted one
-                    $unitsToShift = UnitDetail::where('floor_id', $floorId)
-                        ->where('name', '>', $deletedUnitNumber) // Get units with names (numbers) greater than the deleted one
-                        ->orderBy('name') // Order by name to handle shifts sequentially
-                        ->get();
+            //         // Delete the unit
+            //         $deletedUnit->forceDelete();
 
-                    // Shift the unit numbers
-                    foreach ($unitsToShift as $unit) {
-                        $oldUnitNumber = (int)$unit->name;
-                        $newUnitNumber = $oldUnitNumber - 1; // Decrement the unit number
-                        $unit->update(['name' => $newUnitNumber]);
-                        // echo "   " .$unit->id."-".$newUnitNumber ." ";
-                    }
-                }
+            //         // Fetch the units on the same floor with unit numbers greater than the deleted one
+            //         $unitsToShift = UnitDetail::where('floor_id', $floorId)
+            //             ->where('name', '>', $deletedUnitNumber) // Get units with names (numbers) greater than the deleted one
+            //             ->orderBy('name') // Order by name to handle shifts sequentially
+            //             ->get();
+
+            //         // Shift the unit numbers
+            //         foreach ($unitsToShift as $unit) {
+            //             $oldUnitNumber = (int)$unit->name;
+            //             $newUnitNumber = $oldUnitNumber - 1; // Decrement the unit number
+            //             $unit->update(['name' => $newUnitNumber]);
+            //             // echo "   " .$unit->id."-".$newUnitNumber ." ";
+            //         }
+            //     }
+// end actual code
 
                 // // Fetch the current floor's units in ascending order
                 // $units = UnitDetail::where('floor_id', $floorId)
@@ -378,51 +382,53 @@ class WingController extends Controller
                 //         }
                 //     }
                 // }
-            } elseif ($actionId == 3) // floor delete
-            {
-                // First, get the Wing ID associated with the floor
-                $wingId = FloorDetail::where('id', $floorId)->value('wing_id');
+            // } elseif ($actionId == 3) // floor delete
+            // {
 
-                $floors = FloorDetail::where('wing_id', $wingId)
-                    ->orderBy('id') // Assuming 'id' is a unique identifier for sorting
-                    ->pluck('id')
-                    ->toArray();
+            //     // actual code
+            //     // First, get the Wing ID associated with the floor
+            //     $wingId = FloorDetail::where('id', $floorId)->value('wing_id');
 
-                // Find the index of the floor to be deleted
-                $floorIndex = array_search($floorId, $floors);
+            //     $floors = FloorDetail::where('wing_id', $wingId)
+            //         ->orderBy('id') // Assuming 'id' is a unique identifier for sorting
+            //         ->pluck('id')
+            //         ->toArray();
+
+            //     // Find the index of the floor to be deleted
+            //     $floorIndex = array_search($floorId, $floors);
 
 
-                // Calculate the position of the floor being deleted
-                if ($floorIndex !== false) {
-                    $deletingfloorPosition = $floorIndex + 1; // Convert to 1-based index
+            //     // Calculate the position of the floor being deleted
+            //     if ($floorIndex !== false) {
+            //         $deletingfloorPosition = $floorIndex + 1; // Convert to 1-based index
 
-                    $newUnitNumberPrefix = sprintf('%d', ($deletingfloorPosition) * 100); // Adjust unit prefix accordingly
-                    // Loop through the remaining floors starting from the deleted floor's position
-                    for ($i = $floorIndex + 1; $i < count($floors); $i++) {
-                        $currentFloorId = $floors[$i];
-                        // Calculate new unit number prefix based on deleting floor position
+            //         $newUnitNumberPrefix = sprintf('%d', ($deletingfloorPosition) * 100); // Adjust unit prefix accordingly
+            //         // Loop through the remaining floors starting from the deleted floor's position
+            //         for ($i = $floorIndex + 1; $i < count($floors); $i++) {
+            //             $currentFloorId = $floors[$i];
+            //             // Calculate new unit number prefix based on deleting floor position
 
-                        // Update unit names for this floor
-                        $units = UnitDetail::where('floor_id', $currentFloorId)->get();
-                        $unitIndex = 1;
-                        foreach ($units as $unit) {
-                            $oldUnitNumber = (int)$unit->name; // Assuming name is stored as a string of integers
-                            //   echo $oldUnitNumber;
-                            $newUnitNumber = sprintf('%d%02d', $i, $unitIndex);
-                            // $newUnitNumber = sprintf('%d%02d', (int)($newUnitNumberPrefix / 100), ($oldUnitNumber % 100)); // Keep the last two digits the same
-                            $unit->update(['name' => $newUnitNumber]);
-                            $unitIndex++;
-                            // echo "   " .$unit->id."-".$newUnitNumber ." ".$i;
+            //             // Update unit names for this floor
+            //             $units = UnitDetail::where('floor_id', $currentFloorId)->get();
+            //             $unitIndex = 1;
+            //             foreach ($units as $unit) {
+            //                 $oldUnitNumber = (int)$unit->name; // Assuming name is stored as a string of integers
+            //                 //   echo $oldUnitNumber;
+            //                 $newUnitNumber = sprintf('%d%02d', $i, $unitIndex);
+            //                 // $newUnitNumber = sprintf('%d%02d', (int)($newUnitNumberPrefix / 100), ($oldUnitNumber % 100)); // Keep the last two digits the same
+            //                 $unit->update(['name' => $newUnitNumber]);
+            //                 $unitIndex++;
+            //                 // echo "   " .$unit->id."-".$newUnitNumber ." ".$i;
 
-                        }
-                    }
+            //             }
+            //         }
 
-                    WingDetail::where('id', $wingId)->decrement('total_floors');
-                    UnitDetail::where('floor_id', $floorId)->forceDelete();
-                    FloorDetail::where('id', $floorId)->forceDelete();
-                }
-            }
-
+            //         WingDetail::where('id', $wingId)->decrement('total_floors');
+            //         UnitDetail::where('floor_id', $floorId)->forceDelete();
+            //         FloorDetail::where('id', $floorId)->forceDelete();
+            //     }
+            // }
+            // end actual code
             return response()->json([
                 'status' => 'success',
                 'message' => null,

@@ -3,11 +3,13 @@
 use App\Http\Controllers\PropertyController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BookingController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WingController;
 use App\Http\Controllers\ChequeScanController;
+
 
 
 
@@ -64,9 +66,6 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 
 
     //units call
-    Route::get('/get-booked-unit-detail/{uid}/{bid}/{type}', [UnitController::class, 'getBookedUnitDetail']); 
-    Route::post('/add-unit-booking-detail', [UnitController::class, 'addUnitBookingInfo']);
-    Route::post('/add-unit-payment-detail', [UnitController::class, 'addUnitPaymentDetail']);
     Route::post('/add-interested-leads', [UnitController::class, 'addInterestedLeads']); 
     Route::get('/get-unit-interested-leads/{uid}', [UnitController::class, 'getUnitInterestedLeads']); 
     Route::get('/get-unit-wing-wise/{wid}', [UnitController::class, 'getUnitsBasedOnWing']); 
@@ -75,6 +74,14 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/lead-attach-with-units', [UnitController::class, 'addLeadsAttachingWithUnits']); 
     Route::post('/lead-attach-with-units-using-cheque', [UnitController::class, 'addLeadsAttachWithUnitsUsingCheque']); 
  
+
+
+
+    //booking calls
+    Route::get('/get-booked-unit-detail/{uid}/{bid}/{type}', [BookingController::class, 'getBookedUnitDetail']); 
+    Route::post('/add-unit-booking-detail', [BookingController::class, 'addUnitBookingInfo']);
+    Route::post('/add-unit-payment-detail', [BookingController::class, 'addUnitPaymentDetail']);
+
 // });
 
 
