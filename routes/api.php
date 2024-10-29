@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\VendorController;
 
 
 Route::post('/register-user', [AuthController::class, 'registerUser']);
@@ -40,9 +42,19 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/add-edit-leads', [LeadController::class, 'addOrEditLeads']); 
     Route::post('/add-leads-csv', [LeadController::class, 'addLeadsCsv']); 
     Route::post('/update-lead-notes', [LeadController::class, 'updateLeadNotes']);
-
-    Route::post('/lead-messages/send', [LeadController::class, 'sendBulkMessages']); 
-// });
+    Route::post('/lead-messages/send', [LeadController::class, 'sendBulkMessages']);
+    
+    //inventory call
+    Route::get('/all-inventories/{skey}&{sort}&{sortbykey}&{offset}&{limit}', [InventoryController::class, 'allInventories']); 
+    Route::post('/add-edit-inventory', [InventoryController::class, 'addOrEditInventories']); 
+    Route::get('/get-inventory-details/{id}', [InventoryController::class, 'getInventoryData']); 
+    //vendor call
+    Route::get('/all-vendors/{skey}&{sort}&{sortbykey}&{offset}&{limit}', [VendorController::class, 'allVendors']); 
+    Route::post('/add-edit-vendors', [VendorController::class, 'addOrEditVendors']); 
+    Route::get('/get-vendor-details/{vid}', [VendorController::class, 'getVendorData']); 
+    Route::get('/fetch-vendor-names', [VendorController::class, 'fetchAllVendorName']); 
+    
+    // });
 
 
 
