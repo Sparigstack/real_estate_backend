@@ -62,48 +62,51 @@ class WingController extends Controller
                 ]);
             }
         ])
-        ->withCount(['unitDetails', 'floorDetails'])
-        ->where('id', $wid)
-        ->first();
-    
+            ->withCount(['unitDetails', 'floorDetails'])
+            ->where('id', $wid)
+            ->first();
+
         // Prepare the response
         if ($fetchWings) {
             foreach ($fetchWings->floorDetails as $floor) {
                 foreach ($floor->unitDetails as $unit) {
                     $unitLeads = $unit->leadUnits;
-    
+
                     // Calculate total interested leads count
                     $unit->interested_lead_count = $unitLeads->sum(function ($leadUnit) {
                         return count(explode(',', $leadUnit->interested_lead_id));
                     });
-    
+
                     $unit->booking_status = $unitLeads->pluck('booking_status')->first();
-    
+
                     // Initialize total paid amount
                     $totalPaidAmount = 0;
-    
+
                     // Check payment transactions for this unit
                     $paymentTransactions = $unit->paymentTransactions;
-    
+
                     if ($paymentTransactions->isNotEmpty()) {
                         // Get the first transaction
-                        $firstTransaction = $paymentTransactions->first();
-    
+                        $filteredTransactions  = $paymentTransactions->where('payment_status', 2);
+
                         // Add token_amt from the first transaction if it exists
-                        if ($firstTransaction->token_amt) {
+                        $firstTransaction = $filteredTransactions->first();
+
+                        // Add token_amt from the first transaction if it exists
+                        if ($firstTransaction && $firstTransaction->token_amt) {
                             $totalPaidAmount += $firstTransaction->token_amt;
                         }
-    
+
                         // Sum next_payable_amt from the first transaction and all subsequent ones
-                        foreach ($paymentTransactions as $index => $transaction) {
-                            if ($index === 0 && $firstTransaction->next_payable_amt) {
-                                $totalPaidAmount += $firstTransaction->next_payable_amt; // Add next payable amt from first
+                        foreach ($filteredTransactions as $index => $transaction) {
+                            if ($index === 0 && $firstTransaction && $firstTransaction->next_payable_amt) {
+                                $totalPaidAmount += $firstTransaction->next_payable_amt; // Add next payable amt from the first
                             } elseif ($index > 0 && $transaction->next_payable_amt) {
                                 $totalPaidAmount += $transaction->next_payable_amt; // Add next payable amt from subsequent transactions
                             }
                         }
                     }
-    
+
                     // Assign total paid amount to the unit
                     $unit->total_paid_amount = $totalPaidAmount;
 
@@ -124,7 +127,7 @@ class WingController extends Controller
                                 ];
                             }
                         }
-        
+
                         // Retrieve and format customers
                         if ($leadUnit->allocated_customer_id) {
                             $customerIds = explode(',', $leadUnit->allocated_customer_id);
@@ -138,19 +141,19 @@ class WingController extends Controller
                             }
                         }
                     }
-        
+
                     // Assign the aggregated allocated entities array to each unit
                     $unit->allocated_entities = $allocatedEntities;
-    
-                   
+
+
                     unset($unit->leadUnits);
                 }
             }
-    
+
             // Return the modified result without hidden fields
             return $fetchWings->makeHidden(['property_id', 'created_at', 'updated_at']);
         }
-    
+
         return null;
         // return $fetchWings ? $fetchWings->makeHidden(['property_id', 'created_at', 'updated_at']) : null;
     }
