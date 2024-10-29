@@ -256,11 +256,12 @@ class UnitController extends Controller
                 $leadUnit = $leadUnit ?: new LeadUnit();
                 $leadUnit->unit_id = $unitId;
                 // $leadUnit->allocated_lead_id = $leadUnit->allocated_lead_id ? $leadUnit->allocated_lead_id . ',' . $leadId : $leadId;
-               
+
                 if (!in_array($leadId, $allocatedLeadIds)) {
                     $allocatedLeadIds[] = $leadId;
                     $leadUnit->allocated_lead_id = implode(',', $allocatedLeadIds);
-                } $leadUnit->booking_status = 4; // Update booking status to 4
+                }
+                $leadUnit->booking_status = 4; // Update booking status to 4
                 $leadUnit->save();
 
                 // Set allocated_id and allocated_type for PaymentTransaction
@@ -292,36 +293,38 @@ class UnitController extends Controller
             $paymentTransaction->transaction_notes = 'Booking entry created';
             $paymentTransaction->save();
 
-            // Create the second payment transaction entry
-            $paymentTransactionSecond = new PaymentTransaction();
-            $paymentTransactionSecond->unit_id = $unitId;
-            $paymentTransactionSecond->property_id = $propertyId;
-            $paymentTransactionSecond->allocated_id = $allocatedId; // Set allocated ID
-            $paymentTransactionSecond->allocated_type = $allocatedType; // Set allocated type
-            $paymentTransactionSecond->booking_date = $bookingDate; // Use provided booking date
-            $paymentTransactionSecond->payment_due_date = $paymentDueDate; // Set to provided payment due date
-            $paymentTransactionSecond->token_amt = $tokenAmt; // Set to provided token amount
-            $paymentTransactionSecond->amount = $totalAmt ?? null;
-            $paymentTransactionSecond->next_payable_amt = $nextPayableAmt; // Set to provided next payable amount
-            // $paymentTransactionSecond->payment_status = 1; // Set payment status to 2
-            if ($paymentDueDate) {
-                // Check if payment_due_date is in the future or the past
-                $paymentDueDateObj = \Carbon\Carbon::parse($paymentDueDate);
-                $currentDate = \Carbon\Carbon::today();
+            if ($nextPayableAmt || $paymentDueDate) {
+                // Create the second payment transaction entry
+                $paymentTransactionSecond = new PaymentTransaction();
+                $paymentTransactionSecond->unit_id = $unitId;
+                $paymentTransactionSecond->property_id = $propertyId;
+                $paymentTransactionSecond->allocated_id = $allocatedId; // Set allocated ID
+                $paymentTransactionSecond->allocated_type = $allocatedType; // Set allocated type
+                $paymentTransactionSecond->booking_date = $bookingDate; // Use provided booking date
+                $paymentTransactionSecond->payment_due_date = $paymentDueDate; // Set to provided payment due date
+                $paymentTransactionSecond->token_amt = $tokenAmt; // Set to provided token amount
+                $paymentTransactionSecond->amount = $totalAmt ?? null;
+                $paymentTransactionSecond->next_payable_amt = $nextPayableAmt; // Set to provided next payable amount
+                // $paymentTransactionSecond->payment_status = 1; // Set payment status to 2
+                if ($paymentDueDate) {
+                    // Check if payment_due_date is in the future or the past
+                    $paymentDueDateObj = \Carbon\Carbon::parse($paymentDueDate);
+                    $currentDate = \Carbon\Carbon::today();
 
-                // Set payment_status based on whether the due date is in the future or past
-                if ($paymentDueDateObj->isFuture()) {
-                    $paymentTransactionSecond->payment_status = 1; // Future date, set payment status to 1
+                    // Set payment_status based on whether the due date is in the future or past
+                    if ($paymentDueDateObj->isFuture()) {
+                        $paymentTransactionSecond->payment_status = 1; // Future date, set payment status to 1
+                    } else {
+                        $paymentTransactionSecond->payment_status = 2; // Past date, set payment status to 2
+                    }
                 } else {
-                    $paymentTransactionSecond->payment_status = 2; // Past date, set payment status to 2
+                    $paymentTransactionSecond->payment_status = 1; // Set payment status to 2
                 }
-            } else {
-                $paymentTransactionSecond->payment_status = 1; // Set payment status to 2
-            }
 
-            $paymentTransactionSecond->payment_type = 1; // Assuming manual for now
-            $paymentTransactionSecond->transaction_notes = 'Booking entry created';
-            $paymentTransactionSecond->save();
+                $paymentTransactionSecond->payment_type = 1; // Assuming manual for now
+                $paymentTransactionSecond->transaction_notes = 'Booking entry created';
+                $paymentTransactionSecond->save();
+            }
 
             return response()->json([
                 'status' => 'success',
@@ -456,6 +459,8 @@ class UnitController extends Controller
             // Initialize variables for total paid amount and response data for contacts
             $totalPaidAmount = 0;
             $contactId = null;
+            $responseData['payment_schedule'] = [];
+            $isFirstTransaction = true;
 
             // Loop through payment transactions to get contact details based on allocated_id
             foreach ($paymentTransactions as $index => $transaction) {
@@ -476,23 +481,43 @@ class UnitController extends Controller
 
                 // Sum up the total paid amount for completed transactions
                 if ($transaction->payment_status == 2) {
-                    $totalPaidAmount += $transaction->next_payable_amt;
+                    if ($isFirstTransaction) {
+                        $totalPaidAmount += $transaction->token_amt;
+                        $isFirstTransaction = false;
+                    } else {
+                        $totalPaidAmount += $transaction->next_payable_amt;
+                    }
                 }
 
                 // Prepare payment schedule
-                if ($index == 0) { // For the first transaction
-                    $responseData['payment_schedule'][] = [
-                        'payment_due_date' => $transaction->booking_date,
-                        'next_payable_amt' => $transaction->token_amt,
-                        'payment_status' => $transaction->payment_status, // Status: 1 for pending, 2 for completed
+                if ($transaction->token_amt || $transaction->next_payable_amt || $transaction->booking_date || $transaction->payment_due_date) {
+                    // Only add the object if it has at least one non-null value
+                    $paymentScheduleEntry = [
+                        'payment_due_date' => $index == 0 ? $transaction->booking_date : $transaction->payment_due_date,
+                        'next_payable_amt' => $index == 0 ? $transaction->token_amt : $transaction->next_payable_amt,
+                        'payment_status' => $transaction->payment_status,
                     ];
-                } else { // For subsequent transactions
-                    $responseData['payment_schedule'][] = [
-                        'payment_due_date' => $transaction->payment_due_date,
-                        'next_payable_amt' => $transaction->next_payable_amt,
-                        'payment_status' => $transaction->payment_status, // Status: 1 for pending, 2 for completed
-                    ];
+            
+                    // Check if either next_payable_amt or payment_due_date is not null
+                    if (!is_null($paymentScheduleEntry['next_payable_amt']) || !is_null($paymentScheduleEntry['payment_due_date'])) {
+                        $responseData['payment_schedule'][] = $paymentScheduleEntry;
+                    }
                 }
+                // if ($transaction->token_amt || $transaction->next_payable_amt || $transaction->booking_date || $transaction->payment_due_date) {
+                //     if ($index == 0) {
+                //         $responseData['payment_schedule'][] = [
+                //             'payment_due_date' => $transaction->booking_date,
+                //             'next_payable_amt' => $transaction->token_amt,
+                //             'payment_status' => $transaction->payment_status,
+                //         ];
+                //     } else {
+                //         $responseData['payment_schedule'][] = [
+                //             'payment_due_date' => $transaction->payment_due_date,
+                //             'next_payable_amt' => $transaction->next_payable_amt,
+                //             'payment_status' => $transaction->payment_status,
+                //         ];
+                //     }
+                // }
             }
 
             $responseData['total_paid_amount'] = $totalPaidAmount;
