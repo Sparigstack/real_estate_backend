@@ -147,7 +147,8 @@ class PropertyController extends Controller
             $numberOfUnits = $request->input('numberOfUnits');
             $floorUnitCounts = $request->input('floorUnitCounts');
 
-            if ($sameUnitFlag == 1) {
+            if ($sameUnitFlag == 1) 
+            {
                 $checkWing = WingDetail::where('user_property_id', $propertyId)->where('name', $wingName)->first();
                 if (isset($checkWing)) {
                     return response()->json([
@@ -191,7 +192,8 @@ class PropertyController extends Controller
                     'floorUnitDetails' => $floorUnitDetails,
                     'floorUnitCounts' => null
                 ], 200);
-            } elseif ($sameUnitFlag == 2) {
+            } elseif ($sameUnitFlag == 2) 
+            {
                 $checkWing = WingDetail::where('user_property_id', $propertyId)->where('name', $wingName)->first();
                 if (isset($checkWing)) {
                     return response()->json([

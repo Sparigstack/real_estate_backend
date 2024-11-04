@@ -21,4 +21,9 @@ class InventoryDetail extends Model
     {
         return $this->hasOne(InventoryLog::class, 'inventory_id', 'id');
     }
+
+    public function PropertyDetails()
+    {
+        return $this->belongsTo(UserProperty::class,'property_id','id')->with('user');
+    }
 }

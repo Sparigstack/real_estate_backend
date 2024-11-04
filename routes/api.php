@@ -7,6 +7,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\InventoryUsageController;
 
 
 Route::post('/register-user', [AuthController::class, 'registerUser']);
@@ -53,6 +54,9 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/add-edit-vendors', [VendorController::class, 'addOrEditVendors']); 
     Route::get('/get-vendor-details/{vid}', [VendorController::class, 'getVendorData']); 
     Route::get('/fetch-vendor-names', [VendorController::class, 'fetchAllVendorName']); 
+    //usage call
+      Route::post('/add-usage-log', [InventoryUsageController::class, 'AddInventoryUsage']); 
+      Route::get('/get-inventory-usage/{id}', [InventoryUsageController::class, 'GetInventoryUsage']); 
     
     // });
 
