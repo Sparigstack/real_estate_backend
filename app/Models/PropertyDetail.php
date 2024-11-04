@@ -10,7 +10,7 @@ class PropertyDetail extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_property_id',
+        'property_id',
         'total_wings',
         'amenities_id',
         'status_id',

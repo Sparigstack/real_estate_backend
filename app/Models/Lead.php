@@ -25,4 +25,19 @@ class Lead extends Model
     {
         return $this->belongsTo(LeadSource::class, 'source_id', 'id');
     }
+ 
+
+    public function leadUnits()
+    {
+        return $this->hasMany(LeadUnit::class, 'allocated_lead_id');
+    }
+    public function customerUnits()
+    {
+        return $this->hasMany(LeadUnit::class, 'allocated_customer_id');
+    }
+
+    public function paymentTransactions()
+    {
+        return $this->hasMany(PaymentTransaction::class, 'allocated_id');
+    }
 }

@@ -32,7 +32,7 @@ class UserProperty extends Model
     }
     public function wingDetails()
     {
-        return $this->hasMany(WingDetail::class,'user_property_id','id');
+        return $this->hasMany(WingDetail::class,'property_id','id');
     }
 
     public function propertyDetails()
@@ -46,7 +46,7 @@ class UserProperty extends Model
     }
     public function unitDetails()
     {
-        return $this->hasMany(UnitDetail::class,'user_property_id','id');
+        return $this->hasMany(UnitDetail::class,'property_id','id');
     }
     public function state()
     {

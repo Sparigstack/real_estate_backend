@@ -4,13 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Laravel\Passport\HasApiTokens;
 
 class UnitDetail extends Model
 {
-    use HasFactory;
+    use HasApiTokens, HasFactory;
 
+    protected $table="unit_details";
     protected $fillable = [
-        'user_property_id',
+        'property_id',
         'wing_id',
         'floor_id',
         'name',
@@ -19,7 +21,7 @@ class UnitDetail extends Model
     ];
     public function userProperty()
     {
-        return $this->belongsTo(UserProperty::class,'user_property_id','id');
+        return $this->belongsTo(UserProperty::class,'property_id','id');
     }
     public function wingDetail()
     {
@@ -28,5 +30,13 @@ class UnitDetail extends Model
     public function floorDetail()
     {
         return $this->belongsTo(FloorDetail::class,'floor_id','id');
+    }
+    public function leadUnits()
+    {
+        return $this->hasMany(LeadUnit::class, 'unit_id'); // Ensure unit_id is used here
+    }
+    public function paymentTransactions()
+    {
+        return $this->hasMany(PaymentTransaction::class,'unit_id');
     }
 }
