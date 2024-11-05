@@ -98,6 +98,7 @@ class BookingController extends Controller
                         'payment_due_date' => $index == 0 ? $transaction->booking_date : $transaction->payment_due_date,
                         'next_payable_amt' => $index == 0 ? $transaction->token_amt : $transaction->next_payable_amt,
                         'payment_status' => $transaction->payment_status,
+                        'type'=>$index == 0 ? 'Down Payment' :'Next Payment'
                     ];
 
                     // Check if either next_payable_amt or payment_due_date is not null

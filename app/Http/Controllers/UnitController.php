@@ -532,7 +532,6 @@ class UnitController extends Controller
                             'allocated_type' => $leadType, // 1 for lead, 2 for customer
                             'next_payable_amt' => $amount,
                             'amount' => null,
-                            'add_second_transaction_only' => true // Custom flag for adding only the second transaction
                         ]);
 
                         return response()->json([
@@ -571,7 +570,7 @@ class UnitController extends Controller
                     // Create a new LeadUnit entry if it doesn't exist
                     $associatedEntity = new LeadUnit();
                     $associatedEntity->unit_id = $unitId;
-                    $associatedEntity->booking_status = 3; // Set an appropriate default status
+                    $associatedEntity->booking_status = 4; // Set an appropriate default status
                     if ($leadType == 'lead') {
                         $associatedEntity->allocated_lead_id = $leadId;
                     } elseif ($leadType == 'customer') {
@@ -589,7 +588,6 @@ class UnitController extends Controller
                     'allocated_type' => $leadType, // 1 for lead, 2 for customer
                     'next_payable_amt' => $amount,
                     'amount' =>  null,
-                    'add_second_transaction_only' => false
                 ]);
 
                 return response()->json([
@@ -624,7 +622,7 @@ class UnitController extends Controller
                     // No associated entity found; create a new LeadUnit entry
                     $associatedEntity = new LeadUnit();
                     $associatedEntity->unit_id = $unitId; // Set the unit ID
-                    $associatedEntity->booking_status = 3; // Set an appropriate default status
+                    $associatedEntity->booking_status = 4; // Set an appropriate default status
 
                     if ($leadType == 'lead') {
                         $associatedEntity->allocated_lead_id = $leadId; // Allocate the lead ID
@@ -644,7 +642,6 @@ class UnitController extends Controller
                     'allocated_type' => $leadType, // 1 for lead, 2 for customer
                     'next_payable_amt' => $amount,
                     'amount' => null,
-                    'add_second_transaction_only' => false
                 ]);
 
                 return response()->json([
@@ -677,7 +674,7 @@ class UnitController extends Controller
         $amount = $data['next_payable_amt'];
         $totalamt = $data['amount'] ?? null;
 
-        $addSecondTransactionOnly = $data['add_second_transaction_only'] ?? false;
+        // $addSecondTransactionOnly = $data['add_second_transaction_only'] ?? false;
 
         Log::info('Parsed Variables:', [
             'unitId' => $unitId,
@@ -686,7 +683,6 @@ class UnitController extends Controller
             'leadType' => $leadType,
             'amount' => $amount,
             'totalamt' => $totalamt,
-            'addSecondTransactionOnly' => $addSecondTransactionOnly,
         ]);
 
         $existingTransaction = PaymentTransaction::where('unit_id', $unitId)
@@ -695,6 +691,11 @@ class UnitController extends Controller
 
 
         Log::info('Existing transaction found:', ['exists' => $existingTransaction]);
+
+
+
+        $amount = str_replace(',', '', $amount); // Remove all commas
+
         // Add only the second transaction if an entry exists and flag is set
         if ($existingTransaction) {
             Log::info('logEntity called with data:', $data);
@@ -704,11 +705,9 @@ class UnitController extends Controller
             $transaction2->allocated_id = $leadId;
             $transaction2->allocated_type = ($leadType == 'lead') ? 1 : 2;
             $transaction2->payment_status = 1; // Final payment status
+            $transaction2->payment_due_date = today();
             $transaction2->booking_date = today();
-            $cleanedAmount = str_replace(',', '', $amount); // Remove all commas
-
-            // Convert to float
-            $transaction2->next_payable_amt = (float) $cleanedAmount;
+            $transaction2->next_payable_amt = $amount;
             $transaction2->created_at = now();
             $transaction2->updated_at = now();
             $transaction2->save();
@@ -716,7 +715,6 @@ class UnitController extends Controller
         }
 
         if (!$existingTransaction) {
-            Log::info('nrali:', $data);
             // Log the payment transaction entries
             $transaction1 = new PaymentTransaction();
             $transaction1->unit_id = $unitId;
@@ -724,6 +722,7 @@ class UnitController extends Controller
             $transaction1->allocated_id = $leadId; // Lead or Customer ID
             $transaction1->allocated_type = ($leadType == 'lead') ? 1 : 2; // 1 for lead, 2 for customer
             $transaction1->payment_status = 2; // Initial payment status
+            $transaction1->payment_due_date = today();
             $transaction1->booking_date = today();
             $transaction1->created_at = now();
             $transaction1->updated_at = now();
@@ -735,12 +734,10 @@ class UnitController extends Controller
             $transaction2->property_id = $propertyId;
             $transaction2->allocated_id = $leadId; // Lead or Customer ID
             $transaction2->allocated_type = ($leadType == 'lead') ? 1 : 2; // 1 for lead, 2 for customer
-            $transaction2->payment_status = 1; // Final payment status
+            $transaction2->payment_status = 2; // Final payment status
+            $transaction2->payment_due_date = today();
             $transaction2->booking_date = today();
-            $cleanedAmount = str_replace(',', '', $amount); // Remove all commas
-
-            // Convert to float
-            $transaction2->next_payable_amt = floatval($cleanedAmount);
+            $transaction2->next_payable_amt = $amount;
             $transaction2->created_at = now();
             $transaction2->updated_at = now();
             $transaction2->save();
