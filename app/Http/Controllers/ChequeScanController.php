@@ -24,51 +24,51 @@ class ChequeScanController extends Controller
     public function detectCheque(Request $request)
     {
         try {
-            // $request->validate(['image' => 'required|image']);
-            // $propertyID = $request->input('propertyID');
+            $request->validate(['image' => 'required|image']);
+            $propertyID = $request->input('propertyID');
 
-            // $imageContent = file_get_contents($request->file('image')->getRealPath());
-            // $client = new DocumentProcessorServiceClient([
-            //     'credentials' => env('GOOGLE_APPLICATION_CREDENTIALS'),
-            // ]);
-            // $rawDocument = (new RawDocument())
-            //     ->setContent($imageContent)
-            //     ->setMimeType($request->file('image')->getMimeType());
+            $imageContent = file_get_contents($request->file('image')->getRealPath());
+            $client = new DocumentProcessorServiceClient([
+                'credentials' => env('GOOGLE_APPLICATION_CREDENTIALS'),
+            ]);
+            $rawDocument = (new RawDocument())
+                ->setContent($imageContent)
+                ->setMimeType($request->file('image')->getMimeType());
 
-            // $processRequest = (new ProcessRequest())
-            //     ->setName("projects/cloud-vision-438307/locations/us/processors/1a6eb05828f2b041")
-            //     ->setRawDocument($rawDocument);
+            $processRequest = (new ProcessRequest())
+                ->setName("projects/cloud-vision-438307/locations/us/processors/1a6eb05828f2b041")
+                ->setRawDocument($rawDocument);
 
-            // $response = $client->processDocument($processRequest);
-            // $document = $response->getDocument();
-            // $entities = $document->getEntities();
+            $response = $client->processDocument($processRequest);
+            $document = $response->getDocument();
+            $entities = $document->getEntities();
 
 
-            // $userName = null;
-            // $amount = null;
-            // $entitiesArray = [];
+            $userName = null;
+            $amount = null;
+            $entitiesArray = [];
 
-            // foreach ($entities as $entity) {
-            //     $entitiesArray[] = [
-            //         'type' => $entity->getType(),
-            //         'mention_text' => $entity->getMentionText(),
-            //     ];
-            // }
+            foreach ($entities as $entity) {
+                $entitiesArray[] = [
+                    'type' => $entity->getType(),
+                    'mention_text' => $entity->getMentionText(),
+                ];
+            }
 
-            $entitiesArray = json_decode('[
-                {
-                    "type": "scan-amount",
-                    "mention_text": "50,25,000"
-                },
-                {
-                    "type": "scan-name",
-                    "mention_text": "riya"
-                },
-                 {
-                    "type": "scan-name",
-                    "mention_text": "prateek"
-                }
-            ]', true);
+            // $entitiesArray = json_decode('[
+            //     {
+            //         "type": "scan-amount",
+            //         "mention_text": "50,25,000"
+            //     },
+            //     {
+            //         "type": "scan-name",
+            //         "mention_text": "riya"
+            //     },
+            //      {
+            //         "type": "scan-name",
+            //         "mention_text": "prateek"
+            //     }
+            // ]', true);
 
             // ,
             //     {
@@ -84,7 +84,7 @@ class ChequeScanController extends Controller
             //         "mention_text": "yira CHOUDHARY"
             //     }
 
-            $propertyID = 1;
+           // $propertyID = 1;
 
 
 
@@ -296,7 +296,7 @@ class ChequeScanController extends Controller
 
 
 
-            // $client->close();
+            $client->close();
 
             return response()->json([
                 'matchedLeads' => $results ?? null,
