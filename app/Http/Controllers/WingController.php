@@ -16,7 +16,11 @@ use App\Models\Amenity;
 use App\Models\Country;
 use App\Models\Customer;
 use App\Models\Lead;
+use App\Models\LeadUnit;
+use App\Models\PaymentTransaction;
 use App\Models\State;
+
+
 
 
 
@@ -321,6 +325,40 @@ class WingController extends Controller
             $unitSize = $request->input('unitSize');
             $price = $request->input('price');
             UnitDetail::where('id', $unitId)->update(['square_feet' => $unitSize, 'price' => $price]);
+
+
+
+            // Retrieve all payment transactions for the unit
+            $paymentTransactions = PaymentTransaction::where('unit_id', $unitId)
+            ->where('payment_status',2)
+            ->get();
+
+            // Calculate the total for next_payable_amt
+            $totalNextPayableAmt = $paymentTransactions->sum('next_payable_amt');
+
+            // Retrieve the first payment transaction to include token_amt
+            $firstPaymentTransaction = $paymentTransactions->first();
+            if ($firstPaymentTransaction) {
+                // Add the token_amt of the first entry to the total next_payable_amt
+                $totalNextPayableAmt += $firstPaymentTransaction->token_amt;
+            }
+
+            $unitdata=UnitDetail::where('id',$unitId)->first();
+            $leadUnit=LeadUnit::where('unit_id',$unitId)->first();
+            
+            // Update LeadUnit booking status if totalNextPayableAmt reaches or exceeds the required amount
+            if ($unitdata->price && $leadUnit) {
+                // if ($lastPaymentTransaction && $totalNextPayableAmt >= $lastPaymentTransaction->amount) {
+                //     $leadUnit->booking_status = 3; // Mark as confirmed
+                //     $leadUnit->save();
+                // }
+                if ($totalNextPayableAmt >= $unitdata->price) {
+                    $leadUnit->booking_status = 3; // Mark as confirmed
+                }elseif($totalNextPayableAmt < $unitdata->price){
+                    $leadUnit->booking_status = 4; // Mark as pending   
+                }
+                $leadUnit->save();
+            }
             // if ($actionId == 1) // unit update
             // {
             //     UnitDetail::where('id', $unitId)->update(['square_feet' => $unitSize, 'price' => $price]);

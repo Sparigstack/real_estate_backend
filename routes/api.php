@@ -72,16 +72,16 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/send-reminder/{uid}', [UnitController::class, 'sendReminderToBookedPerson']); 
     Route::get('/get-lead-name-with-detail/{pid}', [UnitController::class, 'getLeadNames']); 
     Route::post('/lead-attach-with-units', [UnitController::class, 'addLeadsAttachingWithUnits']);  
-    Route::post('/add-matched-entity-using-cheque', [UnitController::class, 'addMatchedEntityUsingCheque']); 
-    Route::post('/add-entity-attach-with-units-using-cheque', [UnitController::class, 'addEntityAttachWithUnitsUsingCheque']); 
+    
  
-
 
 
     //booking calls
     Route::get('/get-booked-unit-detail/{uid}/{bid}/{type}', [BookingController::class, 'getBookedUnitDetail']); 
     Route::post('/add-unit-booking-detail', [BookingController::class, 'addUnitBookingInfo']);
     Route::post('/add-unit-payment-detail', [BookingController::class, 'addUnitPaymentDetail']);
+    Route::post('/add-matched-entity-using-cheque', [BookingController::class, 'addMatchedEntityUsingCheque']); 
+    Route::post('/add-entity-attach-with-units-using-cheque', [BookingController::class, 'addEntityAttachWithUnitsUsingCheque']); 
 
 // });
 
