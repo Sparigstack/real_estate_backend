@@ -44,7 +44,7 @@ class ChequeScanController extends Controller
             $entities = $document->getEntities();
 
 
-            $username = [];
+            $username = null;
             $amount = null;
             $entitiesArray = [];
 
@@ -190,11 +190,9 @@ class ChequeScanController extends Controller
 
                 if ($entityamt['type'] == 'scan-amount' && preg_match('/\d/', $entityamt['mention_text'])) {
                     $amount = $entityamt['mention_text'];
-                }elseif ($entityamt['type'] === 'scan-name') {
-                    $username[] = $entityamt['mention_text']; // Add name to the username array
                 }
             }
-            $username = implode(', ', $username);
+         
             foreach ($entities as &$entity) {
                 if ($entity['lead_type'] === 'interested') {
                     continue; // Skip interested types
@@ -307,7 +305,6 @@ class ChequeScanController extends Controller
                 'matchedLeads' => $results ?? null,
                 'allLeads' => $allLeads ?? null,
                 'amount' => $amount ?? null,
-                'username' => $username ?? null,
                 'status' => 'success',
 
             ]);
@@ -317,7 +314,6 @@ class ChequeScanController extends Controller
                 'matchedLeads' => $results ?? null,
                 'allLeads' => $allLeads ?? null,
                 'amount' => $amount ?? null,
-                'username' => $username ?? null,
                 'status' => 'error',
                 'msg'=> $e->getMessage(),
             ]);
