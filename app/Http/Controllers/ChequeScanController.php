@@ -44,7 +44,7 @@ class ChequeScanController extends Controller
             $entities = $document->getEntities();
 
 
-            $userName = null;
+            $username = [];
             $amount = null;
             $entitiesArray = [];
 
@@ -84,7 +84,7 @@ class ChequeScanController extends Controller
             //         "mention_text": "yira CHOUDHARY"
             //     }
 
-           // $propertyID = 1;
+           $propertyID = 1;
 
 
 
@@ -190,8 +190,11 @@ class ChequeScanController extends Controller
 
                 if ($entityamt['type'] == 'scan-amount' && preg_match('/\d/', $entityamt['mention_text'])) {
                     $amount = $entityamt['mention_text'];
+                }elseif ($entityamt['type'] === 'scan-name') {
+                    $username[] = $entityamt['mention_text']; // Add name to the username array
                 }
             }
+            $username = implode(', ', $username);
             foreach ($entities as &$entity) {
                 if ($entity['lead_type'] === 'interested') {
                     continue; // Skip interested types
@@ -199,8 +202,10 @@ class ChequeScanController extends Controller
 
                 foreach ($entitiesArray as $scanEntity) {
                     if ($scanEntity['type'] == 'scan-name') {
-                        $name = $scanEntity['mention_text'];
-                        $nameParts = explode(' ', $name);
+                        $name  = $scanEntity['mention_text'];                     
+                        $nameParts = explode(' ', $name );
+
+                        
 
                         foreach ($nameParts as $part) {
 
@@ -302,6 +307,7 @@ class ChequeScanController extends Controller
                 'matchedLeads' => $results ?? null,
                 'allLeads' => $allLeads ?? null,
                 'amount' => $amount ?? null,
+                'username' => $username ?? null,
                 'status' => 'success',
 
             ]);
@@ -311,6 +317,7 @@ class ChequeScanController extends Controller
                 'matchedLeads' => $results ?? null,
                 'allLeads' => $allLeads ?? null,
                 'amount' => $amount ?? null,
+                'username' => $username ?? null,
                 'status' => 'error',
                 'msg'=> $e->getMessage(),
             ]);
