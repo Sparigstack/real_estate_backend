@@ -260,7 +260,7 @@ class UnitController extends Controller
         }
     }
 
-   
+
 
     public function getUnitInterestedLeads($uid)
     {
@@ -346,5 +346,325 @@ class UnitController extends Controller
         }
     }
 
-    public function addLeadsAttachWithUnitsUsingCheque(Request $request) {}
+    public function addEntityAttachWithUnitsUsingCheque(Request $request) {
+        try {
+            $unitId = $request->input('unit_id');
+            $propertyId = $request->input('property_id');
+            $leadId = $request->input('lead_id');
+            $contactName = $request->input('contact_name');
+            $contactEmail = $request->input('contact_email');
+            $contactNumber = $request->input('contact_number');
+            $nextPayableAmt = $request->input('next_payable_amt');
+            $totalAmt = $request->input('total_amt');
+            $flag = $request->input('flag');
+    
+            // Check if lead_unit entry exists for the given unit_id
+            $leadUnit = LeadUnit::where('unit_id', $unitId)->first();
+    
+            $allocatedLeadIds = $leadUnit && $leadUnit->allocated_lead_id ? explode(',', $leadUnit->allocated_lead_id) : [];
+            $allocatedCustomerIds = $leadUnit && $leadUnit->allocated_customer_id ? explode(',', $leadUnit->allocated_customer_id) : [];
+    
+            // Flag-specific logic
+            if ($flag == 1) {
+                // If the unit has any associated lead or customer, return a matched status
+                if (!empty($allocatedLeadIds) || !empty($allocatedCustomerIds)) {
+                    $names = !empty($allocatedCustomerIds)
+                        ? Customer::whereIn('id', $allocatedCustomerIds)->pluck('name')->toArray()
+                        : Lead::whereIn('id', $allocatedLeadIds)->pluck('name')->toArray();
+    
+                    return response()->json([
+                        'status' => 'matched',
+                        'name' => $names,
+                    ], 200);
+                }
+            }
+    
+            // Determine allocation based on leadId
+            $allocatedType = is_null($leadId) ? 2 : 1; // 2 for customer, 1 for lead
+            $allocatedId = null;
+    
+            if (is_null($leadId)) {
+                // Handle new customer logic
+                $customer = Customer::where('property_id', $propertyId)
+                    ->where('unit_id', $unitId)
+                    ->where('email', $contactEmail)
+                    ->first();
+    
+                if ($customer) {
+                    $customer->name = $contactName;
+                    $customer->contact_no = $contactNumber;
+                    $customer->save();
+                } else {
+                    $customer = Customer::create([
+                        'property_id' => $propertyId,
+                        'unit_id' => $unitId,
+                        'email' => $contactEmail,
+                        'name' => $contactName,
+                        'contact_no' => $contactNumber,
+                    ]);
+                }
+    
+                if (!in_array($customer->id, $allocatedCustomerIds)) {
+                    $allocatedCustomerIds[] = $customer->id;
+                    $leadUnit->allocated_customer_id = implode(',', $allocatedCustomerIds);
+                }
+                $allocatedId = $customer->id;
+            } else {
+                // Handle existing lead logic
+                $lead = Lead::find($leadId);
+                if (!$lead) {
+                    return response()->json(['status' => 'error', 'message' => 'Lead not found'], 200);
+                }
+    
+                if (!in_array($leadId, $allocatedLeadIds)) {
+                    $allocatedLeadIds[] = $leadId;
+                    $leadUnit->allocated_lead_id = implode(',', $allocatedLeadIds);
+                }
+                $allocatedId = $leadId;
+            }
+    
+            // Update lead_unit and set booking status
+            $leadUnit = $leadUnit ?: new LeadUnit();
+            $leadUnit->unit_id = $unitId;
+            $leadUnit->booking_status = 4; // Set booking status to 4
+            $leadUnit->save();
+    
+            // Check and update unit price
+            $unit = UnitDetail::find($unitId);
+            if ($unit && !is_null($totalAmt)) {
+                $unit->price = $totalAmt;
+                $unit->save();
+            }
+    
+            // Log payment transactions
+            $this->logEntity([
+                'unit_id' => $unitId,
+                'property_id' => $propertyId,
+                'allocated_id' => $allocatedId,
+                'allocated_type' => $allocatedType,
+                'next_payable_amt' => $nextPayableAmt ,
+                'amount'=>$totalAmt
+            ]);
+    
+            return response()->json([
+                'status' => 'success',
+                 'name' => null
+                ], 200);
+        } catch (Exception $e) {
+            // Log the error
+            $errorFrom = 'addEntityAttachWithUnitsUsingCheque';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
+    
+
+    public function addMatchedEntityUsingCheque(Request $request)
+    {
+
+        try {
+            $request->validate([
+                'property_id' => 'required|integer',
+                'unit_id' => 'required|integer',
+                'wing_id' => 'required|integer',
+                'id' => 'required|integer', // Lead or Customer ID
+                'lead_type' => 'required|string', // 'lead' or 'customer'
+                'amount' => 'required|string', // Amount to be processed
+                'flag' => 'required|numeric', // Flag to determine action
+            ]);
+
+            // Initialize variables
+            $propertyId = $request->input('property_id');
+            $unitId = $request->input('unit_id');
+            $wingId = $request->input('wing_id');
+            $leadId = $request->input('id'); // Lead or Customer ID
+            $leadType = $request->input('lead_type');
+            $amount = $request->input('amount');
+            $flag = $request->input('flag');
+
+            // Fetch the associated LeadUnit record based on property and unit
+            $associatedEntity = LeadUnit::where('unit_id', $unitId)
+                ->with(['unit']) // Eager load the unit relation to access property_id
+                ->first();
+
+            
+
+            if ($flag == 1) {
+                // Check if there are any entities attached with the same property and unit
+                if ($associatedEntity) {
+                    $matchedNames = [];
+
+                    // Check for leads
+                    $allocatedLeadIds = explode(',', $associatedEntity->allocated_lead_id);
+                    foreach ($allocatedLeadIds as $allocatedLeadId) {
+                        $lead = Lead::where('id', $allocatedLeadId)
+                            ->where('property_id', $propertyId)
+                            ->first();
+                        if ($lead) {
+                            $matchedNames[] = $lead->name; // Collecting names of leads
+                        }
+                    }
+
+                    // Check for customers
+                    $allocatedCustomerIds = explode(',', $associatedEntity->allocated_customer_id);
+                    foreach ($allocatedCustomerIds as $allocatedCustomerId) {
+                        $customer = Customer::where('id', $allocatedCustomerId)
+                            ->where('property_id', $propertyId)
+                            ->first();
+                        if ($customer) {
+                            $matchedNames[] = $customer->name; // Collecting names of customers
+                        }
+                    }
+
+                    // If any matched names are found, return them
+                    if (!empty($matchedNames)) {
+                        return response()->json([
+                            'status' => 'matched',
+                            'names' => $matchedNames, // Ensures names are unique
+                        ], 200);
+                    }
+                }
+
+
+                // If no match found, either update existing or create new LeadUnit entry
+                if ($associatedEntity) {
+                    // Update allocated IDs if entry exists
+                    if ($leadType == 'lead') {
+                        $allocatedLeadIds = explode(',', $associatedEntity->allocated_lead_id);
+                        if (!in_array($leadId, $allocatedLeadIds)) {
+                            $allocatedLeadIds[] = $leadId;
+                            $associatedEntity->allocated_lead_id = implode(',', $allocatedLeadIds);
+                        }
+                    } elseif ($leadType == 'customer') {
+                        $allocatedCustomerIds = explode(',', $associatedEntity->allocated_customer_id);
+                        if (!in_array($leadId, $allocatedCustomerIds)) {
+                            $allocatedCustomerIds[] = $leadId;
+                            $associatedEntity->allocated_customer_id = implode(',', $allocatedCustomerIds);
+                        }
+                    }
+                } else {
+                    // Create a new LeadUnit entry if it doesn't exist
+                    $associatedEntity = new LeadUnit();
+                    $associatedEntity->unit_id = $unitId;
+                    $associatedEntity->booking_status = 3; // Set an appropriate default status
+                    if ($leadType == 'lead') {
+                        $associatedEntity->allocated_lead_id = $leadId;
+                    } elseif ($leadType == 'customer') {
+                        $associatedEntity->allocated_customer_id = $leadId;
+                    }
+                    $associatedEntity->save();
+                }
+
+
+                // If no match found, log the entity
+                $this->logEntity([
+                    'unit_id' => $associatedEntity->unit_id,
+                    'property_id' => $propertyId,
+                    'allocated_id' => $leadId,
+                    'allocated_type' => $leadType , // 1 for lead, 2 for customer
+                    'next_payable_amt' => $amount,
+                    'amount'=>$amount
+                ]);
+
+                return response()->json([
+                    'status' => 'success',
+                    'names' => null,
+                ], 200);
+            } elseif ($flag == 2) {
+                // Check if there are any entities attached as a lead or customer with this unit
+                if ($associatedEntity) {
+                    if ($leadType == 'lead') {
+                        $allocatedLeadIds = explode(',', $associatedEntity->allocated_lead_id);
+                        if (!in_array($leadId, $allocatedLeadIds)) {
+                            // Add lead ID to allocated_lead_id
+                            $allocatedLeadIds[] = $leadId;
+                            $associatedEntity->allocated_lead_id = implode(',', $allocatedLeadIds);
+                        }
+                    } elseif ($leadType == 'customer') {
+                        $allocatedCustomerIds = explode(',', $associatedEntity->allocated_customer_id);
+                        if (!in_array($leadId, $allocatedCustomerIds)) {
+                            // Check if `allocated_customer_id` is empty
+                            if (empty($associatedEntity->allocated_customer_id)) {
+                                $associatedEntity->allocated_customer_id = $leadId;
+                            } else {
+                                $associatedEntity->allocated_customer_id .= ',' . $leadId;
+                            }
+                        }
+                    }
+            
+                    // Save the updates
+                    $associatedEntity->save();
+                }
+
+                // Log the transaction
+                $this->logEntity([
+                    'unit_id' => $associatedEntity->unit_id,
+                    'property_id' => $propertyId,
+                    'allocated_id' => $leadId,
+                    'allocated_type' => $leadType , // 1 for lead, 2 for customer
+                    'next_payable_amt' => $amount,
+                    'amount'=>$amount
+                ]);
+
+                return response()->json([
+                    'status' => 'sucess',
+                    'names' => null,
+                ], 200);
+            }
+        } catch (Exception $e) {
+            // Log the error
+            $errorFrom = 'addMatchedEntityUsingCheque';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
+
+
+    private function logEntity(array $data)
+    {
+
+        $unitId = $data['unit_id'];
+        $propertyId = $data['property_id'];
+        $leadId = $data['allocated_id'];
+        $leadType = $data['allocated_type'];
+        $amount = $data['next_payable_amt'];
+        $totalamt=$data['amount'] ?? null;
+
+        // Log the payment transaction entries
+        $transaction1 = new PaymentTransaction();
+        $transaction1->unit_id = $unitId;
+        $transaction1->property_id = $propertyId;
+        $transaction1->allocated_id = $leadId; // Lead or Customer ID
+        $transaction1->allocated_type = ($leadType == 'lead') ? 1 : 2; // 1 for lead, 2 for customer
+        $transaction1->payment_status = 2; // Initial payment status
+        $transaction1->amount = $totalamt ?? null;
+        $transaction1->created_at = now();
+        $transaction1->updated_at = now();
+        $transaction1->save();
+
+        // Create the second transaction entry
+        $transaction2 = new PaymentTransaction();
+        $transaction2->unit_id = $unitId;
+        $transaction2->property_id = $propertyId;
+        $transaction2->allocated_id = $leadId; // Lead or Customer ID
+        $transaction2->allocated_type = ($leadType == 'lead') ? 1 : 2; // 1 for lead, 2 for customer
+        $transaction2->payment_status = 1; // Final payment status
+        $transaction2->amount = $totalamt ?? null;
+        $transaction2->next_payable_amt = $amount;
+        $transaction2->created_at = now();
+        $transaction2->updated_at = now();
+        $transaction2->save();
+    }
 }
