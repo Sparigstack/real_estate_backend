@@ -704,7 +704,7 @@ class UnitController extends Controller
             $transaction2->property_id = $propertyId;
             $transaction2->allocated_id = $leadId;
             $transaction2->allocated_type = ($leadType == 'lead') ? 1 : 2;
-            $transaction2->payment_status = 1; // Final payment status
+            $transaction2->payment_status = 2; // Final payment status
             $transaction2->payment_due_date = today();
             $transaction2->booking_date = today();
             $transaction2->next_payable_amt = $amount;
