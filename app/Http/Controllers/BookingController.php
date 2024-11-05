@@ -339,6 +339,7 @@ class BookingController extends Controller
 
             // Retrieve the LeadUnit associated with the unit_id
             $leadUnit = LeadUnit::where('unit_id', $unitId)->first();
+            $unitdata=UnitDetail::where('id',$unitId)->first();
 
             if (!$leadUnit) {
                 return response()->json([
@@ -429,10 +430,17 @@ class BookingController extends Controller
             }
 
             // Update LeadUnit booking status if totalNextPayableAmt reaches or exceeds the required amount
-            if ($lastPaymentTransaction && $totalNextPayableAmt >= $lastPaymentTransaction->amount) {
+          if($unitdata->price){
+            // if ($lastPaymentTransaction && $totalNextPayableAmt >= $lastPaymentTransaction->amount) {
+            //     $leadUnit->booking_status = 3; // Mark as confirmed
+            //     $leadUnit->save();
+            // }
+            if ($lastPaymentTransaction && $totalNextPayableAmt >= $unitdata->price) {
                 $leadUnit->booking_status = 3; // Mark as confirmed
                 $leadUnit->save();
             }
+          }
+            
 
             return response()->json([
                 'status' => 'success',
