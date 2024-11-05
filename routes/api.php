@@ -12,11 +12,13 @@ use App\Http\Controllers\InventoryUsageController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WingController;
 use App\Http\Controllers\ChequeScanController;
+use App\Http\Controllers\PurchaseOrderController;
 
 Route::post('/register-user', [AuthController::class, 'registerUser']);
 Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 
-// Route::middleware('auth:api')->group(function (){
+// Route::middleware('auth:api')->group(function ()
+// {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/get-user-details/{uid}', [UserController::class, 'getUserDetails']);
     //Route::get('/user-profile/{uid}', [UserController::class, 'userProfile']);
@@ -34,19 +36,14 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     // Route::get('/get-property-statuses/{statusFlag}', [PropertyController::class, 'getPropertyStatues']);
     // Route::get('/get-property-amenities', [PropertyController::class, 'getPropertyAmenities']);
     Route::get('/get-property-wings-basic-details/{pid}', [PropertyController::class, 'getPropertyWingsBasicDetails']);
-    
-
     // Route::post('/add-unit-details', [PropertyController::class, 'addUnitDetails']);
     // Route::get('/get-wing-details/{propertyId}', [PropertyController::class, 'getWingDetails']);
-  //  Route::post('/add-similar-wing', [PropertyController::class, 'addSimilarWing']);
+    //  Route::post('/add-similar-wing', [PropertyController::class, 'addSimilarWing']);
 
     Route::get('/get-all-properties/{uid}&{stateid}&{cityid}&{area}', [PropertyController::class, 'getAllProperties']);
     Route::get('/get-state-details', [PropertyController::class, 'getStateDetails']); 
     Route::get('/get-state-with-cities-details/{id}', [PropertyController::class, 'getStateWithCities']); 
     Route::get('/get-area-with-cities-details/{uid}/{cid}', [PropertyController::class, 'getAreaWithCities']); 
-
-    
-
     //leads call
     Route::get('/get-leads/{pid}&{skey}&{sort}&{sortbykey}&{offset}&{limit}', [LeadController::class, 'getLeads']);  
     Route::get('/fetch-lead-detail/{pid}/{lid}', [LeadController::class, 'fetchLeadDetail']); 
@@ -54,9 +51,8 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/add-leads-csv', [LeadController::class, 'addLeadsCsv']); 
     Route::post('/update-lead-notes', [LeadController::class, 'updateLeadNotes']);
     Route::post('/lead-messages/send', [LeadController::class, 'sendBulkMessages']);
-    
     //inventory call
-    Route::get('/all-inventories/{skey}&{sort}&{sortbykey}&{offset}&{limit}', [InventoryController::class, 'allInventories']); 
+    Route::get('/all-inventories/{skey}&{sort}&{sortbykey}&{offset}&{limit}&{pid}', [InventoryController::class, 'allInventories']); 
     Route::post('/add-edit-inventory', [InventoryController::class, 'addOrEditInventories']); 
     Route::get('/get-inventory-details/{id}', [InventoryController::class, 'getInventoryData']); 
     //vendor call
@@ -67,9 +63,6 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     //usage call
       Route::post('/add-usage-log', [InventoryUsageController::class, 'AddInventoryUsage']); 
       Route::get('/get-inventory-usage/{id}', [InventoryUsageController::class, 'GetInventoryUsage']); 
-    
-    // });
-
     //wings call
     Route::post('/add-wing-details', [WingController::class, 'addWingDetails']);
     Route::get('/get-wings-basic-details/{wid}', [WingController::class, 'getWingsBasicDetails']); 
@@ -78,7 +71,6 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/update-wing-details', [WingController::class, 'updateWingDetails']);
     Route::get('/get-unit-basic-details/{uid}', [WingController::class, 'getunitBasicDetails']); 
     Route::post('/add-new-unit', [WingController::class, 'addNewUnitForFloor']);
-
     //units call
     Route::post('/add-interested-leads', [UnitController::class, 'addInterestedLeads']); 
     Route::get('/get-unit-interested-leads/{uid}', [UnitController::class, 'getUnitInterestedLeads']); 
@@ -87,15 +79,14 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::get('/get-lead-name-with-detail/{pid}', [UnitController::class, 'getLeadNames']); 
     Route::post('/lead-attach-with-units', [UnitController::class, 'addLeadsAttachingWithUnits']); 
     Route::post('/lead-attach-with-units-using-cheque', [UnitController::class, 'addLeadsAttachWithUnitsUsingCheque']); 
-
     //booking calls
     Route::get('/get-booked-unit-detail/{uid}/{bid}/{type}', [BookingController::class, 'getBookedUnitDetail']); 
     Route::post('/add-unit-booking-detail', [BookingController::class, 'addUnitBookingInfo']);
     Route::post('/add-unit-payment-detail', [BookingController::class, 'addUnitPaymentDetail']);
-
-// });
-
-
+    //po calls
+    Route::post('/generate-po', [PurchaseOrderController::class, 'generatePo']);
+    Route::get( '/get-po-details/{pid}&{skey}&{sort}&{sortbykey}&{offset}&{limit}',[PurchaseOrderController::class, 'getPoDetails']);
+    // });
 
 //apis without auth
 Route::get('/get-sources', [LeadController::class, 'getSources']); 

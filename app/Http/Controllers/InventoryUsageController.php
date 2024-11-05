@@ -32,6 +32,7 @@ class InventoryUsageController extends Controller
             $inventoryData = InventoryDetail::with('PropertyDetails.user')->where('id', $inventoryId)->first();
             $availableQuantity = $inventoryData->current_quantity - $utilizedQuantity;
             InventoryDetail::where('id', $inventoryId)->update(['current_quantity' => $availableQuantity]);
+          
             /// check quantity nd update mail 
             $data = [
                 'userName' => $inventoryData->PropertyDetails->user->name,
@@ -41,11 +42,14 @@ class InventoryUsageController extends Controller
 
             ];
 
-            try {
-                Mail::to($inventoryData->PropertyDetails->user->email)->send(new LowQuantityReminderMail($data));
-            } catch (\Exception $e) {
-                Log::error("Mail sending failed: " . $e->getMessage());
+            if($availableQuantity >= $inventoryData->reminder_quantity){
+                try {
+                    Mail::to($inventoryData->PropertyDetails->user->email)->send(new LowQuantityReminderMail($data));
+                } catch (\Exception $e) {
+                    Log::error("Mail sending failed: " . $e->getMessage());
+                }
             }
+           
             return response()->json([
                 'status' => 'success',
                 'message' => 'Usage details added successfully!',

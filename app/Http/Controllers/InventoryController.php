@@ -10,9 +10,9 @@ use App\Models\InventoryLog;
 class InventoryController extends Controller
 {
 
-    public function allInventories($skey, $sort, $sortbykey, $offset, $limit)
+    public function allInventories($skey, $sort, $sortbykey, $offset, $limit,$pid)
     {
-        $inventoryData = InventoryDetail::with('InventoryLogDetails.Vendor');
+        $inventoryData = InventoryDetail::with('InventoryLogDetails.Vendor')->where('property_id',$pid);
         if ($skey != 'null') 
         {
             $inventoryData->where(function ($query) use ($skey) {
@@ -25,8 +25,8 @@ class InventoryController extends Controller
         {
             $inventoryData->orderBy($sortbykey, $sort);
         }
-        $allVendors = $inventoryData->paginate($limit, ['*'], 'page', $offset);
-        return $allVendors;
+        $getDetails = $inventoryData->paginate($limit, ['*'], 'page', $offset);
+        return $getDetails;
     }
     public function addOrEditInventories(Request $request)
     {
@@ -95,8 +95,9 @@ class InventoryController extends Controller
 
     public function getInventoryData($id)
     {
-        $getInventoryDetail = InventoryDetail::with('InventoryLogDetails.Vendor')->where('id', $id)->first();
-        if ($getInventoryDetail) {
+        $getInventoryDetail = InventoryDetail::with('InventoryLogDetails.Vendor','PropertyDetails')->where('id', $id)->first();
+        if ($getInventoryDetail) 
+        {
             return $getInventoryDetail;
         } else {
             return null;

@@ -26,7 +26,7 @@ class LeadController extends Controller
     public function getLeads($pid, $skey, $sort, $sortbykey, $offset, $limit)
     {
 
-        try {
+        // try {
             if ($pid != 'null') {
                 // $allLeads = Lead::with('userproperty', 'leadSource')->where('property_id',$pid);
                 $allLeads = Lead::with(['userproperty', 'leadSource', 'leadUnits.unit.wingDetail'])
@@ -77,18 +77,18 @@ class LeadController extends Controller
             } else {
                 return null;
             }
-        } catch (Exception $e) {
-            // Log the error
-            $errorFrom = 'getLeadDetails';
-            $errorMessage = $e->getMessage();
-            $priority = 'high';
-            Helper::errorLog($errorFrom, $errorMessage, $priority);
+        // } catch (Exception $e) {
+        //     // Log the error
+        //     $errorFrom = 'getLeadDetails';
+        //     $errorMessage = $e->getMessage();
+        //     $priority = 'high';
+        //     Helper::errorLog($errorFrom, $errorMessage, $priority);
 
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Not found',
-            ], 400);
-        }
+        //     return response()->json([
+        //         'status' => 'error',
+        //         'message' => 'Not found',
+        //     ], 400);
+        // }
     }
 
     public function getUserProperties($uid)
