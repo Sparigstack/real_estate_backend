@@ -541,7 +541,7 @@ class UnitController extends Controller
                     }
 
                     // If any matched names are found, return them
-                    if (!empty($matchedNames) && $nameExists == false) {
+                    if (!empty($matchedNames) ) {
                         return response()->json([
                             'status' => 'matched',
                             'names' => implode(', ', $matchedNames) // Ensures names are unique
@@ -594,7 +594,7 @@ class UnitController extends Controller
                     'status' => 'success',
                     'names' => null,
                 ], 200);
-            } elseif ($flag == 2 || $flag == 3) { //2 means yes  call and 3 means no call
+            } elseif ($flag == 2 ) { //2 means yes  call 
                 // Check if there are any entities attached as a lead or customer with this unit
                 if ($associatedEntity) {
                     if ($leadType == 'lead') {
@@ -645,7 +645,106 @@ class UnitController extends Controller
                 ]);
 
                 return response()->json([
-                    'status' => 'sucess',
+                    'status' => 'success',
+                    'names' => null,
+                ], 200);
+            }elseif($flag == 3) {//and 3 means no call
+                 // Check if there are any entities attached as a lead or customer with this unit
+                 $matchedNames = [];
+                 if ($associatedEntity) {
+
+
+                    $allocatedLeadIds = explode(',', $associatedEntity->allocated_lead_id);
+                   // Check for leads
+                   $allocatedLeadIds = explode(',', $associatedEntity->allocated_lead_id);
+                   foreach ($allocatedLeadIds as $allocatedLeadId) {
+                       $lead = Lead::where('id', $allocatedLeadId)
+                           ->where('property_id', $propertyId)
+                           ->first();
+                       if ($lead) {
+                           $matchedNames[] = $lead->name; // Collecting names of leads
+                         
+                       }
+                   }
+ 
+                   // Check for customers
+                   $allocatedCustomerIds = explode(',', $associatedEntity->allocated_customer_id);
+                   foreach ($allocatedCustomerIds as $allocatedCustomerId) {
+                       $customer = Customer::where('id', $allocatedCustomerId)
+                           ->where('property_id', $propertyId)
+                           ->first();
+                       if ($customer) {
+                           $matchedNames[] = $customer->name; // Collecting names of customers
+                         
+                       }
+                   }
+ 
+
+                   if (!empty($matchedNames) ) {
+                    return response()->json([
+                        'status' => 'matched',
+                        'names' => implode(', ', $matchedNames) // Ensures names are unique
+                    ], 200);
+                }
+
+
+                if ($leadType == 'lead') {
+                    $allocatedLeadIds = explode(',', $associatedEntity->allocated_lead_id);
+                
+                    if (!in_array($leadId, $allocatedLeadIds)) {
+                        // Add lead ID to allocated_lead_id
+                        if (empty($associatedEntity->allocated_lead_id)) {
+                            // If it's the first entry, set without a comma
+                            $associatedEntity->allocated_lead_id = $leadId;
+                        } else {
+                            // Append with a comma for subsequent entries
+                            $associatedEntity->allocated_lead_id .= ',' . $leadId;
+                        }
+                    }
+                } elseif ($leadType == 'customer') {
+                    $allocatedCustomerIds = explode(',', $associatedEntity->allocated_customer_id);
+                
+                    if (!in_array($leadId, $allocatedCustomerIds)) {
+                        if (empty($associatedEntity->allocated_customer_id)) {
+                            // If it's the first entry, set without a comma
+                            $associatedEntity->allocated_customer_id = $leadId;
+                        } else {
+                            // Append with a comma for subsequent entries
+                            $associatedEntity->allocated_customer_id .= ',' . $leadId;
+                        }
+                    }
+                }
+
+                    // Save the updates
+                    $associatedEntity->save();
+                } else {
+                    // No associated entity found; create a new LeadUnit entry
+                    $associatedEntity = new LeadUnit();
+                    $associatedEntity->unit_id = $unitId; // Set the unit ID
+                    $associatedEntity->booking_status = 4; // Set an appropriate default status
+
+                    if ($leadType == 'lead') {
+                        $associatedEntity->allocated_lead_id = $leadId; // Allocate the lead ID
+                    } elseif ($leadType == 'customer') {
+                        $associatedEntity->allocated_customer_id = $leadId; // Allocate the customer ID
+                    }
+
+                    // Save the new LeadUnit entry
+                    $associatedEntity->save();
+                }
+
+                // Log the transaction
+                $this->logEntity([
+                    'unit_id' => $associatedEntity->unit_id,
+                    'property_id' => $propertyId,
+                    'allocated_id' => $leadId,
+                    'allocated_type' => $leadType, // 1 for lead, 2 for customer
+                    'next_payable_amt' => $amount,
+                    'amount' => null,
+                ]);
+
+                return response()->json([
+                    'status' => 'success',
                     'names' => null,
                 ], 200);
             }
