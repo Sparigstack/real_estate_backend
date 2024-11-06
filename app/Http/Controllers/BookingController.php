@@ -964,7 +964,7 @@ class BookingController extends Controller
         }
         
         $unitdata=UnitDetail::where('id',$unitId)->first();
-        $leadUnit=LeadUnit::where('id',$unitId)->first();
+        $leadUnit=LeadUnit::where('unit_id',$unitId)->first();
         // Update LeadUnit booking status if totalNextPayableAmt reaches or exceeds the required amount
         if ($unitdata->price) {
             if ($totalNextPayableAmt >= $unitdata->price) {
