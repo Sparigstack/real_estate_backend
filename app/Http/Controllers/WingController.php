@@ -345,16 +345,24 @@ class WingController extends Controller
 
             $unitdata=UnitDetail::where('id',$unitId)->first();
             $leadUnit=LeadUnit::where('unit_id',$unitId)->first();
+           
             
             // Update LeadUnit booking status if totalNextPayableAmt reaches or exceeds the required amount
-            if ($unitdata->price && $leadUnit) {
+            if ($unitdata->price != '' && $leadUnit != '') {
                 // if ($lastPaymentTransaction && $totalNextPayableAmt >= $lastPaymentTransaction->amount) {
                 //     $leadUnit->booking_status = 3; // Mark as confirmed
                 //     $leadUnit->save();
                 // }
+               
                 if ($totalNextPayableAmt >= $unitdata->price) {
-                    $leadUnit->booking_status = 3; // Mark as confirmed
-                }elseif($totalNextPayableAmt < $unitdata->price){
+                    
+                    if($unitdata->price>0){
+                        $leadUnit->booking_status = 3; // Mark as confirmed
+                    }else{
+                        // return "h";
+                        $leadUnit->booking_status = 4;// Mark as pending   
+                    }                  
+                }elseif($totalNextPayableAmt < $unitdata->price && $unitdata->price>0){
                     $leadUnit->booking_status = 4; // Mark as pending   
                 }
                 $leadUnit->save();

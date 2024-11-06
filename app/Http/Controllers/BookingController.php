@@ -300,6 +300,39 @@ class BookingController extends Controller
                 $paymentTransactionSecond->save();
             }
 
+
+            // Retrieve all payment transactions for the unit
+            $paymentTransactions = PaymentTransaction::where('unit_id', $unitId)
+            ->where('payment_status',2)
+            ->get();
+
+            // Calculate the total for next_payable_amt
+            $totalNextPayableAmt = $paymentTransactions->sum('next_payable_amt');
+
+            // Retrieve the first payment transaction to include token_amt
+            $firstPaymentTransaction = $paymentTransactions->first();
+            if ($firstPaymentTransaction) {
+                // Add the token_amt of the first entry to the total next_payable_amt
+                $totalNextPayableAmt += $firstPaymentTransaction->token_amt;
+            }
+
+            $leadUnit = LeadUnit::where('unit_id', $unitId)->first();
+            $unitdata = UnitDetail::where('id', $unitId)->first();
+            // Update LeadUnit booking status if totalNextPayableAmt reaches or exceeds the required amount
+            if ($unitdata->price != '' && $leadUnit != '') {
+                // if ($lastPaymentTransaction && $totalNextPayableAmt >= $lastPaymentTransaction->amount) {
+                //     $leadUnit->booking_status = 3; // Mark as confirmed
+                //     $leadUnit->save();
+                // }
+                if($unitdata->price>0){
+                    if ($totalNextPayableAmt >= $unitdata->price) {
+                        $leadUnit->booking_status = 3; // Mark as confirmed
+                        $leadUnit->save();
+                    }
+                }
+               
+            }
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Unit booking information saved successfully',
@@ -427,14 +460,16 @@ class BookingController extends Controller
             }
 
             // Update LeadUnit booking status if totalNextPayableAmt reaches or exceeds the required amount
-            if ($unitdata->price) {
+            if ($unitdata->price != '' && $leadUnit != '') {
                 // if ($lastPaymentTransaction && $totalNextPayableAmt >= $lastPaymentTransaction->amount) {
                 //     $leadUnit->booking_status = 3; // Mark as confirmed
                 //     $leadUnit->save();
                 // }
-                if ($lastPaymentTransaction && $totalNextPayableAmt >= $unitdata->price) {
-                    $leadUnit->booking_status = 3; // Mark as confirmed
-                    $leadUnit->save();
+                if($unitdata->price>0){
+                    if ($totalNextPayableAmt >= $unitdata->price) {
+                        $leadUnit->booking_status = 3; // Mark as confirmed
+                        $leadUnit->save();
+                    }
                 }
             }
 
