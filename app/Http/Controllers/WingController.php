@@ -354,16 +354,12 @@ class WingController extends Controller
                 //     $leadUnit->save();
                 // }
                
-                if ($totalNextPayableAmt >= $unitdata->price) {
-                    
-                    if($unitdata->price>0){
-                        $leadUnit->booking_status = 3; // Mark as confirmed
-                    }else{
-                        // return "h";
-                        $leadUnit->booking_status = 4;// Mark as pending   
-                    }                  
-                }elseif($totalNextPayableAmt < $unitdata->price && $unitdata->price>0){
+                if ($totalNextPayableAmt > $unitdata->price) {
+                    $leadUnit->booking_status = 4;// Mark as pending                  
+                }elseif($totalNextPayableAmt < $unitdata->price){
                     $leadUnit->booking_status = 4; // Mark as pending   
+                }else if($unitdata->price = $totalNextPayableAmt ){
+                    $leadUnit->booking_status = 3;// Mark as booked  
                 }
                 $leadUnit->save();
             }

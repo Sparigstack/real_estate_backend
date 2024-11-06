@@ -324,12 +324,14 @@ class BookingController extends Controller
                 //     $leadUnit->booking_status = 3; // Mark as confirmed
                 //     $leadUnit->save();
                 // }
-                if($unitdata->price>0){
-                    if ($totalNextPayableAmt >= $unitdata->price) {
-                        $leadUnit->booking_status = 3; // Mark as confirmed
-                        $leadUnit->save();
-                    }
+                if ($totalNextPayableAmt > $unitdata->price) {
+                    $leadUnit->booking_status = 4;// Mark as pending                  
+                }elseif($totalNextPayableAmt < $unitdata->price){
+                    $leadUnit->booking_status = 4; // Mark as pending   
+                }else if($unitdata->price = $totalNextPayableAmt ){
+                    $leadUnit->booking_status = 3;// Mark as booked  
                 }
+                $leadUnit->save();
                
             }
 
@@ -465,12 +467,16 @@ class BookingController extends Controller
                 //     $leadUnit->booking_status = 3; // Mark as confirmed
                 //     $leadUnit->save();
                 // }
-                if($unitdata->price>0){
-                    if ($totalNextPayableAmt >= $unitdata->price) {
-                        $leadUnit->booking_status = 3; // Mark as confirmed
-                        $leadUnit->save();
-                    }
+                
+                if ($totalNextPayableAmt > $unitdata->price) {
+                    $leadUnit->booking_status = 4;// Mark as pending                  
+                }elseif($totalNextPayableAmt < $unitdata->price){
+                    $leadUnit->booking_status = 4; // Mark as pending   
+                }else if($unitdata->price = $totalNextPayableAmt ){
+                    $leadUnit->booking_status = 3;// Mark as booked  
                 }
+                $leadUnit->save();
+               
             }
 
 
