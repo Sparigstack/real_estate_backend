@@ -10,6 +10,7 @@ use Hash;
 use App\Helper;
 use Twilio\Rest\Client;
 use App\Mail\GetOtpMail;
+use App\Models\CompanyDetail;
 use App\Models\UserProperty;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
@@ -49,7 +50,7 @@ class AuthController extends Controller
                 $userOtp->otp = $otp;
                 $userOtp->contact_no = $mobile_number;
                 $userOtp->verified = false;
-                $userOtp->expire_at = now()->addMinutes(2);
+                $userOtp->expire_at = now()->addMinutes(3);
                 $userOtp->save();
                 // User::where('email', $email)->update(['name' =>$username]);
                 try {
@@ -111,70 +112,92 @@ class AuthController extends Controller
     }
     public function checkUserOtp(Request $request)
     {
-        try
-        {
-        $otp = $request->input('otp');
-        $contact_no = $request->input('mobile_number');
-        $company_name = $request->input('comapany_name');
-        $user_name = $request->input('user_name');
-        $userexitsflag=$request->input('flag');
-
-        $flag=0;
-
+        try {
+            $otp = $request->input('otp');
+            $contact_no = $request->input('mobile_number');
+            $userexitsflag = $request->input('flag');
+            
+            // Default value for user property flag
+            $flag = 0;
+    
+            // Check OTP and expiration
             $checkUserDetails = UserOtp::where('contact_no', $contact_no)->where('otp', $otp)->first();
-            if ($checkUserDetails) {
+
+            if ($checkUserDetails) {           
                 if ($checkUserDetails->expire_at > now()) {
                     $checkUserDetails->update(['verified' => 1]);
-                    $userExist = User::where('contact_no', $contact_no)->first();
-                    if ($userExist) {
-                        if ($userExist->tokens()) {
-                            $userExist->tokens()->delete();
+    
+                    // Handle existing user scenario
+                    if ($userexitsflag == 1) {
+                        // User exists, fetch user details
+                        $userExist = User::where('contact_no', $contact_no)->first();
+    
+                        if ($userExist) {
+                            // Clear any existing tokens
+                            if ($userExist->tokens()) {
+                                $userExist->tokens()->delete();
+                            }
+                            // Generate new token for existing user
+                            $token = $userExist->createToken('access_token')->accessToken;
+                            $userId = $userExist->id;
+    
+                            // Check if the user has any properties and set the flag
+                            $userPropertyCount = UserProperty::where('user_id', $userId)->count();
+                            if ($userPropertyCount > 0) {
+                                $flag = 1;
+                            }
                         }
-                        
-                        $token = $userExist->createToken('access_token')->accessToken;
-                        $userId = $userExist->id;
                     } else {
+                        // Handle new user scenario
+                        $company_name = $request->input('company_name');
+                        $user_name = $request->input('user_name');
+    
+                        // Create a new user and token
                         $newUser = new User();
-                        $newUser->email = $contact_no;
                         $newUser->name = $user_name;
+                        $newUser->contact_no = $contact_no;
                         $newUser->save();
+    
                         $userId = $newUser->id;
                         $token = $newUser->createToken('access_token')->accessToken;
+    
+                        // Create new company details for the user
+                        $newCompany = new CompanyDetail();
+                        $newCompany->user_id = $userId;
+                        $newCompany->name = $company_name;
+                        $newCompany->save();
                     }
+    
+                    // Delete the OTP record after successful verification
                     $checkUserDetails->delete();
-
-                    
-                    //check if this user have any property if commercial or residential then send flag =1
-                    $userPropertyCount=UserProperty::where('user_id',$userId)->count();
-                    if($userPropertyCount>0){
-                        $flag=1;
-                    }
-
+    
                     return response()->json([
                         'status' => 'success',
                         'message' => null,
                         'token' => $token,
                         'userId' => $userId,
-                        'userProperty'=> $flag,
+                        'userProperty' => $flag,
                     ], 200);
+    
                 } else {
+                    // OTP expired, delete it and return error
                     $checkUserDetails->delete();
                     return response()->json([
                         'status' => 'error',
-                        'message' => null,
+                        'message' => 'OTP expired. Please try again.',
                         'token' => null,
                         'userId' => null,
-                        'userProperty'=> $flag,
-                    ], 400);
+                        'userProperty' => $flag,
+                    ], 200);
                 }
             } else {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Invalid Otp. Please try again.',
+                    'message' => 'Invalid OTP. Please try again.',
                     'token' => null,
                     'userId' => null,
-                    'userProperty'=> $flag,
-                ], 400);
+                    'userProperty' => $flag,
+                ], 200);
             }
         } catch (\Exception $e) {
             $errorFrom = 'CheckUserOtp';
@@ -183,10 +206,11 @@ class AuthController extends Controller
             Helper::errorLog($errorFrom, $errorMessage, $priority);
             return response()->json([
                 'status' => 'error',
-                'message' => 'something went wrong',
-            ],400);
+                'message' => 'Something went wrong',
+            ], 400);
         }
     }
+    
 
     // public function checkUserOtp(Request $request)
     // {
