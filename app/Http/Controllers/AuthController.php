@@ -74,23 +74,16 @@ class AuthController extends Controller
     {
         try {
             $flag=1;
-            $validator = validator($request->all(), [
-                'mobile_number' => 'required|string|max:15',
-            ]);
-            
-            if ($validator->fails()) {
-                return response()->json($validator->errors(), 400);
-            }
-
-            $validatedData = $validator->validated();
+          
+            $contact_no=$request->mobile_number;
             // $checkUser = User::where('contact_no', $validatedData['contact_no'])->first();
 
-            $checkUserDetails = UserOtp::where('contact_no', $validatedData['mobile_number'])->where('verified', 0)->first();
+            $checkUserDetails = UserOtp::where('contact_no', $contact_no)->where('verified', 0)->first();
             if($checkUserDetails){
                 $flag=0;
             }
 
-            $response = $this->generateAndSendOtp($validatedData['mobile_number']);
+            $response = $this->generateAndSendOtp($contact_no);
             if ($response == 'success') {
                 return response()->json([
                     'status' => 'success',
@@ -116,32 +109,34 @@ class AuthController extends Controller
             ], 400);
         }
     }
-
-
     public function checkUserOtp(Request $request)
     {
         try
         {
         $otp = $request->input('otp');
-        $email = $request->input('email');
+        $contact_no = $request->input('mobile_number');
+        $company_name = $request->input('comapany_name');
+        $user_name = $request->input('user_name');
+        $userexitsflag=$request->input('flag');
+
         $flag=0;
 
-            $checkUserDetails = UserOtp::where('email', $email)->where('otp', $otp)->first();
+            $checkUserDetails = UserOtp::where('contact_no', $contact_no)->where('otp', $otp)->first();
             if ($checkUserDetails) {
                 if ($checkUserDetails->expire_at > now()) {
                     $checkUserDetails->update(['verified' => 1]);
-                    $userExist = User::where('email', $email)->first();
+                    $userExist = User::where('contact_no', $contact_no)->first();
                     if ($userExist) {
                         if ($userExist->tokens()) {
                             $userExist->tokens()->delete();
                         }
-                        $userExist->update(['name' =>$checkUserDetails->username]);
+                        
                         $token = $userExist->createToken('access_token')->accessToken;
                         $userId = $userExist->id;
                     } else {
                         $newUser = new User();
-                        $newUser->email = $email;
-                        $newUser->name = $checkUserDetails->username;
+                        $newUser->email = $contact_no;
+                        $newUser->name = $user_name;
                         $newUser->save();
                         $userId = $newUser->id;
                         $token = $newUser->createToken('access_token')->accessToken;
@@ -192,6 +187,83 @@ class AuthController extends Controller
             ],400);
         }
     }
+
+    // public function checkUserOtp(Request $request)
+    // {
+    //     try
+    //     {
+    //     $otp = $request->input('otp');
+    //     $email = $request->input('email');
+    //     $flag=0;
+
+    //         $checkUserDetails = UserOtp::where('email', $email)->where('otp', $otp)->first();
+    //         if ($checkUserDetails) {
+    //             if ($checkUserDetails->expire_at > now()) {
+    //                 $checkUserDetails->update(['verified' => 1]);
+    //                 $userExist = User::where('email', $email)->first();
+    //                 if ($userExist) {
+    //                     if ($userExist->tokens()) {
+    //                         $userExist->tokens()->delete();
+    //                     }
+    //                     $userExist->update(['name' =>$checkUserDetails->username]);
+    //                     $token = $userExist->createToken('access_token')->accessToken;
+    //                     $userId = $userExist->id;
+    //                 } else {
+    //                     $newUser = new User();
+    //                     $newUser->email = $email;
+    //                     $newUser->name = $checkUserDetails->username;
+    //                     $newUser->save();
+    //                     $userId = $newUser->id;
+    //                     $token = $newUser->createToken('access_token')->accessToken;
+    //                 }
+    //                 $checkUserDetails->delete();
+
+                    
+    //                 //check if this user have any property if commercial or residential then send flag =1
+    //                 $userPropertyCount=UserProperty::where('user_id',$userId)->count();
+    //                 if($userPropertyCount>0){
+    //                     $flag=1;
+    //                 }
+
+    //                 return response()->json([
+    //                     'status' => 'success',
+    //                     'message' => null,
+    //                     'token' => $token,
+    //                     'userId' => $userId,
+    //                     'userProperty'=> $flag,
+    //                 ], 200);
+    //             } else {
+    //                 $checkUserDetails->delete();
+    //                 return response()->json([
+    //                     'status' => 'error',
+    //                     'message' => null,
+    //                     'token' => null,
+    //                     'userId' => null,
+    //                     'userProperty'=> $flag,
+    //                 ], 400);
+    //             }
+    //         } else {
+    //             return response()->json([
+    //                 'status' => 'error',
+    //                 'message' => 'Invalid Otp. Please try again.',
+    //                 'token' => null,
+    //                 'userId' => null,
+    //                 'userProperty'=> $flag,
+    //             ], 400);
+    //         }
+    //     } catch (\Exception $e) {
+    //         $errorFrom = 'CheckUserOtp';
+    //         $errorMessage = $e->getMessage();
+    //         $priority = 'high';
+    //         Helper::errorLog($errorFrom, $errorMessage, $priority);
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'message' => 'something went wrong',
+    //         ],400);
+    //     }
+    // }
+
+    
 
     public function logout(Request $request)
     {

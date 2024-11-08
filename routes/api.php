@@ -14,6 +14,7 @@ use App\Http\Controllers\ChequeScanController;
 
 
 Route::post('/register-user', [AuthController::class, 'registerUser']);
+// Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 
 Route::middleware('auth:api')->group(function (){
