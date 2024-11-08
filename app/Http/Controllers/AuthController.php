@@ -96,7 +96,7 @@ class AuthController extends Controller
                     'status' => 'error',
                     'userExists'=> $flag,
                     'message' => 'something went wrong',
-                ], 400);
+                ], 200);
             }
 
         } catch (\Exception $e) {
