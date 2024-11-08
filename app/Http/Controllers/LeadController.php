@@ -486,8 +486,8 @@ class LeadController extends Controller
     {
         try {
             // Validate client_id and client_secret
-            $client_id = $request->header('client_id');
-            $client_secret_key = $request->header('client_secret_key');
+            $client_id = $request->header('client_id_1');
+            $client_secret_key = $request->header('client_secret_key_1');
 
             // Check if client_id and client_secret are provided
             if (!$client_id || !$client_secret_key) {
@@ -501,7 +501,7 @@ class LeadController extends Controller
             $user = User::where('client_id', $client_id)
                 ->where('client_secret_key', $client_secret_key)
                 ->first();
-
+               
             if (!$user) {
                 return response()->json([
                     'status' => 'error',
@@ -617,7 +617,7 @@ class LeadController extends Controller
 
             // Step 2: Referrer validation
             $referer = $request->header('referer'); // Get referer from headers
-            $allowedDomains = ['127.0.0.1', 'localhost'];
+            $allowedDomains = [env('APP_FRONTEND_URL'),'127.0.0.1', 'localhost'];
 
             if (!$referer || !in_array(parse_url($referer, PHP_URL_HOST), $allowedDomains)) {
                 return response()->json([

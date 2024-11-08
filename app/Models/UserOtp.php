@@ -13,8 +13,8 @@ class UserOtp extends Authenticatable
     use HasFactory, Notifiable,SoftDeletes;
 
     protected $fillable = [
-        'email',
         'otp',
+        'mobile_number',
         'expire_at',
         'verified',
         'created_at',

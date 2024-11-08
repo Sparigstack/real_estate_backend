@@ -52,7 +52,7 @@
 <body>
     <div class="email-container">
         <div class="content">
-            <img src="real-estate-logo.svg" alt="Site Logo" class="logo">
+            <img src="http://superbuildup-9.ap-south-1.elasticbeanstalk.com/real-estate-logo.svg" alt="Site Logo" class="logo">
             <h1 class="textContent">Your OTP Code</h1>
             <p class="textContent">Use the following OTP to complete your authentication:</p>
             <p class="otp">{{ $otp }}</p>

@@ -18,14 +18,14 @@ use Illuminate\Support\Facades\Log;
 class AuthController extends Controller
 {
 
-    public function generateAndSendOtp($email, $username)
+    public function generateAndSendOtp($mobile_number)
     {
         try {
             $otp = rand(100000, 999999);
-            $checkUserOtp = UserOtp::where('email', $email)->where('expire_at', '>', now())->first();
+            $checkUserOtp = UserOtp::where('contact_no', $mobile_number)->where('expire_at', '>', now())->first();
            
             // Remove expired OTPs
-            UserOtp::where('email', $email)
+            UserOtp::where('contact_no', $mobile_number)
             ->where(function ($query) {
                 $query->where('expire_at', '<', now())
                       ->orWhere('verified', '1')
@@ -36,27 +36,26 @@ class AuthController extends Controller
                 try {
                     // Mail::to($email)->send(new GetOtpMail($checkUserOtp->otp));
                 } catch (\Exception $e) {
-                    Log::error("Mail sending failed: " . $e->getMessage());
+                    Log::error("Otp message sending failed: " . $e->getMessage());
                 }
 
-                User::where('email', $email)->update(['name' =>$username]);
+                // User::where('contact_no', $contact_no)->update(['name' =>$username]);
             } else {
-                $otpExpire = UserOtp::where('email', $email)->where('expire_at', '<', now())->first();
+                $otpExpire = UserOtp::where('contact_no', $mobile_number)->where('expire_at', '<', now())->first();
                 if ($otpExpire) {
                     $otpExpire->delete();
                 }
                 $userOtp = new UserOtp();
                 $userOtp->otp = $otp;
-                $userOtp->email = $email;
+                $userOtp->contact_no = $mobile_number;
                 $userOtp->verified = false;
-                $userOtp->username = $username;
-                $userOtp->expire_at = now()->addMinutes(3);
+                $userOtp->expire_at = now()->addMinutes(2);
                 $userOtp->save();
-                User::where('email', $email)->update(['name' =>$username]);
+                // User::where('email', $email)->update(['name' =>$username]);
                 try {
                     // Mail::to($email)->send(new GetOtpMail($otp));
                 } catch (\Exception $e) {
-                    Log::error("Mail sending failed: " . $e->getMessage());
+                    Log::error("Otp message sending failed: " . $e->getMessage());
                 }
             }
 
@@ -74,34 +73,34 @@ class AuthController extends Controller
     public function registerUser(Request $request)
     {
         try {
+            $flag=1;
             $validator = validator($request->all(), [
-                'email' => 'required|string|email|max:255',
-                'username' => 'required|string|max:45'
+                'mobile_number' => 'required|string|max:15',
             ]);
+            
             if ($validator->fails()) {
                 return response()->json($validator->errors(), 400);
             }
 
             $validatedData = $validator->validated();
-            $checkUser = User::where('email', $validatedData['email'])->first();
+            // $checkUser = User::where('contact_no', $validatedData['contact_no'])->first();
 
-            // if ($checkUser && $checkUser->name !== strtolower($validatedData['username'])) {
-            //     return response()->json([
-            //         'status' => 'error',
-            //         'message' => 'Username and email do not match',
-            //     ], 400);
-            // }
+            $checkUserDetails = UserOtp::where('contact_no', $validatedData['mobile_number'])->where('verified', 0)->first();
+            if($checkUserDetails){
+                $flag=0;
+            }
 
-
-            $response = $this->generateAndSendOtp($validatedData['email'], $validatedData['username']);
+            $response = $this->generateAndSendOtp($validatedData['mobile_number']);
             if ($response == 'success') {
                 return response()->json([
                     'status' => 'success',
+                    'userExists'=> $flag,
                     'message' => 'otp sent successfully',
                 ], 200);
             } else {
                 return response()->json([
                     'status' => 'error',
+                    'userExists'=> $flag,
                     'message' => 'something went wrong',
                 ], 400);
             }

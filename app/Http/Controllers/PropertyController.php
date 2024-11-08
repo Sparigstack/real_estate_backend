@@ -79,32 +79,39 @@ class PropertyController extends Controller
 
             // Handle image saving
             if ($propertyImg) {
-                // Define folder path
+                // Define the base properties folder path
+                $baseFolderPath = public_path("properties");
+            
+                // Check if the base properties folder exists, if not, create it
+                if (!file_exists($baseFolderPath)) {
+                    mkdir($baseFolderPath, 0777, true);
+                }
+            
+                // Define user-specific folder path
                 $folderPath = public_path("properties/$userId/{$userProperty->id}");
-
-                // Ensure directory exists
+            
+                // Ensure user-specific directory exists
                 if (!file_exists($folderPath)) {
                     mkdir($folderPath, 0777, true);
                 }
-
+            
                 // Decode base64 image
                 $image_parts = explode(";base64,", $propertyImg);
                 $image_type_aux = explode("image/", $image_parts[0]);
                 $image_type = $image_type_aux[1];
                 $image_base64 = base64_decode($image_parts[1]);
-
+            
                 // Create unique file name
                 $fileName = uniqid() . '.' . $image_type;
-
+            
                 // Save the image in the defined folder
                 $filePath = $folderPath . '/' . $fileName;
                 file_put_contents($filePath, $image_base64);
-
+            
                 // Save file path relative to the public folder
                 $userProperty->property_img = "properties/$userId/{$userProperty->id}/$fileName";
                 $userProperty->save();
             }
-
 
             return response()->json([
                 'status' => 'success',
