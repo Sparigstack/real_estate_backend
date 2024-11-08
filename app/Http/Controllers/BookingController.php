@@ -324,12 +324,13 @@ class BookingController extends Controller
                 //     $leadUnit->booking_status = 3; // Mark as confirmed
                 //     $leadUnit->save();
                 // }
-                if ($totalNextPayableAmt > $unitdata->price) {
-                    $leadUnit->booking_status = 4;// Mark as pending                  
-                }elseif($totalNextPayableAmt < $unitdata->price){
-                    $leadUnit->booking_status = 4; // Mark as pending   
-                }else if($unitdata->price = $totalNextPayableAmt ){
-                    $leadUnit->booking_status = 3;// Mark as booked  
+                if ($totalNextPayableAmt >= $unitdata->price) {
+                    if($unitdata->price <= 0){
+                        $leadUnit->booking_status = 4; // Mark as pending
+                    }else{
+                        $leadUnit->booking_status = 3; // Mark as confirmed
+                    }
+                    $leadUnit->save();
                 }
                 $leadUnit->save();
                
@@ -468,12 +469,13 @@ class BookingController extends Controller
                 //     $leadUnit->save();
                 // }
                 
-                if ($totalNextPayableAmt > $unitdata->price) {
-                    $leadUnit->booking_status = 4;// Mark as pending                  
-                }elseif($totalNextPayableAmt < $unitdata->price){
-                    $leadUnit->booking_status = 4; // Mark as pending   
-                }else if($unitdata->price = $totalNextPayableAmt ){
-                    $leadUnit->booking_status = 3;// Mark as booked  
+                if ($totalNextPayableAmt >= $unitdata->price) {
+                    if($unitdata->price <= 0){
+                        $leadUnit->booking_status = 4; // Mark as pending
+                    }else{
+                        $leadUnit->booking_status = 3; // Mark as confirmed
+                    }
+                    $leadUnit->save();
                 }
                 $leadUnit->save();
                

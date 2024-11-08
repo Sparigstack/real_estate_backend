@@ -34,7 +34,7 @@ class AuthController extends Controller
             ->forceDelete();
             if ($checkUserOtp) {
                 try {
-                    Mail::to($email)->send(new GetOtpMail($checkUserOtp->otp));
+                    // Mail::to($email)->send(new GetOtpMail($checkUserOtp->otp));
                 } catch (\Exception $e) {
                     Log::error("Mail sending failed: " . $e->getMessage());
                 }
