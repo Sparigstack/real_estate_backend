@@ -287,70 +287,77 @@ class WingController extends Controller
         }
     }
 
-    public function addSimilarWingDetails(Request $request){
-        try{
-                // Retrieve request data
-                $selectedWingId = $request->input('selectedwingId');
-                $propertyId = $request->input('propertyid');
-                $wingId = $request->input('currentwingid');
-        
-                // Step 1: Get the details of the selected wing
-                $selectedWing = WingDetail::where('id', $selectedWingId)
-                                          ->where('property_id', $propertyId)
-                                          ->first();
-        
-                if (!$selectedWing) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Selected wing not found.',
-                    ], 200);
-                }
-        
-                // Step 2: Duplicate floor details
-                $floorDetails = FloorDetail::where('wing_id', $selectedWingId)
-                                           ->where('property_id', $propertyId)
-                                           ->get();
-        
-                $newFloors = [];
-                foreach ($floorDetails as $floor) {
-                    $newFloors[] = FloorDetail::create([
+    public function addSimilarWingDetails(Request $request)
+    {
+        try {
+            // Retrieve request data
+            $selectedWingId = $request->input('selectedwingId');
+            $propertyId = $request->input('propertyid');
+            $wingId = $request->input('currentwingid');
+
+            // Step 1: Get the details of the selected wing
+            $selectedWing = WingDetail::where('id', $selectedWingId)
+                ->where('property_id', $propertyId)
+                ->first();
+
+            if (!$selectedWing) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Selected wing not found.',
+                ], 200);
+            }
+
+            // Step 2: Duplicate floor details
+            $floorDetails = FloorDetail::where('wing_id', $selectedWingId)
+                ->where('property_id', $propertyId)
+                ->get();
+
+            $newFloors = [];
+            foreach ($floorDetails as $floor) {
+                $newFloor = FloorDetail::create([
+                    'property_id' => $propertyId,
+                    'wing_id' => $wingId,
+                    'floor_size' => $floor->floor_size,
+                    'pent_house_status' => $floor->pent_house_status, // if you have this field
+                ]);
+                $newFloors[$floor->id] = $newFloor; // Map old floor ID to new floor
+            }
+
+            // Step 3: Duplicate unit details for each new floor
+            foreach ($newFloors as $oldFloorId => $newFloor) {
+                // Get the units for the current old floor ID
+                $unitDetails = UnitDetail::where('floor_id', $oldFloorId)
+                    ->where('property_id', $propertyId)
+                    ->get();
+
+                foreach ($unitDetails as $unit) {
+                    UnitDetail::create([
                         'property_id' => $propertyId,
                         'wing_id' => $wingId,
-                        'floor_size' => $floor->floor_size,
+                        'floor_id' => $newFloor->id, // Assign the new floor ID here
+                        'name' => $unit->name,
+                        'status_id' => $unit->status_id,
+                        'square_feet' => $unit->square_feet,
+                        'price' => $unit->price,
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ]);
                 }
-        
-                // Step 3: Duplicate unit details for each floor
-                foreach ($newFloors as $newFloor) {
-                    $unitDetails = UnitDetail::where('floor_id', $floor->id)
-                                             ->where('property_id', $propertyId)
-                                             ->get();
-        
-                    foreach ($unitDetails as $unit) {
-                        UnitDetail::create([
-                            'property_id' => $propertyId,
-                            'wing_id' => $wingId,
-                            'floor_id' => $newFloor->id,
-                            'name' => $unit->name,
-                            'status_id' => $unit->status_id,
-                            'square_feet' => $unit->square_feet,
-                            'price' => $unit->price,
-                        ]);
-                    }
-                }
-        
-                // Step 4: Update the total floors in the wing_details table
-                $updateCurrentWing=WingDetail::where('id',$wingId)->where('property_id', $propertyId)->first();
-                $updateCurrentWing->update([
-                    'total_floors' => $selectedWing->total_floors
-                ]);
-        
-                return response()->json([
-                    'status' => 'success',
-                    'message' => 'Wing details added successfully with new floors and units.',
-                ], 200);
+            }
 
-        }catch (\Exception $e) {
+            // Step 4: Update the total floors in the wing_details table
+            $updateCurrentWing = WingDetail::where('id', $wingId)
+                ->where('property_id', $propertyId)
+                ->first();
+            $updateCurrentWing->update([
+                'total_floors' => $selectedWing->total_floors
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Wing details added successfully with new floors and units.',
+            ], 200);
+        } catch (\Exception $e) {
             $errorFrom = 'addSimilarWingDetails';
             $errorMessage = $e->getMessage();
             $priority = 'high';
@@ -404,8 +411,8 @@ class WingController extends Controller
 
             // Retrieve all payment transactions for the unit
             $paymentTransactions = PaymentTransaction::where('unit_id', $unitId)
-            ->where('payment_status',2)
-            ->get();
+                ->where('payment_status', 2)
+                ->get();
 
             // Calculate the total for next_payable_amt
             $totalNextPayableAmt = $paymentTransactions->sum('next_payable_amt');
@@ -417,17 +424,17 @@ class WingController extends Controller
                 $totalNextPayableAmt += $firstPaymentTransaction->token_amt;
             }
 
-            $unitdata=UnitDetail::where('id',$unitId)->first();
-            $leadUnit=LeadUnit::where('unit_id',$unitId)->first();
-           
-            
+            $unitdata = UnitDetail::where('id', $unitId)->first();
+            $leadUnit = LeadUnit::where('unit_id', $unitId)->first();
+
+
             // Update LeadUnit booking status if totalNextPayableAmt reaches or exceeds the required amount
             if ($unitdata->price != '' && $leadUnit != '') {
                 // if ($lastPaymentTransaction && $totalNextPayableAmt >= $lastPaymentTransaction->amount) {
                 //     $leadUnit->booking_status = 3; // Mark as confirmed
                 //     $leadUnit->save();
                 // }
-               
+
                 // if ($totalNextPayableAmt > $unitdata->price) {
                 //     $leadUnit->booking_status = 4;// Mark as pending                  
                 // }elseif($totalNextPayableAmt < $unitdata->price){
@@ -440,17 +447,16 @@ class WingController extends Controller
                     $leadUnit->booking_status = 4; // Mark as pending
                 } elseif ($totalNextPayableAmt >= $unitdata->price) {
                     // If totalNextPayableAmt is greater than or equal to unit price, mark as confirmed
-                    if($unitdata->price <= 0){
+                    if ($unitdata->price <= 0) {
                         $leadUnit->booking_status = 4; // Mark as pending
-                    }else{
+                    } else {
                         $leadUnit->booking_status = 3; // Mark as confirmed
                     }
-                    
                 } elseif ($totalNextPayableAmt < $unitdata->price) {
                     // If totalNextPayableAmt is less than unit price
-                  
-                        $leadUnit->booking_status = 4; // Mark as pending
-                    
+
+                    $leadUnit->booking_status = 4; // Mark as pending
+
                 }
                 $leadUnit->save();
             }
@@ -485,36 +491,36 @@ class WingController extends Controller
             //             // echo "   " .$unit->id."-".$newUnitNumber ." ";
             //         }
             //     }
-// end actual code
+            // end actual code
 
-                // // Fetch the current floor's units in ascending order
-                // $units = UnitDetail::where('floor_id', $floorId)
-                //     ->orderBy('id', 'asc')
-                //     ->get();
+            // // Fetch the current floor's units in ascending order
+            // $units = UnitDetail::where('floor_id', $floorId)
+            //     ->orderBy('id', 'asc')
+            //     ->get();
 
 
-                // // Find the unit to be deleted
-                // $unitToDelete = UnitDetail::find($unitId);
+            // // Find the unit to be deleted
+            // $unitToDelete = UnitDetail::find($unitId);
 
-                // if ($unitToDelete) {
-                //     $deletedUnitNumber = (int)$unitToDelete->name;
+            // if ($unitToDelete) {
+            //     $deletedUnitNumber = (int)$unitToDelete->name;
 
-                //     // Delete the unit
-                //     // $unitToDelete->forceDelete();
+            //     // Delete the unit
+            //     // $unitToDelete->forceDelete();
 
-                //      // Re-number the remaining units
-                //      $unitIndex = 1;
-                //     foreach ($units as $unit) {
-                //         // Only renumber units that come after the deleted unit
-                //         if ((int)$unit->name > $deletedUnitNumber) {
-                //             // $newUnitNumber = sprintf('%d%02d', $floorId, $unitIndex);
-                //             $newUnitNumber = sprintf('%d%02d', (int)($deletedUnitNumber / 100), $unitIndex);
-                //             // $unit->update(['name' => $newUnitNumber]);
-                //             $unitIndex++;
-                //             echo "   " .$unit->id."-".$newUnitNumber ." ";
-                //         }
-                //     }
-                // }
+            //      // Re-number the remaining units
+            //      $unitIndex = 1;
+            //     foreach ($units as $unit) {
+            //         // Only renumber units that come after the deleted unit
+            //         if ((int)$unit->name > $deletedUnitNumber) {
+            //             // $newUnitNumber = sprintf('%d%02d', $floorId, $unitIndex);
+            //             $newUnitNumber = sprintf('%d%02d', (int)($deletedUnitNumber / 100), $unitIndex);
+            //             // $unit->update(['name' => $newUnitNumber]);
+            //             $unitIndex++;
+            //             echo "   " .$unit->id."-".$newUnitNumber ." ";
+            //         }
+            //     }
+            // }
             // } elseif ($actionId == 3) // floor delete
             // {
 
