@@ -267,15 +267,15 @@ class LeadController extends Controller
                             'data' => $lead
                         ], 200);
                     }
-                } elseif ($flag == 2) {
+                }elseif ($flag == 2) {
                     // Flag 2: Add new lead with attached unit
-        
+            
                     if ($leadid == 0) {
                         // Check if the same contact number and property combination already exists
                         $existingLead = Lead::where('contact_no', $contactno)
                             ->where('property_id', $propertyid)
                             ->first();
-        
+            
                         if (!$existingLead) {
                             // Create a new lead record
                             $lead = Lead::create([
@@ -286,32 +286,42 @@ class LeadController extends Controller
                                 'source_id' => $sourceid,
                                 'budget' => $budget,
                                 'status' => 0, // 0-new
-                                'type' => 0 // manual
+                                'type' => 0  // manual
                             ]);
-        
-                            // Attach the unit in lead_unit table
+                        } else {
+                            // If the lead exists, don't create a new lead, but pass it to the LeadUnit table
+                            $lead = $existingLead;
+                        }
+            
+                        // Now handle the LeadUnit entry
+                        $existingUnit = LeadUnit::where('unit_id', $unit_id)->first();
+            
+                        if ($existingUnit) {
+                            // Append the new lead ID to the interested_lead_id (comma-separated)
+                            $existingUnit->interested_lead_id = $existingUnit->interested_lead_id 
+                                ? $existingUnit->interested_lead_id . ',' . $lead->id
+                                : (string) $lead->id;
+            
+                            // Update the lead_unit entry
+                            $existingUnit->save();
+                        } else {
+                            // Create a new lead_unit entry if no existing entry for the unit
                             LeadUnit::create([
                                 'interested_lead_id' => $lead->id,
-                                'allocated_lead_id' => null, // You can set this if required
-                                'allocated_customer_id' => null, // You can set this if required
+                                'allocated_lead_id' => null, 
+                                'allocated_customer_id' => null, 
                                 'unit_id' => $unit_id,
-                                'booking_status' => 2, // Default booking status
+                                'booking_status' => 2,
                             ]);
-        
-                            // Return success response
-                            return response()->json([
-                                'status' => 'success',
-                                'message' => 'Lead added with unit successfully.',
-                                'data' => $lead
-                            ], 200);
-                        } else {
-                            return response()->json([
-                                'status' => 'error',
-                                'message' => 'Lead already exists.',
-                                'data' => null
-                            ], 200);
                         }
-                    } 
+            
+                        // Return success response
+                        return response()->json([
+                            'status' => 'success',
+                            'message' => 'Lead added with unit successfully.',
+                            'data' => $lead
+                        ], 200);
+                    }
                 }
         } catch (\Exception $e) {
             // Log the error
