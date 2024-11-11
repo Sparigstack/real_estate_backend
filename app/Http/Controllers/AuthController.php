@@ -74,17 +74,34 @@ class AuthController extends Controller
     public function registerUser(Request $request)
     {
         try {
-            $flag=1;
+            $flag=0;//0 means first tym, 1 means exists
           
             $contact_no=$request->mobile_number;
             // $checkUser = User::where('contact_no', $validatedData['contact_no'])->first();
-
-            $checkUserDetails = UserOtp::where('contact_no', $contact_no)->where('verified', 0)->first();
-            if($checkUserDetails){
+            $checkUserDetails = UserOtp::withTrashed()->where('contact_no', $contact_no)->first();
+          
+            if($checkUserDetails==""){
                 $flag=0;
+            }else if($checkUserDetails){
+                $verifiedStatus = $checkUserDetails->verified;
+                if( $verifiedStatus==1){
+                    $flag=1;
+                }else{
+                    $flag=0;
+                }
             }
-
+           
             $response = $this->generateAndSendOtp($contact_no);
+
+            // if ($checkUserDetails) {
+            //     $verifiedStatus = $checkUserDetails->verified;
+            //     if( $verifiedStatus==1){
+            //         $flag=1;
+            //     }else{
+            //         $flag=0;
+            //     }
+            //     // You can now use $verifiedStatus as needed
+            // } 
             if ($response == 'success') {
                 return response()->json([
                     'status' => 'success',
