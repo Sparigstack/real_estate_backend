@@ -288,7 +288,78 @@ class WingController extends Controller
     }
 
     public function addSimilarWingDetails(Request $request){
+        try{
+                // Retrieve request data
+                $selectedWingId = $request->input('selectedwingId');
+                $propertyId = $request->input('propertyid');
+                $wingId = $request->input('currentwingid');
+        
+                // Step 1: Get the details of the selected wing
+                $selectedWing = WingDetail::where('id', $selectedWingId)
+                                          ->where('property_id', $propertyId)
+                                          ->first();
+        
+                if (!$selectedWing) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Selected wing not found.',
+                    ], 200);
+                }
+        
+                // Step 2: Duplicate floor details
+                $floorDetails = FloorDetail::where('wing_id', $selectedWingId)
+                                           ->where('property_id', $propertyId)
+                                           ->get();
+        
+                $newFloors = [];
+                foreach ($floorDetails as $floor) {
+                    $newFloors[] = FloorDetail::create([
+                        'property_id' => $propertyId,
+                        'wing_id' => $wingId,
+                        'floor_size' => $floor->floor_size,
+                    ]);
+                }
+        
+                // Step 3: Duplicate unit details for each floor
+                foreach ($newFloors as $newFloor) {
+                    $unitDetails = UnitDetail::where('floor_id', $floor->id)
+                                             ->where('property_id', $propertyId)
+                                             ->get();
+        
+                    foreach ($unitDetails as $unit) {
+                        UnitDetail::create([
+                            'property_id' => $propertyId,
+                            'wing_id' => $wingId,
+                            'floor_id' => $newFloor->id,
+                            'name' => $unit->name,
+                            'status_id' => $unit->status_id,
+                            'square_feet' => $unit->square_feet,
+                            'price' => $unit->price,
+                        ]);
+                    }
+                }
+        
+                // Step 4: Update the total floors in the wing_details table
+                $updateCurrentWing=WingDetail::where('id',$wingId)->where('property_id', $propertyId)->first();
+                $updateCurrentWing->update([
+                    'total_floors' => $selectedWing->total_floors
+                ]);
+        
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Wing details added successfully with new floors and units.',
+                ], 200);
 
+        }catch (\Exception $e) {
+            $errorFrom = 'addSimilarWingDetails';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'something went wrong',
+            ], 400);
+        }
     }
 
     public function bulkUpdatesForWingsDetails(Request $request)

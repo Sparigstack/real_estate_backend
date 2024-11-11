@@ -8,6 +8,7 @@ use App\Helper;
 use App\Mail\ManageLeads;
 use App\Models\Lead;
 use App\Models\LeadSource;
+use App\Models\LeadUnit;
 use App\Models\Property;
 use App\Models\UserProperty;
 use App\Models\User;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Barryvdh\DomPDF\Facade as PDF;
+
 
 
 
@@ -160,109 +162,157 @@ class LeadController extends Controller
     public function addOrEditLeads(Request $request)
     {
         try {
-            // Validate inputs
-            $validatedData = $request->validate([
-                'propertyinterest' => 'required|integer',  // Assuming propertyinterest is an integer (property_id)
-                'name' => 'required|string|max:255',       // Name is required and must be a string
-                'email' => 'required|email|max:255',       // Email is required and must be valid
-                'contactno' => 'required|string|max:15',   // Contact number is required, can be a string
-                'source' => 'required|integer',            // Source ID is required (1-reference, 2-social media, etc.)
-                'budget' => 'required|numeric',            // Budget is optional and must be a number if provided
-                'leadid' => 'required|numeric',
-            ]);
 
-            // Retrieve validated data from the request
-            $propertyid = $validatedData['propertyinterest'];
-            $name = $validatedData['name'];
-            $email = $validatedData['email'];
-            $contactno = $validatedData['contactno'];
-            $sourceid = $validatedData['source'];
-            $budget = $request->input('budget'); // Budget remains nullable
-            $leadid = $request->input('leadid');
-            // $status = $request->input('status'); // 0-new, 1-negotiation, 2-in contact, 3-highly interested, 4-closed
-            // $type = $request->input('type', 0); // 0-manual, 1-csv, 2-web form
-
-            if ($leadid == 0) {
-
-                // Check if the same email and property combination already exists
-                $existingLead = Lead::where('email', $email)
-                    ->where('property_id', $propertyid)
-                    ->first();
-
-
-                if (!$existingLead) {
-                    // Create a new lead record for manual or web form entry //0 or 2
-                    $lead = Lead::create([
-                        'property_id' => $propertyid,
-                        'name' => $name,
-                        'email' => $email,
-                        'contact_no' => $contactno,
-                        'source_id' => $sourceid,
-                        'budget' => $budget,
-                        'status' => 0, //0-new, 1-negotiation, 2-in contact, 3-highly interested, 4-closed
-                        'type' => 0 //manual
-                    ]);
-
-                    // Return success response
-                    return response()->json([
-                        'status' => 'success',
-                        'message' => 'Lead added successfully.',
-                        'data' => $lead
-                    ], 200);
-                } else {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Lead already exists.',
-                        'data' => null
-                    ], 200);
-                }
-            } else {
-                // update a lead record for manual or web form entry //0 or 2
-                // Find existing lead by ID
-                $lead = Lead::find($leadid);
-
-                if (!$lead) {
-                    // Return error if lead not found
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Lead not found.',
-                        'data' => null
-                    ], 200);
-                }
-
-                // Check if another lead with the same email and updated property_id exists
-                $duplicateLead = Lead::where('email', $email)
-                    ->where('property_id', $propertyid)
-                    ->where('id', '!=', $leadid)  // Exclude the current lead
-                    ->first();
-
-                if ($duplicateLead) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Lead already exists.',
-                        'data' => null
-                    ], 200);
-                }
-
-                // Update the existing lead record
-                $lead->update([
-                    'property_id' => $propertyid,
-                    'name' => $name,
-                    'email' => $email,
-                    'contact_no' => $contactno,
-                    'source_id' => $sourceid,
-                    'budget' => $budget,
-                    'status' => 0, // You can change this to another value if needed
-                    'type' => 0 // 0 - manual, modify if necessary
+                // Validate inputs
+                $validatedData = $request->validate([
+                    'propertyinterest' => 'required|integer',  // Assuming propertyinterest is an integer (property_id)
+                    'name' => 'required|string|max:255',       // Name is required and must be a string
+                    'contactno' => 'required|string|max:15',   // Contact number is required, can be a string
+                    'source' => 'required|integer',            // Source ID is required (1-reference, 2-social media, etc.)
+                    'budget' => 'required|numeric',            // Budget is optional and must be a number if provided
+                    'leadid' => 'required|numeric',
+                    'flag' => 'required|in:1,2',                // Flag to determine lead type
+                    'unitId' => 'nullable|integer',           // Unit ID will be provided for flag 2
                 ]);
-
-                // Return success response for updating the lead
-                return response()->json([
-                    'status' => 'success',
-                    'message' => 'Lead updated successfully.',
-                    'data' => $lead
-                ], 200);
-            }
+        
+                // Retrieve validated data from the request
+                $propertyid = $validatedData['propertyinterest'];
+                $name = $validatedData['name'];
+                $contactno = $validatedData['contactno'];
+                $sourceid = $validatedData['source'];
+                $budget = $request->input('budget'); // Budget remains nullable
+                $leadid = $request->input('leadid');
+                $flag = $validatedData['flag'];  // New flag parameter
+                $unit_id = $request->input('unitId'); // Optional unit ID
+                $email=$request->input('email');
+        
+                if ($flag == 1) {
+                    // Flag 1: Normal lead add
+        
+                    if ($leadid == 0) {
+                        // Check if the same contact number and property combination already exists
+                        $existingLead = Lead::where('contact_no', $contactno)
+                            ->where('property_id', $propertyid)
+                            ->first();
+        
+                        if (!$existingLead) {
+                            // Create a new lead record for manual or web form entry
+                            $lead = Lead::create([
+                                'property_id' => $propertyid,
+                                'name' => $name,
+                                'contact_no' => $contactno,
+                                'email' => $email,
+                                'source_id' => $sourceid,
+                                'budget' => $budget,
+                                'status' => 0, // 0-new
+                                'type' => 0 // manual
+                            ]);
+        
+                            // Return success response
+                            return response()->json([
+                                'status' => 'success',
+                                'message' => 'Lead added successfully.',
+                                'data' => $lead
+                            ], 200);
+                        } else {
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => 'Lead already exists.',
+                                'data' => null
+                            ], 200);
+                        }
+                    } else {
+                        // Update an existing lead record
+                        $lead = Lead::find($leadid);
+        
+                        if (!$lead) {
+                            // Return error if lead not found
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => 'Lead not found.',
+                                'data' => null
+                            ], 200);
+                        }
+        
+                        // Check if another lead with the same contact number and updated property_id exists
+                        $duplicateLead = Lead::where('contact_no', $contactno)
+                            ->where('property_id', $propertyid)
+                            ->where('id', '!=', $leadid)  // Exclude the current lead
+                            ->first();
+        
+                        if ($duplicateLead) {
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => 'Lead already exists.',
+                                'data' => null
+                            ], 200);
+                        }
+        
+                        // Update the existing lead record
+                        $lead->update([
+                            'property_id' => $propertyid,
+                            'name' => $name,
+                            'contact_no' => $contactno,
+                            'email' => $email,
+                            'source_id' => $sourceid,
+                            'budget' => $budget,
+                            'status' => 0, // You can change this to another value if needed
+                            'type' => 0 // 0 - manual, modify if necessary
+                        ]);
+        
+                        // Return success response for updating the lead
+                        return response()->json([
+                            'status' => 'success',
+                            'message' => 'Lead updated successfully.',
+                            'data' => $lead
+                        ], 200);
+                    }
+                } elseif ($flag == 2) {
+                    // Flag 2: Add new lead with attached unit
+        
+                    if ($leadid == 0) {
+                        // Check if the same contact number and property combination already exists
+                        $existingLead = Lead::where('contact_no', $contactno)
+                            ->where('property_id', $propertyid)
+                            ->first();
+        
+                        if (!$existingLead) {
+                            // Create a new lead record
+                            $lead = Lead::create([
+                                'property_id' => $propertyid,
+                                'name' => $name,
+                                'contact_no' => $contactno,
+                                'email' => $email,
+                                'source_id' => $sourceid,
+                                'budget' => $budget,
+                                'status' => 0, // 0-new
+                                'type' => 0 // manual
+                            ]);
+        
+                            // Attach the unit in lead_unit table
+                            LeadUnit::create([
+                                'interested_lead_id' => $lead->id,
+                                'allocated_lead_id' => null, // You can set this if required
+                                'allocated_customer_id' => null, // You can set this if required
+                                'unit_id' => $unit_id,
+                                'booking_status' => 2, // Default booking status
+                            ]);
+        
+                            // Return success response
+                            return response()->json([
+                                'status' => 'success',
+                                'message' => 'Lead added with unit successfully.',
+                                'data' => $lead
+                            ], 200);
+                        } else {
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => 'Lead already exists.',
+                                'data' => null
+                            ], 200);
+                        }
+                    } 
+                }
         } catch (\Exception $e) {
             // Log the error
             $errorFrom = 'addEditLeadDetails';
