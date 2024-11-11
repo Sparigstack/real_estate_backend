@@ -91,7 +91,7 @@ class UserController extends Controller
 
     public function getUserDetails($uid)
     {
-        $userDetails = User::where('id', $uid)->first();
+        $userDetails = User::with('companyDetail')->where('id', $uid)->first();
         if ($userDetails) {
             // Check if client_id and client_secret_key are missing, generate if needed
             if (empty($userDetails->client_id)) {

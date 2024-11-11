@@ -50,7 +50,7 @@ class AuthController extends Controller
                 $userOtp->otp = $otp;
                 $userOtp->contact_no = $mobile_number;
                 $userOtp->verified = false;
-                $userOtp->expire_at = now()->addMinutes(3);
+                $userOtp->expire_at = now()->addMinutes(2);
                 $userOtp->save();
                 // User::where('email', $email)->update(['name' =>$username]);
                 try {
@@ -93,15 +93,7 @@ class AuthController extends Controller
            
             $response = $this->generateAndSendOtp($contact_no);
 
-            // if ($checkUserDetails) {
-            //     $verifiedStatus = $checkUserDetails->verified;
-            //     if( $verifiedStatus==1){
-            //         $flag=1;
-            //     }else{
-            //         $flag=0;
-            //     }
-            //     // You can now use $verifiedStatus as needed
-            // } 
+
             if ($response == 'success') {
                 return response()->json([
                     'status' => 'success',

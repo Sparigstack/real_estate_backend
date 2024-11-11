@@ -17,7 +17,7 @@ Route::post('/register-user', [AuthController::class, 'registerUser']);
 // Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 
-Route::middleware('auth:api')->group(function (){
+// Route::middleware('auth:api')->group(function (){
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/get-user-details/{uid}', [UserController::class, 'getUserDetails']);
     //Route::get('/user-profile/{uid}', [UserController::class, 'userProfile']);
@@ -60,6 +60,7 @@ Route::middleware('auth:api')->group(function (){
     Route::post('/add-wing-details', [WingController::class, 'addWingDetails']);
     Route::get('/get-wings-basic-details/{wid}', [WingController::class, 'getWingsBasicDetails']); 
     Route::post('/add-wings-floor-details', [WingController::class, 'addWingsFloorDetails']);
+    Route::post('/add-similar-wing-details', [WingController::class, 'addSimilarWingDetails']);
     Route::post('/bulk-updates-for-wings-details', [WingController::class, 'bulkUpdatesForWingsDetails']);
     Route::post('/update-wing-details', [WingController::class, 'updateWingDetails']);
     Route::get('/get-unit-basic-details/{uid}', [WingController::class, 'getunitBasicDetails']); 
@@ -84,7 +85,7 @@ Route::middleware('auth:api')->group(function (){
     Route::post('/add-matched-entity-using-cheque', [BookingController::class, 'addMatchedEntityUsingCheque']); 
     Route::post('/add-entity-attach-with-units-using-cheque', [BookingController::class, 'addEntityAttachWithUnitsUsingCheque']); 
 
-});
+// });
 
 
 

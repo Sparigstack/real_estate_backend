@@ -287,6 +287,9 @@ class WingController extends Controller
         }
     }
 
+    public function addSimilarWingDetails(Request $request){
+
+    }
 
     public function bulkUpdatesForWingsDetails(Request $request)
     {
