@@ -17,7 +17,7 @@ Route::post('/register-user', [AuthController::class, 'registerUser']);
 // Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 
-// Route::middleware('auth:api')->group(function (){
+Route::middleware('auth:api')->group(function (){
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/get-user-details/{uid}', [UserController::class, 'getUserDetails']);
     //Route::get('/user-profile/{uid}', [UserController::class, 'userProfile']);
@@ -86,7 +86,7 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/add-matched-entity-using-cheque', [BookingController::class, 'addMatchedEntityUsingCheque']); 
     Route::post('/add-entity-attach-with-units-using-cheque', [BookingController::class, 'addEntityAttachWithUnitsUsingCheque']); 
 
-// });
+});
 
 
 
