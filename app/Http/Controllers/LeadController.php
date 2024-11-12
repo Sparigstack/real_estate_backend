@@ -394,24 +394,15 @@ class LeadController extends Controller
             // Process CSV rows
             while (($columns = fgetcsv($csvFile)) !== false) {
                 $data = array_combine($escapedHeader, $columns);
-
-                // Debug: print the current row
-                Log::info('CSV row: ', $data);
-
-
+    
                 if (empty($data['name']) && empty($data['contact']) && empty($data['source']) && empty($data['budget'])) {
-                    // Skip this row entirely if all fields are empty
                     continue;
                 }
-
-                // Validate that required fields are not empty
-                if (empty($data['name'])  || empty($data['contact']) || empty($data['source']) || empty($data['budget'])) {
-                    // Add to failed leads with reason
-                    $errorFrom = 'addLeadDetailsfailed';
-                    $errorMessage = 'Missing required field(s)';
-                    $priority = 'high';
-                    Helper::errorLog($errorFrom, $errorMessage, $priority);
-
+    
+                // Validate required fields (name, contact, source, budget)
+                if (empty($data['name']) || empty($data['contact']) || empty($data['source']) || empty($data['budget'])) {
+                    Helper::errorLog('addLeadDetailsfailed', 'Missing required field(s)', 'high');
+    
                     $leadsIssues[] = [
                         'name' => $data['name'] ?? 'N/A',
                         'email' => $data['email'] ?? 'N/A',
@@ -420,19 +411,16 @@ class LeadController extends Controller
                         'budget' => $data['budget'] ?? 'N/A',
                         'reason' => 'Missing required field(s)',
                     ];
-                    continue; // Skip this row and move to the next one
+                    continue;
                 }
-
-                // Additional validation: email format
-                if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-                    $errorFrom = 'addLeadDetailsfailed';
-                    $errorMessage = 'Invalid email format';
-                    $priority = 'high';
-                    Helper::errorLog($errorFrom, $errorMessage, $priority);
-
+    
+                // Validate email format if email is provided
+                if (!empty($data['email']) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                    Helper::errorLog('addLeadDetailsfailed', 'Invalid email format', 'high');
+    
                     $leadsIssues[] = [
                         'name' => $data['name'],
-                        'email' => $data['email'] ?? 'N/A',
+                        'email' => $data['email'],
                         'contact' => $data['contact'],
                         'source' => $data['source'],
                         'budget' => $data['budget'],
@@ -440,39 +428,34 @@ class LeadController extends Controller
                     ];
                     continue;
                 }
-
+    
                 try {
-                    // Case-insensitive check if source exists, insert if not
+                    // Check if source exists; if not, assign it to "others" (source_id = 5)
                     $source = LeadSource::whereRaw('LOWER(name) = ?', [strtolower($data['source'])])->first();
                     if (!$source) {
-                        $source = LeadSource::find(5); // Assign to "others"
+                        $source = LeadSource::find(5);
                     }
-
-
-                    // Uniqueness check: If the same email and property_id exist, skip
+    
+                    // Check uniqueness based on contact number and property ID
                     $existingLead = Lead::where('contact_no', $data['contact'])
                         ->where('property_id', $propertyId)
                         ->first();
-
-
+    
                     if ($existingLead) {
-                        Log::info('leads skipped for property id: ' . $propertyId, $data);
-
-                        // Skip row if the combination of email and property_id already exists
+                        Log::info('Lead skipped for property id: ' . $propertyId, $data);
+    
                         $leadsIssues[] = [
                             'name' => $data['name'],
                             'email' => $data['email'] ?? 'N/A',
                             'contact' => $data['contact'],
                             'source' => $data['source'],
                             'budget' => $data['budget'],
-                            'reason' => 'Duplicate entry',
+                            'reason' => 'Duplicate entry based on contact number',
                         ];
                         continue;
                     }
-
-
+    
                     // Create lead record
-
                     $lead = Lead::create([
                         'property_id' => $propertyId,
                         'name' => $data['name'],
@@ -483,55 +466,51 @@ class LeadController extends Controller
                         'status' => 0, // New lead
                         'type' => 1, // From CSV
                     ]);
-
-                    // $leadsAdded[] = $lead;
+    
+                    $leadsAdded[] = $lead;
                 } catch (\Exception $e) {
-                    // If something goes wrong for this row, log it as a failed lead
-                    $leadsFailed[] = [
+                    $leadsIssues[] = [
                         'name' => $data['name'],
                         'email' => $data['email'],
                         'contact' => $data['contact'],
                         'source' => $data['source'],
                         'budget' => $data['budget'],
-                        'reason' => "Something went wrong"
+                        'reason' => "Error: " . $e->getMessage(),
                     ];
-
-                    $errorFrom = 'addLeadDetailsfailed';
-                    $errorMessage = $e->getMessage();
-                    $priority = 'high';
-                    Helper::errorLog($errorFrom, $errorMessage, $priority);
+    
+                    Helper::errorLog('addLeadDetailsfailed', $e->getMessage(), 'high');
                 }
             }
 
             fclose($csvFile); // Close the file after processing
 
-            if (count($leadsIssues) > 0) {
-                // Create a temporary CSV file for skipped/failed leads
-                $csvFilePath = storage_path('app/leads_issues_' . time() . '.csv');
-                $csvHandle = fopen($csvFilePath, 'w');
-                fputcsv($csvHandle, ['Name', 'Email(optional)', 'Contact', 'Source', 'Budget', 'Reason']);
+            // if (count($leadsIssues) > 0) {
+            //     // Create a temporary CSV file for skipped/failed leads
+            //     $csvFilePath = storage_path('app/leads_issues_' . time() . '.csv');
+            //     $csvHandle = fopen($csvFilePath, 'w');
+            //     fputcsv($csvHandle, ['Name', 'Email(optional)', 'Contact', 'Source', 'Budget', 'Reason']);
 
-                foreach ($leadsIssues as $leadIssue) {
-                    fputcsv($csvHandle, [
-                        $leadIssue['name'],
-                        $leadIssue['email'],
-                        $leadIssue['contact'],
-                        $leadIssue['source'],
-                        $leadIssue['budget'],
-                        $leadIssue['reason']
-                    ]);
-                }
+            //     foreach ($leadsIssues as $leadIssue) {
+            //         fputcsv($csvHandle, [
+            //             $leadIssue['name'],
+            //             $leadIssue['email'],
+            //             $leadIssue['contact'],
+            //             $leadIssue['source'],
+            //             $leadIssue['budget'],
+            //             $leadIssue['reason']
+            //         ]);
+            //     }
 
-                fclose($csvHandle);
+            //     fclose($csvHandle);
 
-                // Send the email with the CSV attachment
-                // Mail::to($propertyUserEmail)->send(new ManageLeads($property, $leadsIssues, $csvFilePath));
+            //     // Send the email with the CSV attachment
+            //     Mail::to($propertyUserEmail)->send(new ManageLeads($property, $leadsIssues, $csvFilePath));
 
-                // Delete the temporary file after sending the email
-                if (file_exists($csvFilePath)) {
-                    unlink($csvFilePath); // This removes the temporary CSV file
-                }
-            }
+            //     // Delete the temporary file after sending the email
+            //     if (file_exists($csvFilePath)) {
+            //         unlink($csvFilePath); // This removes the temporary CSV file
+            //     }
+            // }
 
             return response()->json([
                 'status' => 'success',
