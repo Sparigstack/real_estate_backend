@@ -188,7 +188,7 @@ class BookingController extends Controller
             if (is_null($leadId)) {
                 $customer = Customer::where('property_id', $propertyId)
                     ->where('unit_id', $unitId)
-                    ->where('email', $contactEmail)
+                    ->where('contact_no', $contactNumber)
                     ->first();
 
                 if ($customer) {
