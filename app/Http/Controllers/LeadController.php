@@ -365,15 +365,20 @@ class LeadController extends Controller
             // Open the CSV file
             $csvFile = fopen($file, 'r');
             $header = fgetcsv($csvFile);
-            $expectedHeaders = ['name', 'email', 'contact', 'source', 'budget'];
+            $expectedHeaders = ['name', 'email(optional)', 'contact', 'source', 'budget'];
             $escapedHeader = [];
 
-            foreach ($header as $key => $value) {
-                $escapedHeader[] = preg_replace('/[^a-z]/', '', strtolower($value));
+            foreach ($header as $value) {
+                // Normalize headers by removing spaces and setting to lowercase
+                $normalizedHeader = strtolower(str_replace([' ', '(optional)'], '', $value));
+                $escapedHeader[] = $normalizedHeader;
             }
 
+            // Define the expected headers in the same format
+            $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source', 'budget'];
+
             // Validate CSV headers
-            if (array_diff($expectedHeaders, $escapedHeader)) {
+            if (array_diff($normalizedExpectedHeaders, $escapedHeader)) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Invalid CSV headers.',
@@ -427,7 +432,7 @@ class LeadController extends Controller
 
                     $leadsIssues[] = [
                         'name' => $data['name'],
-                        'email' => $data['email'],
+                        'email' => $data['email'] ?? 'N/A',
                         'contact' => $data['contact'],
                         'source' => $data['source'],
                         'budget' => $data['budget'],
@@ -456,7 +461,7 @@ class LeadController extends Controller
                         // Skip row if the combination of email and property_id already exists
                         $leadsIssues[] = [
                             'name' => $data['name'],
-                            'email' => $data['email'],
+                            'email' => $data['email'] ?? 'N/A',
                             'contact' => $data['contact'],
                             'source' => $data['source'],
                             'budget' => $data['budget'],
@@ -504,7 +509,7 @@ class LeadController extends Controller
                 // Create a temporary CSV file for skipped/failed leads
                 $csvFilePath = storage_path('app/leads_issues_' . time() . '.csv');
                 $csvHandle = fopen($csvFilePath, 'w');
-                fputcsv($csvHandle, ['Name', 'Email', 'Contact', 'Source', 'Budget', 'Reason']);
+                fputcsv($csvHandle, ['Name', 'Email(optional)', 'Contact', 'Source', 'Budget', 'Reason']);
 
                 foreach ($leadsIssues as $leadIssue) {
                     fputcsv($csvHandle, [
@@ -520,7 +525,7 @@ class LeadController extends Controller
                 fclose($csvHandle);
 
                 // Send the email with the CSV attachment
-                Mail::to($propertyUserEmail)->send(new ManageLeads($property, $leadsIssues, $csvFilePath));
+                // Mail::to($propertyUserEmail)->send(new ManageLeads($property, $leadsIssues, $csvFilePath));
 
                 // Delete the temporary file after sending the email
                 if (file_exists($csvFilePath)) {

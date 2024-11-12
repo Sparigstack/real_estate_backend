@@ -17,7 +17,7 @@ Route::post('/register-user', [AuthController::class, 'registerUser']);
 // Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 
-Route::middleware('auth:api')->group(function (){
+// Route::middleware('auth:api')->group(function (){
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/get-user-details/{uid}', [UserController::class, 'getUserDetails']);
     //Route::get('/user-profile/{uid}', [UserController::class, 'userProfile']);
@@ -80,13 +80,15 @@ Route::middleware('auth:api')->group(function (){
 
 
     //booking calls
+    Route::get('/get-payment-types', [BookingController::class, 'getPaymentTypes']); 
     Route::get('/get-booked-unit-detail/{uid}/{bid}/{type}', [BookingController::class, 'getBookedUnitDetail']); 
     Route::post('/add-unit-booking-detail', [BookingController::class, 'addUnitBookingInfo']);
     Route::post('/add-unit-payment-detail', [BookingController::class, 'addUnitPaymentDetail']);
     Route::post('/add-matched-entity-using-cheque', [BookingController::class, 'addMatchedEntityUsingCheque']); 
     Route::post('/add-entity-attach-with-units-using-cheque', [BookingController::class, 'addEntityAttachWithUnitsUsingCheque']); 
 
-});
+
+// });
 
 
 

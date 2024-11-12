@@ -18,6 +18,7 @@ use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\LeadUnit;
 use App\Models\PaymentTransaction;
+use App\Models\PaymentType;
 use App\Models\State;
 use Exception;
 use Illuminate\Support\Facades\Log;
@@ -1016,4 +1017,24 @@ class BookingController extends Controller
             }
         }
     }
+
+    public function getPaymentTypes(){
+        try {
+            $data=PaymentType::all();
+         
+            return $data;
+        } catch (Exception $e) {
+            // Log the error
+            $errorFrom = 'getPaymentTypes';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
+
 }
