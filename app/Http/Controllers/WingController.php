@@ -638,4 +638,31 @@ class WingController extends Controller
             ], 400);
         }
     }
+
+    public function getWingsWithUnitsAndFloors($pid)
+    {
+        try {
+            if ($pid !== 'null') {
+                $wings = WingDetail::where('property_id', $pid)
+                    ->whereHas('unitDetails')  // Ensure that there are related unit_details
+                    ->whereHas('floorDetails') // Ensure that there are related floor_details
+                    ->get(['id', 'name']);  // Only select id and name columns
+
+                return  $wings;
+            }else{
+                return null;
+            }
+        } catch (\Exception $e) {
+            // Log the error
+            $errorFrom = 'getWingsWithUnitsAndFloors';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
 }
