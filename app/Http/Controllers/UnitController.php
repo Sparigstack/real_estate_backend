@@ -17,6 +17,7 @@ use App\Models\Country;
 use App\Models\Customer;
 use App\Models\Lead;
 use App\Models\LeadUnit;
+use App\Models\LeadUnitData;
 use App\Models\PaymentTransaction;
 use App\Models\State;
 use Exception;
@@ -217,6 +218,8 @@ class UnitController extends Controller
 
             // Iterate through the leads_array from the request
             foreach ($request->leads_array as $lead) {
+                $leadId = $lead['lead_id'];
+                $budget = $lead['budget'];
                 // If lead_id is not already in the existingLeadIds array, add it
                 if (!in_array($lead['lead_id'], $existingLeadIds)) {
                     $existingLeadIds[] = $lead['lead_id'];
@@ -232,6 +235,24 @@ class UnitController extends Controller
                 $existingLeadUnit->booking_status = 2; // Set booking_status to 2
                 // $existingLeadUnit->updated_at = now(); // Update timestamp
                 $existingLeadUnit->save();
+
+                // Check if there's an existing record in leadunitdata for this lead and unit
+                $leadUnitData = LeadUnitData::where('lead_unit_id', $existingLeadUnit->id)
+                    ->where('lead_id', $leadId)
+                    ->first();
+
+                if ($leadUnitData) {
+                    // Update existing record
+                    $leadUnitData->budget = $budget;
+                    $leadUnitData->save();
+                } else {
+                    // Create new leadunitdata entry
+                    LeadUnitData::create([
+                        'lead_unit_id' => $existingLeadUnit->id,
+                        'lead_id' => $leadId,
+                        'budget' => $budget,
+                    ]);
+                }
             } else {
                 // If no existing lead unit, create a new one
                 $newLeadUnit = new LeadUnit();
@@ -241,6 +262,16 @@ class UnitController extends Controller
                 $newLeadUnit->unit_id = $request->unit_id;
                 $newLeadUnit->booking_status = 2; // Set booking_status to 2
                 $newLeadUnit->save();
+
+
+                // Insert budget data for each lead in leads_array for the new lead unit
+                foreach ($request->leads_array as $leadData) {
+                    LeadUnitData::create([
+                        'lead_unit_id' => $newLeadUnit->id,
+                        'lead_id' => $leadData['lead_id'],
+                        'budget' => $leadData['budget'],
+                    ]);
+                }
             }
 
             return response()->json([
@@ -346,6 +377,4 @@ class UnitController extends Controller
             ], 400);
         }
     }
-
-    
 }
