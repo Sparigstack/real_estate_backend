@@ -50,7 +50,7 @@ class AuthController extends Controller
                 $userOtp->otp = $otp;
                 $userOtp->contact_no = $mobile_number;
                 $userOtp->verified = false;
-                $userOtp->expire_at = now()->addMinutes(2);
+                $userOtp->expire_at = now()->addMinutes(15);
                 $userOtp->save();
                 // User::where('email', $email)->update(['name' =>$username]);
                 try {

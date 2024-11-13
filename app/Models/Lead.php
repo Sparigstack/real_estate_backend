@@ -9,7 +9,7 @@ class Lead extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'property_id', 'name', 'email', 'contact_no', 'source_id','budget','type','status','notes'
+        'property_id', 'name', 'email', 'contact_no', 'source_id','type','status','notes'
     ];
 
     public function userproperty()
@@ -40,4 +40,9 @@ class Lead extends Model
     {
         return $this->hasMany(PaymentTransaction::class, 'allocated_id');
     }
+    public function leadUnitData()
+    {
+        return $this->hasMany(LeadUnitData::class);
+    }
+
 }
