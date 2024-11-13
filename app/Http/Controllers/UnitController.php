@@ -56,7 +56,6 @@ class UnitController extends Controller
                                 'name' => $lead->name,
                                 'email' => $lead->email,
                                 'contact_no' => $lead->contact_no,
-                                'budget' => $lead->budget,
                                 'booking_status' => $leadUnit->booking_status,
                                 // Add any additional lead fields you need
                             ];
@@ -243,15 +242,24 @@ class UnitController extends Controller
                 ], 200);
             }
 
-            // Initialize an array to hold all interested lead IDs
+            // Initialize variables
             $existingLeadIds = [];
             $existingLeadUnit = $unit->leadUnits->first();
 
-            // If there are existing interested leads, retrieve them
-            if ($existingLeadUnit) {
-                // Get the current interested_lead_id (comma-separated)
+            // If no existing lead unit, create a new one
+            if (!$existingLeadUnit) {
+                $newLeadUnit = new LeadUnit();
+                $newLeadUnit->interested_lead_id = ''; // Will be updated later
+                $newLeadUnit->unit_id = $request->unit_id;
+                $newLeadUnit->booking_status = 2;
+                $newLeadUnit->save();
+
+                // Use $newLeadUnit as the current lead unit
+                $leadUnitId = $newLeadUnit->id;
+            } else {
+                // If there is an existing lead unit, use its ID
+                $leadUnitId = $existingLeadUnit->id;
                 $existingLeadIds = explode(',', $existingLeadUnit->interested_lead_id);
-                // Convert existing lead IDs to integers for easier manipulation
                 $existingLeadIds = array_map('intval', $existingLeadIds);
             }
 
@@ -259,58 +267,43 @@ class UnitController extends Controller
             foreach ($request->leads_array as $lead) {
                 $leadId = $lead['lead_id'];
                 $budget = $lead['budget'];
-                // If lead_id is not already in the existingLeadIds array, add it
-                if (!in_array($lead['lead_id'], $existingLeadIds)) {
-                    $existingLeadIds[] = $lead['lead_id'];
+
+                // Add lead ID if not already present
+                if (!in_array($leadId, $existingLeadIds)) {
+                    $existingLeadIds[] = $leadId;
                 }
-            }
 
-            // Convert the updated lead IDs back to a comma-separated string
-            $updatedInterestedLeadIds = implode(',', $existingLeadIds);
-
-            // Update the interested_lead_id and booking_status in the existing lead unit
-            if ($existingLeadUnit) {
-                $existingLeadUnit->interested_lead_id = $updatedInterestedLeadIds;
-                $existingLeadUnit->booking_status = 2; // Set booking_status to 2
-                // $existingLeadUnit->updated_at = now(); // Update timestamp
-                $existingLeadUnit->save();
-
-                // Check if there's an existing record in leadunitdata for this lead and unit
-                $leadUnitData = LeadUnitData::where('lead_unit_id', $existingLeadUnit->id)
+                // Check if there's an existing record in LeadUnitData
+                $leadUnitData = LeadUnitData::where('lead_unit_id', $leadUnitId)
                     ->where('lead_id', $leadId)
                     ->first();
 
                 if ($leadUnitData) {
-                    // Update existing record
-                    $leadUnitData->budget = $budget;
-                    $leadUnitData->save();
+                    // Update budget if different
+                    if ($leadUnitData->budget != $budget) {
+                        $leadUnitData->budget = $budget;
+                        $leadUnitData->save();
+                    }
                 } else {
-                    // Create new leadunitdata entry
+                    // Create new LeadUnitData entry if not exists
                     LeadUnitData::create([
-                        'lead_unit_id' => $existingLeadUnit->id,
+                        'lead_unit_id' => $leadUnitId,
                         'lead_id' => $leadId,
                         'budget' => $budget,
                     ]);
                 }
+            }
+
+            // Convert updated lead IDs back to a comma-separated string
+            $updatedInterestedLeadIds = implode(',', $existingLeadIds);
+
+            // Update the interested_lead_id in the lead unit
+            if ($existingLeadUnit) {
+                $existingLeadUnit->interested_lead_id = $updatedInterestedLeadIds;
+                $existingLeadUnit->save();
             } else {
-                // If no existing lead unit, create a new one
-                $newLeadUnit = new LeadUnit();
                 $newLeadUnit->interested_lead_id = $updatedInterestedLeadIds;
-                // $newLeadUnit->allocated_lead_id = $unit->allocated_lead_id; // Optional, adjust as needed
-                // $newLeadUnit->allocated_customer_id = $unit->allocated_customer_id; // Optional, adjust as needed
-                $newLeadUnit->unit_id = $request->unit_id;
-                $newLeadUnit->booking_status = 2; // Set booking_status to 2
                 $newLeadUnit->save();
-
-
-                // Insert budget data for each lead in leads_array for the new lead unit
-                foreach ($request->leads_array as $leadData) {
-                    LeadUnitData::create([
-                        'lead_unit_id' => $newLeadUnit->id,
-                        'lead_id' => $leadData['lead_id'],
-                        'budget' => $leadData['budget'],
-                    ]);
-                }
             }
 
             return response()->json([
