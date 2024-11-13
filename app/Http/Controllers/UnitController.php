@@ -107,29 +107,29 @@ class UnitController extends Controller
             ], 400);
         }
     }
-    public function getLeadCustomerNames($pid){
+    public function getLeadCustomerNames($pid)
+    {
         try {
             if ($pid != 'null') {
                 $allLeads = Lead::where('property_id', $pid)->get();
 
                 // Retrieve all customers for the specified property
-            $allCustomers = Customer::where('property_id', $pid)->get();
+                $allCustomers = Customer::where('property_id', $pid)->get();
 
-            $leadsWithType = $allLeads->map(function($lead) {
-                $lead->type = 'lead'; // Mark this record as a lead
-                return $lead;
-            });
+                $leadsWithType = $allLeads->map(function ($lead) {
+                    $lead->type = 'lead'; // Mark this record as a lead
+                    return $lead;
+                });
 
-            $customersWithType = $allCustomers->map(function($customer) {
-                $customer->type = 'customer'; // Mark this record as a customer
-                return $customer;
-            });
+                $customersWithType = $allCustomers->map(function ($customer) {
+                    $customer->type = 'customer'; // Mark this record as a customer
+                    return $customer;
+                });
 
-            // Merge both arrays into one
-            $allLeadsCustomers = $leadsWithType->merge($customersWithType);
+                // Merge both arrays into one
+                $allLeadsCustomers = $leadsWithType->merge($customersWithType);
 
-            return $allLeadsCustomers;
-
+                return $allLeadsCustomers;
             } else {
                 return null;
             }
@@ -351,8 +351,20 @@ class UnitController extends Controller
                 // Fetch details of interested leads
                 $interestedLeads = Lead::whereIn('id', $interestedLeadIds)->get();
 
-                // Return an empty array if no leads were found
-                return $interestedLeads->isEmpty() ? [] : $interestedLeads->toArray();
+                // Fetch budget details from LeadUnitData based on lead_unit_id
+                $budgets = LeadUnitData::where('lead_unit_id', $leadUnit->id)
+                    ->whereIn('lead_id', $interestedLeadIds)
+                    ->get()
+                    ->keyBy('lead_id'); // Index by lead_id for easy access
+
+                // Map the budget to each lead
+                $leadsWithBudgets = $interestedLeads->map(function ($lead) use ($budgets) {
+                    $lead->budget = $budgets->get($lead->id)->budget ?? null; // Assign budget if available
+                    return $lead;
+                });
+
+                // Return the leads with budget details
+                return $leadsWithBudgets->isEmpty() ? [] : $leadsWithBudgets->toArray();
             } else {
                 return []; // Return an empty array if uid is 'null'
             }
