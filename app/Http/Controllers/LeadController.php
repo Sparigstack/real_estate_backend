@@ -269,12 +269,13 @@ class LeadController extends Controller
                 }
             } elseif ($flag == 2) {
                 // Flag 2: Add new lead with attached unit
-
+            
                 if ($leadid == 0) { //if new lead
                     // Check if the same contact number and property combination already exists
                     $existingLead = Lead::where('contact_no', $contactno)
                         ->where('property_id', $propertyid)
                         ->first();
+
 
                     if (!$existingLead) {
                         // Create a new lead record
@@ -292,6 +293,7 @@ class LeadController extends Controller
                         $lead = $existingLead;
                     }
 
+                    
                     // Now handle the LeadUnit entry
                     $existingUnit = LeadUnit::where('unit_id', $unit_id)->first();
 
@@ -310,9 +312,8 @@ class LeadController extends Controller
                             $existingUnit->save();
                         }
                     } else {
-                        // return "jkj0";
                         // Create a new lead_unit entry if no existing entry for the unit
-                        LeadUnit::create([
+                        $existingUnit = LeadUnit::create([
                             'interested_lead_id' => $lead->id,
                             'allocated_lead_id' => null,
                             'allocated_customer_id' => null,
@@ -321,11 +322,13 @@ class LeadController extends Controller
                         ]);
                     }
 
-
+                   
+                   
                     // Now handle the LeadUnitData entry
                     $leadUnitData = LeadUnitData::where('lead_unit_id', $existingUnit->id)
                         ->where('lead_id', $lead->id)
                         ->first();
+                        // return "nirali".$existingUnit->id. $leadUnitData;
 
                     if ($leadUnitData) {
                         // Update the budget if LeadUnitData exists
@@ -386,9 +389,8 @@ class LeadController extends Controller
                             $existingUnit->save();
                         }
                     } else {
-                        // return "jkj0";
                         // Create a new lead_unit entry if no existing entry for the unit
-                        LeadUnit::create([
+                        $existingUnit = LeadUnit::create([
                             'interested_lead_id' => $lead->id,
                             'allocated_lead_id' => null,
                             'allocated_customer_id' => null,
