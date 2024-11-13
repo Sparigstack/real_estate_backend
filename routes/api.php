@@ -74,6 +74,7 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::get('/get-unit-wing-wise/{wid}', [UnitController::class, 'getUnitsBasedOnWing']); 
     Route::post('/send-reminder/{uid}', [UnitController::class, 'sendReminderToBookedPerson']); 
     Route::get('/get-lead-name-with-detail/{pid}', [UnitController::class, 'getLeadNames']); 
+    Route::get('/get-lead-customer-name-with-detail/{pid}', [UnitController::class, 'getLeadCustomerNames']); 
     Route::post('/lead-attach-with-units', [UnitController::class, 'addLeadsAttachingWithUnits']);  
     
  

@@ -107,6 +107,45 @@ class UnitController extends Controller
             ], 400);
         }
     }
+    public function getLeadCustomerNames($pid){
+        try {
+            if ($pid != 'null') {
+                $allLeads = Lead::where('property_id', $pid)->get();
+
+                // Retrieve all customers for the specified property
+            $allCustomers = Customer::where('property_id', $pid)->get();
+
+            $leadsWithType = $allLeads->map(function($lead) {
+                $lead->type = 'lead'; // Mark this record as a lead
+                return $lead;
+            });
+
+            $customersWithType = $allCustomers->map(function($customer) {
+                $customer->type = 'customer'; // Mark this record as a customer
+                return $customer;
+            });
+
+            // Merge both arrays into one
+            $allLeadsCustomers = $leadsWithType->merge($customersWithType);
+
+            return $allLeadsCustomers;
+
+            } else {
+                return null;
+            }
+        } catch (Exception $e) {
+            // Log the error
+            $errorFrom = 'getLeadNameDetails';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
 
     public function addLeadsAttachingWithUnits(Request $request)
     {
