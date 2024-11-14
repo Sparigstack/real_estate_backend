@@ -66,8 +66,8 @@ class LeadController extends Controller
                     $lead->unit_name = null; // Default value
                     $lead->wing_name = null; // Default value
 
-                    if ($lead->leadUnits->isNotEmpty()) {
-                        foreach ($lead->leadUnits as $leadUnit) {
+                    if ($lead->leadCustomerUnits->isNotEmpty()) {
+                        foreach ($lead->leadCustomerUnits as $leadUnit) {
                             if ($leadUnit->allocated_lead_id) {
                                 $unit = $leadUnit->unit; // Get the related unit details
                                 if ($unit) {
