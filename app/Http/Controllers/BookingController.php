@@ -42,6 +42,30 @@ class BookingController extends Controller
             // Initialize the response data
             $responseData = [];
 
+
+            $leadUnit = LeadUnit::where('unit_id', $uid)->first();
+            if (!$leadUnit) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unit not found for the provided unit ID.',
+                ], 404);
+            }
+    
+            // Determine the contact details from Lead or Customer based on allocation fields
+            if (!is_null($leadUnit->allocated_lead_id)) {
+                $contact = Lead::find($leadUnit->allocated_lead_id);
+            } elseif (!is_null($leadUnit->allocated_customer_id)) {
+                $contact = Customer::find($leadUnit->allocated_customer_id);
+            }
+    
+            // Populate contact details if available
+            if (isset($contact)) {
+                $responseData['contact_name'] = $contact->name;
+                $responseData['contact_email'] = $contact->email;
+                $responseData['contact_number'] = $contact->contact_no;
+            }
+    
+
             // Retrieve the LeadUnit with the necessary relationships
             $leadUnit = LeadUnit::with(['paymentTransaction' => function ($query) {
                 $query->orderBy('id', 'asc'); // Order by transaction ID in ascending order
@@ -67,20 +91,20 @@ class BookingController extends Controller
 
             // Loop through payment transactions to get contact details based on allocated_id
             foreach ($paymentTransactions as $index => $transaction) {
-                if ($transaction->allocated_type == 1) { // If it's a lead
-                    $contact = Lead::find($transaction->allocated_id);
-                } elseif ($transaction->allocated_type == 2) { // If it's a customer
-                    $contact = Customer::find($transaction->allocated_id);
-                }
+                // if ($transaction->allocated_type == 1) { // If it's a lead
+                //     $contact = Lead::find($transaction->allocated_id);
+                // } elseif ($transaction->allocated_type == 2) { // If it's a customer
+                //     $contact = Customer::find($transaction->allocated_id);
+                // }
 
-                if ($contact) {
-                    // Populate contact details only once
-                    if (empty($responseData['contact_name'])) {
-                        $responseData['contact_name'] = $contact->name;
-                        $responseData['contact_email'] = $contact->email;
-                        $responseData['contact_number'] = $contact->contact_no;
-                    }
-                }
+                // if ($contact) {
+                //     // Populate contact details only once
+                //     if (empty($responseData['contact_name'])) {
+                //         $responseData['contact_name'] = $contact->name;
+                //         $responseData['contact_email'] = $contact->email;
+                //         $responseData['contact_number'] = $contact->contact_no;
+                //     }
+                // }
 
                 // Sum up the total paid amount for completed transactions
                 if ($transaction->payment_status == 2) {
