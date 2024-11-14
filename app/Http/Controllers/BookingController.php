@@ -228,19 +228,21 @@ class BookingController extends Controller
                     ->where('contact_no', $contactNumber)
                     ->first();
 
-                if ($customer) {
-                    $customer->name = $contactName;
-                    $customer->contact_no = $contactNumber;
-                    $customer->save();
-                } else {
-                    $customer = Customer::create([
-                        'property_id' => $propertyId,
-                        // 'unit_id' => $unitId,
-                        'email' => $contactEmail,
-                        'name' => $contactName,
-                        'contact_no' => $contactNumber,
-                    ]);
-                }
+                    if ($customer) {
+                        // Update the existing customer's name if it's different
+                        if ($customer->name !== $contactName) {
+                            $customer->name = $contactName;
+                            $customer->save();
+                        }
+                    } else {
+                        // Create a new customer if no existing customer with the same contact number was found
+                        $customer = Customer::create([
+                            'property_id' => $propertyId,
+                            'email' => $contactEmail,
+                            'name' => $contactName,
+                            'contact_no' => $contactNumber,
+                        ]);
+                    }
 
                 // Update allocated_customer_id in lead_unit
                 $leadUnit = $leadUnit ?: new LeadUnit();
@@ -256,7 +258,7 @@ class BookingController extends Controller
                 $allocatedType = 2; // Customer
             } else {
                 // Provided entity ID - handle as lead or customer based on type
-                if ($type === 'lead') {
+                if ($type == 'lead') {
                     $lead = Lead::find($entityId);
                     if (!$lead) {
                         return response()->json([
@@ -403,12 +405,16 @@ class BookingController extends Controller
                 'date' => 'required|date',
                 'unit_id' => 'required|integer',
                 'payment_id' => 'nullable|integer',
+                'bookingpaymenttype'=> 'nullable|integer',
+                'bookingreferencenumber'=> 'nullable|numeric',
             ]);
 
             $amount = $validatedData['amount'];
             $paymentDate = $validatedData['date'];
             $unitId = $validatedData['unit_id'];
             $paymentId = $validatedData['payment_id'];
+            $bookingpaymenttype = $validatedData['bookingpaymenttype'];
+            $bookingreferencenumber = $validatedData['bookingreferencenumber'];
 
             // Retrieve the LeadUnit associated with the unit_id
             $leadUnit = LeadUnit::where('unit_id', $unitId)->first();
