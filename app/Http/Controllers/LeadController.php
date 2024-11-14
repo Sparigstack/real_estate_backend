@@ -7,9 +7,10 @@ use Illuminate\Http\Request;
 use App\Helper;
 use App\Mail\ManageLeads;
 use App\Models\Lead;
+use App\Models\LeadCustomer;
+use App\Models\LeadCustomerUnit;
+use App\Models\LeadCustomerUnitData;
 use App\Models\LeadSource;
-use App\Models\LeadUnit;
-use App\Models\LeadUnitData;
 use App\Models\Property;
 use App\Models\UserProperty;
 use App\Models\User;
@@ -24,6 +25,7 @@ use Barryvdh\DomPDF\Facade as PDF;
 
 
 
+
 class LeadController extends Controller
 {
 
@@ -33,7 +35,7 @@ class LeadController extends Controller
         try {
             if ($pid != 'null') {
                 // $allLeads = Lead::with('userproperty', 'leadSource')->where('property_id',$pid);
-                $allLeads = Lead::with(['userproperty', 'leadSource', 'leadUnits.unit.wingDetail'])
+                $allLeads = LeadCustomer::with(['userproperty', 'leadSource', 'leadCustomerUnits.unit.wingDetail'])
                     ->where('property_id', $pid);
 
                 //search query
@@ -50,7 +52,7 @@ class LeadController extends Controller
 
                 //sortby key
                 if ($sortbykey != 'null') {
-                    if (in_array($sortbykey, ['name', 'email', 'budget', 'contact_no'])) {
+                    if (in_array($sortbykey, ['name', 'email', 'contact_no'])) {
                         $allLeads->orderBy($sortbykey, $sort);
                     } elseif ($sortbykey == 'source') {
                         $allLeads->orderBy(LeadSource::select('name')->whereColumn('lead_sources.id', 'leads.source_id'), $sort);
@@ -142,7 +144,7 @@ class LeadController extends Controller
     {
         try {
             if ($pid != 'null' && $lid != 'null') {
-                $fetchLeadDetail = Lead::with('userproperty', 'leadSource')->where('property_id', $pid)->where('id', $lid)->first();
+                $fetchLeadDetail = LeadCustomer::with('userproperty', 'leadSource')->where('property_id', $pid)->where('id', $lid)->first();
                 return $fetchLeadDetail;
             } else {
                 return null;
@@ -173,6 +175,7 @@ class LeadController extends Controller
                 'source' => 'required|integer',            // Source ID is required (1-reference, 2-social media, etc.)
                 'budget' => 'nullable|numeric',            // Budget is optional and must be a number if provided
                 'leadid' => 'required|numeric',
+                'notes' => 'nullable|string',
                 'flag' => 'required|in:1,2',                // Flag to determine lead type
                 'unitId' => 'nullable|integer',           // Unit ID will be provided for flag 2
             ]);
@@ -187,26 +190,31 @@ class LeadController extends Controller
             $flag = $validatedData['flag'];  // New flag parameter
             $unit_id = $request->input('unitId'); // Optional unit ID
             $email = $request->input('email');
+            $notes = $request->input('notes');
 
+
+    
             if ($flag == 1) {
                 // Flag 1: Normal lead add
 
                 if ($leadid == 0) { //if new lead
                     // Check if the same contact number and property combination already exists
-                    $existingLead = Lead::where('contact_no', $contactno)
+                    $existingLead = LeadCustomer::where('contact_no', $contactno)
                         ->where('property_id', $propertyid)
                         ->first();
 
                     if (!$existingLead) {
                         // Create a new lead record for manual or web form entry
-                        $lead = Lead::create([
+                        $lead = LeadCustomer::create([
                             'property_id' => $propertyid,
                             'name' => $name,
                             'contact_no' => $contactno,
                             'email' => $email,
                             'source_id' => $sourceid,
                             'status' => 0, // 0-new
-                            'type' => 0 // manual
+                            'type' => 0, // manual,
+                            'notes' => $notes,
+                            'entity_type' => 1
                         ]);
 
                         // Return success response
@@ -218,33 +226,34 @@ class LeadController extends Controller
                     } else {
                         return response()->json([
                             'status' => 'error',
-                            'message' => 'Lead already exists.',
+                            'message' => $existingLead->name . ' is already added with this contact no.',
                             'data' => null
                         ], 200);
                     }
                 } else {
                     // Update an existing lead record
-                    $lead = Lead::find($leadid);
+                    $lead = LeadCustomer::find($leadid);
 
                     if (!$lead) {
                         // Return error if lead not found
                         return response()->json([
                             'status' => 'error',
-                            'message' => 'Lead not found.',
+                            'message' => 'Lead/customer not found.',
                             'data' => null
                         ], 200);
                     }
 
                     // Check if another lead with the same contact number and updated property_id exists
-                    $duplicateLead = Lead::where('contact_no', $contactno)
+                    $duplicateLead = LeadCustomer::where('contact_no', $contactno)
                         ->where('property_id', $propertyid)
                         ->where('id', '!=', $leadid)  // Exclude the current lead
                         ->first();
 
+                       
                     if ($duplicateLead) {
                         return response()->json([
                             'status' => 'error',
-                            'message' => 'Lead already exists.',
+                            'message' => $duplicateLead->name . ' is already added with this contact no.',
                             'data' => null
                         ], 200);
                     }
@@ -257,7 +266,9 @@ class LeadController extends Controller
                         'email' => $email,
                         'source_id' => $sourceid,
                         'status' => 0, // You can change this to another value if needed
-                        'type' => 0 // 0 - manual, modify if necessary
+                        'type' => 0, // 0 - manual, modify if necessary
+                        'notes' => $notes,
+                        'entity_type' => 1
                     ]);
 
                     // Return success response for updating the lead
@@ -269,33 +280,35 @@ class LeadController extends Controller
                 }
             } elseif ($flag == 2) {
                 // Flag 2: Add new lead with attached unit
-            
+
                 if ($leadid == 0) { //if new lead
                     // Check if the same contact number and property combination already exists
-                    $existingLead = Lead::where('contact_no', $contactno)
+                    $existingLead = LeadCustomer::where('contact_no', $contactno)
                         ->where('property_id', $propertyid)
                         ->first();
 
 
                     if (!$existingLead) {
                         // Create a new lead record
-                        $lead = Lead::create([
+                        $lead = LeadCustomer::create([
                             'property_id' => $propertyid,
                             'name' => $name,
                             'contact_no' => $contactno,
                             'email' => $email,
                             'source_id' => $sourceid,
                             'status' => 0, // 0-new
-                            'type' => 0  // manual
+                            'type' => 0,  // manual
+                            'notes' => $notes,
+                            'entity_type' => 1
                         ]);
                     } else {
                         // If the lead exists, don't create a new lead, but pass it to the LeadUnit table
                         $lead = $existingLead;
                     }
 
-                    
+
                     // Now handle the LeadUnit entry
-                    $existingUnit = LeadUnit::where('unit_id', $unit_id)->first();
+                    $existingUnit = LeadCustomerUnit::where('unit_id', $unit_id)->first();
 
                     if ($existingUnit) {
                         // Append the new lead ID to the interested_lead_id (comma-separated)
@@ -313,22 +326,21 @@ class LeadController extends Controller
                         }
                     } else {
                         // Create a new lead_unit entry if no existing entry for the unit
-                        $existingUnit = LeadUnit::create([
+                        $existingUnit = LeadCustomerUnit::create([
                             'interested_lead_id' => $lead->id,
-                            'allocated_lead_id' => null,
-                            'allocated_customer_id' => null,
+                            'leads_customers_id' => null,
                             'unit_id' => $unit_id,
                             'booking_status' => 2,
                         ]);
                     }
 
-                   
-                   
+
+
                     // Now handle the LeadUnitData entry
-                    $leadUnitData = LeadUnitData::where('lead_unit_id', $existingUnit->id)
-                        ->where('lead_id', $lead->id)
+                    $leadUnitData = LeadCustomerUnitData::where('leads_customers_unit_id', $existingUnit->id)
+                        ->where('leads_customers_id', $lead->id)
                         ->first();
-                        // return "nirali".$existingUnit->id. $leadUnitData;
+                    // return "nirali".$existingUnit->id. $leadUnitData;
 
                     if ($leadUnitData) {
                         // Update the budget if LeadUnitData exists
@@ -337,9 +349,9 @@ class LeadController extends Controller
                         ]);
                     } else {
                         // Create a new LeadUnitData entry if it doesn't exist
-                        LeadUnitData::create([
-                            'lead_unit_id' => $existingUnit->id,
-                            'lead_id' => $lead->id,
+                        LeadCustomerUnitData::create([
+                            'leads_customers_unit_id' => $existingUnit->id,
+                            'leads_customers_id' => $lead->id,
                             'budget' => $budget,
                         ]);
                     }
@@ -351,20 +363,22 @@ class LeadController extends Controller
                         'data' => $lead
                     ], 200);
                 } else {
-                    $existingLead = Lead::where('contact_no', $contactno)
+                    $existingLead = LeadCustomer::where('contact_no', $contactno)
                         ->where('property_id', $propertyid)
                         ->first();
 
                     if (!$existingLead) {
                         // Create a new lead record
-                        $lead = Lead::create([
+                        $lead = LeadCustomer::create([
                             'property_id' => $propertyid,
                             'name' => $name,
                             'contact_no' => $contactno,
                             'email' => $email,
                             'source_id' => $sourceid,
                             'status' => 0, // 0-new
-                            'type' => 0  // manual
+                            'type' => 0, // manual
+                            'notes' => $notes,
+                            'entity_type' => 1
                         ]);
                     } else {
                         // If the lead exists, don't create a new lead, but pass it to the LeadUnit table
@@ -372,7 +386,7 @@ class LeadController extends Controller
                     }
 
                     // Now handle the LeadUnit entry
-                    $existingUnit = LeadUnit::where('unit_id', $unit_id)->first();
+                    $existingUnit = LeadCustomerUnit::where('unit_id', $unit_id)->first();
 
                     if ($existingUnit) {
                         // Append the new lead ID to the interested_lead_id (comma-separated)
@@ -390,10 +404,9 @@ class LeadController extends Controller
                         }
                     } else {
                         // Create a new lead_unit entry if no existing entry for the unit
-                        $existingUnit = LeadUnit::create([
+                        $existingUnit = LeadCustomerUnit::create([
                             'interested_lead_id' => $lead->id,
-                            'allocated_lead_id' => null,
-                            'allocated_customer_id' => null,
+                            'leads_customers_id' => null,
                             'unit_id' => $unit_id,
                             'booking_status' => 2,
                         ]);
@@ -401,8 +414,8 @@ class LeadController extends Controller
 
 
                     // Now handle the LeadUnitData entry
-                    $leadUnitData = LeadUnitData::where('lead_unit_id', $existingUnit->id)
-                        ->where('lead_id', $lead->id)
+                    $leadUnitData = LeadCustomerUnitData::where('leads_customers_unit_id', $existingUnit->id)
+                        ->where('leads_customers_id', $lead->id)
                         ->first();
 
                     if ($leadUnitData) {
@@ -412,9 +425,9 @@ class LeadController extends Controller
                         ]);
                     } else {
                         // Create a new LeadUnitData entry if it doesn't exist
-                        LeadUnitData::create([
-                            'lead_unit_id' => $existingUnit->id,
-                            'lead_id' => $lead->id,
+                        LeadCustomerUnitData::create([
+                            'leads_customers_unit_id' => $existingUnit->id,
+                            'leads_customers_id' => $lead->id,
                             'budget' => $budget,
                         ]);
                     }
@@ -463,7 +476,7 @@ class LeadController extends Controller
             // Open the CSV file
             $csvFile = fopen($file, 'r');
             $header = fgetcsv($csvFile);
-            $expectedHeaders = ['name', 'email(optional)', 'contact', 'source'];
+            $expectedHeaders = ['name', 'email(optional)', 'contact', 'source','notes(optional)'];
             $escapedHeader = [];
 
             foreach ($header as $value) {
@@ -473,7 +486,7 @@ class LeadController extends Controller
             }
 
             // Define the expected headers in the same format
-            $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source'];
+            $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source','notes'];
 
             // Validate CSV headers
             if (array_diff($normalizedExpectedHeaders, $escapedHeader)) {
@@ -504,6 +517,7 @@ class LeadController extends Controller
                     $leadsIssues[] = [
                         'name' => $data['name'] ?? 'N/A',
                         'email' => $data['email'] ?? 'N/A',
+                        'notes' => $data['notes'] ?? 'N/A',
                         'contact' => $data['contact'] ?? 'N/A',
                         'source' => $data['source'] ?? 'N/A',
                         'reason' => 'Missing required field(s)',
@@ -517,6 +531,7 @@ class LeadController extends Controller
                     $leadsIssues[] = [
                         'name' => $data['name'],
                         'email' => $data['email'] ?? 'N/A',
+                        'notes' => $data['notes'] ?? 'N/A',
                         'contact' => $data['contact'],
                         'source' => $data['source'],
                         'reason' => 'Invalid phone number (must be 10 digits)',
@@ -533,6 +548,7 @@ class LeadController extends Controller
                         'email' => $data['email'] ?? 'N/A',
                         'contact' => $data['contact'],
                         'source' => $data['source'],
+                        'notes' => $data['notes'] ?? 'N/A',
                         'reason' => 'Invalid email format',
                     ];
                     continue;
@@ -546,7 +562,7 @@ class LeadController extends Controller
                     }
 
                     // Check uniqueness based on contact number and property ID
-                    $existingLead = Lead::where('contact_no', $data['contact'])
+                    $existingLead = LeadCustomer::where('contact_no', $data['contact'])
                         ->where('property_id', $propertyId)
                         ->first();
 
@@ -556,6 +572,7 @@ class LeadController extends Controller
                         $leadsIssues[] = [
                             'name' => $data['name'],
                             'email' => $data['email'] ?? 'N/A',
+                            'notes' => $data['notes'] ?? 'N/A',
                             'contact' => $data['contact'],
                             'source' => $data['source'],
                             'reason' => 'Duplicate entry based on contact number',
@@ -564,11 +581,12 @@ class LeadController extends Controller
                     }
 
                     // Create lead record
-                    $lead = Lead::create([
+                    $lead = LeadCustomer::create([
                         'property_id' => $propertyId,
                         'name' => $data['name'],
                         'email' => $data['email'] ?? null,
                         'contact_no' => $data['contact'],
+                        'notes' => $data['notes'] ?? null,
                         'source_id' => $source->id,
                         'status' => 0, // New lead
                         'type' => 1, // From CSV
@@ -579,6 +597,7 @@ class LeadController extends Controller
                     $leadsIssues[] = [
                         'name' => $data['name'],
                         'email' => $data['email'] ?? 'N/A',
+                        'notes' => $data['notes'] ?? 'N/A',
                         'contact' => $data['contact'],
                         'source' => $data['source'],
                         'reason' => "Error: " . $e->getMessage(),
@@ -641,8 +660,8 @@ class LeadController extends Controller
     {
         try {
             // Validate client_id and client_secret
-            $client_id = $request->header('client_id_1');
-            $client_secret_key = $request->header('client_secret_key_1');
+            $client_id = $request->header('client_id');
+            $client_secret_key = $request->header('client_secret_key');
 
             // Check if client_id and client_secret are provided
             if (!$client_id || !$client_secret_key) {
@@ -668,9 +687,9 @@ class LeadController extends Controller
             $validatedData = $request->validate([
                 'leads' => 'required|array', // Expect an array of leads
                 'leads.*.name' => 'required|string|max:255',
-                'leads.*.email' => 'required|email|max:255',
+                'leads.*.email' => 'nullable|email|max:255',
                 'leads.*.contact' => 'required|string|max:15',
-                'leads.*.budget' => 'required|numeric', // Ensure budget is required and numeric
+                'leads.*.notes' => 'nullable|string', // Ensure budget is required and numeric
                 'leads.*.source' => 'required|string|max:255', // Example: "call"
                 'leads.*.property' => 'required|string|max:255', // Property could be validated more specifically if needed
             ]);
@@ -690,12 +709,12 @@ class LeadController extends Controller
                 }
 
                 // Check if the lead with the same email and property already exists
-                $existingLead = Lead::where('email', $leadData['email'])
+                $existingLead = LeadCustomer::where('contact_no', $leadData['contact'])
                     ->where('property_id', $property->id)
                     ->first();
 
                 if ($existingLead) {
-                    $existingLeads[] = $leadData['email']; // Collect existing leads
+                    $existingLeads[] = $leadData['contact']; // Collect existing leads
                     continue; // Skip to the next lead
                 }
 
@@ -703,15 +722,15 @@ class LeadController extends Controller
                 $sourceId = LeadSource::whereRaw('LOWER(name) = ?', [strtolower($leadData['source'])])->value('id');
 
                 // Create the new lead
-                $newLead = Lead::create([
+                $newLead = LeadCustomer::create([
                     'property_id' => $property->id,
                     'name' => $leadData['name'],
                     'email' => $leadData['email'],
                     'contact_no' => $leadData['contact'],
                     'source_id' => $sourceId,
-                    'budget' => $leadData['budget'],
                     'status' => 0,  // Default to new lead
-                    'type' => 2, // 0 for manual, 1 CSV, 2 REST API
+                    'type' => 2, // 0 for manual, 1 CSV, 2 REST API,
+                    'notes' => $leadData['notes'],
                 ]);
 
                 $createdLeads[] = $newLead; // Collect newly created leads
@@ -785,10 +804,10 @@ class LeadController extends Controller
             $validatedData = $request->validate([
                 'propertyinterest' => 'required|integer',  // Assuming propertyinterest is an integer (property_id)
                 'name' => 'required|string|max:255',       // Name is required and must be a string
-                'email' => 'required|email|max:255',       // Email is required and must be valid
+                'email' => 'nullable|email|max:255',       // Email is required and must be valid
                 'contactno' => 'required|string|max:15',   // Contact number is required, can be a string
-                'source' => 'required|integer',            // Source ID is required (1-reference, 2-social media, etc.)
-                'budget' => 'required|numeric',            // Budget is optional and must be a number if provided
+                'source' => 'required|integer',            // Source ID is required (1-reference, 2-social media, etc.)      // Budget is optional and must be a number if provided
+                'notes' => 'nullable|string',
             ]);
 
             // Retrieve validated data from the request
@@ -797,23 +816,23 @@ class LeadController extends Controller
             $email = $validatedData['email'];
             $contactno = $validatedData['contactno'];
             $sourceid = $validatedData['source'];
-            $budget = $request->input('budget'); // Budget remains nullable
+            $notes = $request->input('notes'); // notes remains nullable
 
             // Check if the same email and property combination already exists
-            $existingLead = Lead::where('email', $email)
+            $existingLead = LeadCustomer::where('contact_no', $contactno)
                 ->where('property_id', $propertyid)
                 ->first();
 
 
             if (!$existingLead) {
                 // Create a new lead record for manual or web form entry //0 or 2
-                $lead = Lead::create([
+                $lead = LeadCustomer::create([
                     'property_id' => $propertyid,
                     'name' => $name,
                     'email' => $email,
                     'contact_no' => $contactno,
                     'source_id' => $sourceid,
-                    'budget' => $budget,
+                    'notes' => $notes,
                     'status' => 0, //0-new, 1-negotiation, 2-in contact, 3-highly interested, 4-closed
                     'type' => 3 //web form
                 ]);
@@ -827,7 +846,7 @@ class LeadController extends Controller
             } else {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Lead already exists.',
+                    'message' => $existingLead->name . ' is already added with this contact no.',
                     'data' => null
                 ], 200);
             }
@@ -845,43 +864,5 @@ class LeadController extends Controller
         }
     }
 
-    public function updateLeadNotes(Request $request)
-    {
-        // Validate the incoming request data
-        $validator = Validator::make($request->all(), [
-            'leadid' => 'required|integer|exists:leads,id', // Make sure leadid exists in leads table
-            'notes' => 'required|string|max:500',
-        ]);
-
-        // If validation fails, return the error messages
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Validation failed',
-            ], 400);
-        }
-
-        try {
-            // Find the lead by id and update the notes
-            $lead = Lead::find($request->input('leadid'));
-            $lead->notes = $request->input('notes');
-            $lead->save();
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Lead notes updated successfully',
-            ], 200);
-        } catch (\Exception $e) {
-            // Log the error and return a response
-            $errorFrom = 'updateLeadNotes';
-            $errorMessage = $e->getMessage();
-            $priority = 'high';
-            Helper::errorLog($errorFrom, $errorMessage, $priority);
-
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Something went wrong. Please try again.',
-            ], 500);
-        }
-    }
+   
 }

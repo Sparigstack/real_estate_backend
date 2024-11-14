@@ -53,7 +53,6 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::get('/fetch-lead-detail/{pid}/{lid}', [LeadController::class, 'fetchLeadDetail']); 
     Route::post('/add-edit-leads', [LeadController::class, 'addOrEditLeads']); 
     Route::post('/add-leads-csv', [LeadController::class, 'addLeadsCsv']); 
-    Route::post('/update-lead-notes', [LeadController::class, 'updateLeadNotes']);
     Route::post('/lead-messages/send', [LeadController::class, 'sendBulkMessages']);
     
     //wings call

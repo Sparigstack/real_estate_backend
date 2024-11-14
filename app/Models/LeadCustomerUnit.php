@@ -5,12 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class LeadUnit extends Model
+class LeadCustomerUnit extends Model
 {
     use HasFactory;
 
-    protected $table="lead_unit";
-    protected $fillable = ['interested_lead_id', 'unit_id', 'booking_status','allocated_lead_id','allocated_customer_id'];
+    protected $table="leads_customers_unit";
+    protected $fillable = ['interested_lead_id', 'unit_id', 'booking_status','leads_customers_id'];
 
   
 
@@ -32,26 +32,17 @@ class LeadUnit extends Model
     // {
     //     return $this->belongsTo(Customer::class, 'allocated_customer_id');
     // }
-
-    public function allocatedLeads()
+    public function leadCustomer()
     {
-        // Explode the comma-separated string into an array and fetch the leads
-        return Lead::whereIn('id', explode(',', $this->allocated_lead_id))->get();
-    }
-
-    // Method to retrieve allocated customers as a collection
-    public function allocatedCustomers()
-    {
-        // Explode the comma-separated string into an array and fetch the customers
-        return Customer::whereIn('id', explode(',', $this->allocated_customer_id))->get();
+        return $this->belongsTo(LeadCustomer::class, 'leads_customers_id');
     }
 
     public function interestedLeads()
     {
         return Lead::whereIn('id', explode(',', $this->interested_lead_id))->get();
     }
-    public function leadUnitData()
+    public function leadCustomerUnitData()
     {
-        return $this->hasMany(LeadUnitData::class);
+        return $this->hasMany(LeadCustomerUnitData::class, 'leads_customers_unit_id');
     }
 }

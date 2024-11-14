@@ -5,11 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Lead extends Model
+class LeadCustomer  extends Model
 {
     use HasFactory;
+    protected $table="leads_customers";
     protected $fillable = [
-        'property_id', 'name', 'email', 'contact_no', 'source_id','type','status','notes'
+        'property_id', 'name', 'email', 'contact_no', 'source_id','type','status','notes','entity_type'
     ];
 
     public function userproperty()
@@ -25,24 +26,20 @@ class Lead extends Model
     {
         return $this->belongsTo(LeadSource::class, 'source_id', 'id');
     }
- 
 
-    public function leadUnits()
+    public function leadCustomerUnits()
     {
-        return $this->hasMany(LeadCustomerUnit::class, 'allocated_lead_id');
-    }
-    public function customerUnits()
-    {
-        return $this->hasMany(LeadCustomerUnit::class, 'allocated_customer_id');
+        return $this->hasMany(LeadCustomerUnit::class, 'leads_customers_id');
     }
 
     public function paymentTransactions()
     {
-        return $this->hasMany(PaymentTransaction::class, 'allocated_id');
+        return $this->hasMany(PaymentTransaction::class, 'leads_customers_id');
     }
-    public function leadUnitData()
+
+    public function getEntityTypeLabelAttribute()
     {
-        return $this->hasMany(LeadCustomerUnit::class);
+        return $this->entity_type === 1 ? 'Lead' : 'Customer';
     }
 
 }
