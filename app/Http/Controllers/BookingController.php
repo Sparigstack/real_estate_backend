@@ -93,6 +93,10 @@ class BookingController extends Controller
                 }
 
                 // Prepare payment schedule
+                $paymentType = PaymentType::find($transaction->payment_type);
+                $paymentTypeName = $paymentType ? $paymentType->name : 'Unknown';
+                $paymentTypeId = $paymentType ? $paymentType->id : 'Unknown';
+               
                 if ($transaction->token_amt || $transaction->next_payable_amt || $transaction->booking_date || $transaction->payment_due_date) {
                     // Only add the object if it has at least one non-null value
                     $paymentScheduleEntry = [
@@ -100,7 +104,10 @@ class BookingController extends Controller
                         'payment_due_date' => $index == 0 ? $transaction->booking_date : $transaction->payment_due_date,
                         'next_payable_amt' => $index == 0 ? $transaction->token_amt : $transaction->next_payable_amt,
                         'payment_status' => $transaction->payment_status,
-                        'type' => $index == 0 ? 'Down Payment' : ($transaction->payment_status == 1 ? 'Next Payment' : ($transaction->payment_status == 2 ? 'Last Payment' : ''))
+                        // 'type' => $index == 0 ? 'Down Payment' : ($transaction->payment_status == 1 ? 'Next Payment' : ($transaction->payment_status == 2 ? 'Last Payment' : '')),
+                        'type' => $paymentTypeName,
+                        'type_id' => $paymentTypeId,
+                        'reference_number' => $transaction->reference_number
                     ];
 
                     // Check if either next_payable_amt or payment_due_date is not null
@@ -177,6 +184,11 @@ class BookingController extends Controller
             $paymentDueDate = $request->input('payment_due_date');
             $nextPayableAmt = $request->input('next_payable_amt');
             $type = $request->input('type'); // 'lead' or 'customer'
+            $bookingpaymenttype = $request->input('bookingpaymenttype');
+            $bookingreferencenumber = $request->input('bookingreferencenumber');
+            $nextpaymenttype = $request->input('nextpaymenttype');
+            $nextpaymentreferencenumber = $request->input('nextpaymentreferencenumber');
+
 
             $leadUnit = LeadUnit::where('unit_id', $unitId)->first();
 
@@ -264,20 +276,25 @@ class BookingController extends Controller
             }
 
             // Create the first payment transaction entry
-            $paymentTransaction = new PaymentTransaction();
-            $paymentTransaction->unit_id = $unitId;
-            $paymentTransaction->property_id = $propertyId;
-            $paymentTransaction->allocated_id = $allocatedId;
-            $paymentTransaction->allocated_type = $allocatedType;
-            $paymentTransaction->booking_date = $bookingDate;
-            $paymentTransaction->token_amt = $tokenAmt;
-            $paymentTransaction->payment_status = 2;
-            $paymentTransaction->payment_type = 1;
-            $paymentTransaction->transaction_notes = 'Booking entry created';
-            $paymentTransaction->save();
+            // return $tokenAmt;
+            if($tokenAmt!=null){
+                $paymentTransaction = new PaymentTransaction();
+                $paymentTransaction->unit_id = $unitId;
+                $paymentTransaction->property_id = $propertyId;
+                $paymentTransaction->allocated_id = $allocatedId;
+                $paymentTransaction->allocated_type = $allocatedType;
+                $paymentTransaction->booking_date = $bookingDate;
+                $paymentTransaction->token_amt = $tokenAmt;
+                $paymentTransaction->payment_status = 2;
+                $paymentTransaction->payment_type = $bookingpaymenttype; // Use bookingpaymenttype for the first transaction
+                $paymentTransaction->reference_number = $bookingreferencenumber; // Set reference number for first transaction
+                $paymentTransaction->transaction_notes = 'Booking entry created';
+                $paymentTransaction->save();
+            }
+           
 
             // Handle additional transaction for next payment if applicable
-            if ($nextPayableAmt || $paymentDueDate) {
+            if ($nextPayableAmt) {
                 $paymentTransactionSecond = new PaymentTransaction();
                 $paymentTransactionSecond->unit_id = $unitId;
                 $paymentTransactionSecond->property_id = $propertyId;
@@ -295,8 +312,9 @@ class BookingController extends Controller
                     $paymentTransactionSecond->payment_status = 1;
                 }
 
-                $paymentTransactionSecond->payment_type = 1;
-                $paymentTransactionSecond->transaction_notes = 'Booking entry created';
+                $paymentTransactionSecond->payment_type = $nextpaymenttype; // Use nextpaymenttype for the next transaction
+                $paymentTransactionSecond->reference_number = $nextpaymentreferencenumber; // Set reference number for the next transaction
+                $paymentTransactionSecond->transaction_notes = 'Next Booking entry created';
                 $paymentTransactionSecond->save();
             }
 
