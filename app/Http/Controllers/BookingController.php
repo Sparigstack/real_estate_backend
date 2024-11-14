@@ -188,7 +188,7 @@ class BookingController extends Controller
             if (is_null($entityId)) {
                 // Null entity ID - handle as new customer
                 $customer = Customer::where('property_id', $propertyId)
-                    ->where('unit_id', $unitId)
+                    // ->where('unit_id', $unitId)
                     ->where('contact_no', $contactNumber)
                     ->first();
 
@@ -199,7 +199,7 @@ class BookingController extends Controller
                 } else {
                     $customer = Customer::create([
                         'property_id' => $propertyId,
-                        'unit_id' => $unitId,
+                        // 'unit_id' => $unitId,
                         'email' => $contactEmail,
                         'name' => $contactName,
                         'contact_no' => $contactNumber,
@@ -540,7 +540,7 @@ class BookingController extends Controller
             if (is_null($leadId)) {
                 // Handle new customer logic
                 $customer = Customer::where('property_id', $propertyId)
-                    ->where('unit_id', $unitId)
+                    // ->where('unit_id', $unitId)
                     ->where('email', $contactEmail)
                     ->first();
 
@@ -551,7 +551,7 @@ class BookingController extends Controller
                 } else {
                     $customer = Customer::create([
                         'property_id' => $propertyId,
-                        'unit_id' => $unitId,
+                        // 'unit_id' => $unitId,
                         'email' => $contactEmail,
                         'name' => $contactName,
                         'contact_no' => $contactNumber,
