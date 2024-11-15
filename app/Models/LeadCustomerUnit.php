@@ -39,7 +39,7 @@ class LeadCustomerUnit extends Model
 
     public function interestedLeads()
     {
-        return Lead::whereIn('id', explode(',', $this->interested_lead_id))->get();
+        return leadCustomer::whereIn('id', explode(',', $this->interested_lead_id))->get();
     }
     public function leadCustomerUnitData()
     {

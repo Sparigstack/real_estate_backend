@@ -41,5 +41,6 @@ class LeadCustomer  extends Model
     {
         return $this->entity_type === 1 ? 'Lead' : 'Customer';
     }
+   
 
 }

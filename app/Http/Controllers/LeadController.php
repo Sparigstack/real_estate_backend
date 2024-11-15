@@ -29,16 +29,42 @@ use Barryvdh\DomPDF\Facade as PDF;
 class LeadController extends Controller
 {
 
-    public function getLeads($pid, $skey, $sort, $sortbykey, $offset, $limit)
+    public function getLeads($pid,$flag,$skey, $sort, $sortbykey, $offset, $limit)
     {
+     // flag  1->allleads,2->members(customers),3->non members(interested leads)
 
         try {
             if ($pid != 'null') {
-                // $allLeads = Lead::with('userproperty', 'leadSource')->where('property_id',$pid);
+                // Base query
                 $allLeads = LeadCustomer::with(['userproperty', 'leadSource', 'leadCustomerUnits.unit.wingDetail'])
                     ->where('property_id', $pid);
+    
+                // Apply filtering based on flag
+                if ($flag == 2) {
+                    // Flag 2: Customers (entity_type = 2)
+                    $allLeads->where('entity_type', 2);
+                } elseif ($flag == 3) {
+                    // Flag 3: Interested leads only (interested_lead_id not null in LeadCustomerUnits)
+                        $fetchLeadCustomerUnit = LeadCustomerUnit::with('unit')
+                        ->whereHas('unit', function ($query) use ($pid) {
+                            $query->where('property_id', $pid); // Filter based on property_id in UnitDetails table
+                        })
+                        ->whereNotNull('interested_lead_id') // Interested lead condition
+                        ->get();
 
-                //search query
+                    // Iterate over the fetched LeadCustomerUnits and extract the comma-separated interested_lead_ids
+                    $interestedLeadIds = $fetchLeadCustomerUnit->pluck('interested_lead_id')
+                        ->map(function($interestedLeadId) {
+                            return explode(',', $interestedLeadId); // Convert comma-separated string to an array
+                        })
+                        ->flatten() // Flatten the array of arrays into a single array
+                        ->unique(); // Ensure IDs are unique
+
+                    // Filter allLeads by interested lead IDs
+                    $allLeads->whereIn('id', $interestedLeadIds);
+                }
+    
+                // Apply search filter
                 if ($skey != 'null') {
                     $allLeads->where(function ($q) use ($skey) {
                         $q->where('name', 'like', "%{$skey}%")
@@ -49,23 +75,28 @@ class LeadController extends Controller
                             });
                     });
                 }
-
-                //sortby key
+    
+                // Apply sorting
                 if ($sortbykey != 'null') {
                     if (in_array($sortbykey, ['name', 'email', 'contact_no'])) {
                         $allLeads->orderBy($sortbykey, $sort);
                     } elseif ($sortbykey == 'source') {
-                        $allLeads->orderBy(LeadSource::select('name')->whereColumn('lead_sources.id', 'leads.source_id'), $sort);
+                        $allLeads->orderBy(
+                            LeadSource::select('name')
+                                ->whereColumn('lead_sources.id', 'leads.source_id'),
+                            $sort
+                        );
                     }
                 }
-
+    
+                // Paginate results
                 $allLeads = $allLeads->paginate($limit, ['*'], 'page', $offset);
-
+    
                 // Modify the response to include unit name and wing name at the top level
                 foreach ($allLeads as $lead) {
                     $lead->unit_name = null; // Default value
                     $lead->wing_name = null; // Default value
-
+    
                     if ($lead->leadCustomerUnits->isNotEmpty()) {
                         foreach ($lead->leadCustomerUnits as $leadUnit) {
                             if ($leadUnit->allocated_lead_id) {
@@ -78,7 +109,7 @@ class LeadController extends Controller
                         }
                     }
                 }
-
+    
                 return $allLeads;
             } else {
                 return null;
