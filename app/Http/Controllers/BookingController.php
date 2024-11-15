@@ -14,9 +14,9 @@ use App\Helper;
 use App\Models\Status;
 use App\Models\Amenity;
 use App\Models\Country;
-use App\Models\Customer;
-use App\Models\Lead;
-use App\Models\LeadUnit;
+use App\Models\LeadCustomer;
+use App\Models\LeadCustomerUnit;
+use App\Models\LeadCustomerUnitData;
 use App\Models\PaymentTransaction;
 use App\Models\PaymentType;
 use App\Models\State;
@@ -196,7 +196,7 @@ class BookingController extends Controller
     public function addUnitBookingInfo(Request $request)
     {
 
-        try {
+        // try {
             $unitId = $request->input('unit_id');
             $propertyId = $request->input('property_id');
             $entityId = $request->input('entity_id'); // Now used for lead_id or customer_id based on $type
@@ -212,109 +212,92 @@ class BookingController extends Controller
             $bookingreferencenumber = $request->input('bookingreferencenumber');
             $nextpaymenttype = $request->input('nextpaymenttype');
             $nextpaymentreferencenumber = $request->input('nextpaymentreferencenumber');
+            $notes=$request->input('notes');
 
 
-            $leadUnit = LeadUnit::where('unit_id', $unitId)->first();
+            $leadUnit = LeadCustomerUnit::where('unit_id', $unitId)->first();
 
             // Determine which IDs are allocated based on the $type
-            $allocatedIds = $type === 'customer'
-                ? ($leadUnit && $leadUnit->allocated_customer_id ? explode(',', $leadUnit->allocated_customer_id) : [])
-                : ($leadUnit && $leadUnit->allocated_lead_id ? explode(',', $leadUnit->allocated_lead_id) : []);
+            $allocatedIds = ($leadUnit && $leadUnit->leads_customers_id ? explode(',', $leadUnit->leads_customers_id) : []);
+          
 
             if (is_null($entityId)) {
                 // Null entity ID - handle as new customer
-                $customer = Customer::where('property_id', $propertyId)
+                $leadcustomer = LeadCustomer::where('property_id', $propertyId)
                     // ->where('unit_id', $unitId)
                     ->where('contact_no', $contactNumber)
                     ->first();
 
-                if ($customer) {
+                if ($leadcustomer) {
                     // Update the existing customer's name if it's different
-                    if ($customer->name !== $contactName) {
-                        $customer->name = $contactName;
-                        $customer->save();
-                    }
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => $leadcustomer->name . ' is already added with this contact no.',
+                        'data' => null
+                    ], 200);
+                  
                 } else {
                     // Create a new customer if no existing customer with the same contact number was found
-                    $customer = Customer::create([
+                    $leadcustomer = leadcustomer::create([
                         'property_id' => $propertyId,
                         'email' => $contactEmail,
                         'name' => $contactName,
                         'contact_no' => $contactNumber,
+                        'entity_type' =>2
                     ]);
                 }
 
                 // Update allocated_customer_id in lead_unit
-                $leadUnit = $leadUnit ?: new LeadUnit();
+                $leadUnit = $leadUnit ?: new LeadCustomerUnit();
                 $leadUnit->unit_id = $unitId;
-                if (!in_array($customer->id, $allocatedIds)) {
-                    $allocatedIds[] = $customer->id;
-                    $leadUnit->allocated_customer_id = implode(',', $allocatedIds);
+                if (!in_array($leadcustomer->id, $allocatedIds)) {
+                    $allocatedIds[] = $leadcustomer->id;
+                    $leadUnit->leads_customers_id = implode(',', $allocatedIds);
                 }
                 $leadUnit->booking_status = 4;
                 $leadUnit->save();
 
-                $allocatedId = $customer->id;
-                $allocatedType = 2; // Customer
+                $allocatedId = $leadcustomer->id;
+            
             } else {
                 // Provided entity ID - handle as lead or customer based on type
-                if ($type == 'lead') {
-                    $lead = Lead::find($entityId);
-                    if (!$lead) {
+              
+                    $leadcustomer = LeadCustomer::find($entityId);
+                    if (!$leadcustomer) {
                         return response()->json([
                             'status' => 'error',
-                            'message' => 'Lead not found',
+                            'message' => 'Lead/Customer not found',
                         ], 200);
                     }
 
-                    $leadUnit = $leadUnit ?: new LeadUnit();
+                    Leadcustomer::where('id',$entityId)->update(['entity_type'=>2]);
+                    $leadUnit = $leadUnit ?: new LeadCustomerUnit();
                     $leadUnit->unit_id = $unitId;
                     if (!in_array($entityId, $allocatedIds)) {
                         $allocatedIds[] = $entityId;
-                        $leadUnit->allocated_lead_id = implode(',', $allocatedIds);
+                        $leadUnit->leads_customers_id = implode(',', $allocatedIds);
                     }
                     $leadUnit->booking_status = 4;
                     $leadUnit->save();
 
                     $allocatedId = $entityId;
-                    $allocatedType = 1; // Lead
-                } elseif ($type === 'customer') {
-                    $customer = Customer::find($entityId);
-                    if (!$customer) {
-                        return response()->json([
-                            'status' => 'error',
-                            'message' => 'Customer not found',
-                        ], 200);
-                    }
-
-                    $leadUnit = $leadUnit ?: new LeadUnit();
-                    $leadUnit->unit_id = $unitId;
-                    if (!in_array($entityId, $allocatedIds)) {
-                        $allocatedIds[] = $entityId;
-                        $leadUnit->allocated_customer_id = implode(',', $allocatedIds);
-                    }
-                    $leadUnit->booking_status = 4;
-                    $leadUnit->save();
-
-                    $allocatedId = $entityId;
-                    $allocatedType = 2; // Customer
-                }
+                   
+                
             }
 
             // Create the first payment transaction entry
-            // return $tokenAmt;
+            
             if ($tokenAmt != null) {
                 $paymentTransaction = new PaymentTransaction();
                 $paymentTransaction->unit_id = $unitId;
                 $paymentTransaction->property_id = $propertyId;
-                $paymentTransaction->allocated_id = $allocatedId;
-                $paymentTransaction->allocated_type = $allocatedType;
+                $paymentTransaction->leads_customers_id = $allocatedId;
                 $paymentTransaction->booking_date = $bookingDate;
                 $paymentTransaction->token_amt = $tokenAmt;
                 $paymentTransaction->payment_status = 2;
                 $paymentTransaction->payment_type = $bookingpaymenttype; // Use bookingpaymenttype for the first transaction
                 $paymentTransaction->reference_number = $bookingreferencenumber; // Set reference number for first transaction
-                $paymentTransaction->transaction_notes = 'Booking entry created';
+                $paymentTransaction->transaction_notes = $notes;
                 $paymentTransaction->save();
             }
 
@@ -324,8 +307,7 @@ class BookingController extends Controller
                 $paymentTransactionSecond = new PaymentTransaction();
                 $paymentTransactionSecond->unit_id = $unitId;
                 $paymentTransactionSecond->property_id = $propertyId;
-                $paymentTransactionSecond->allocated_id = $allocatedId;
-                $paymentTransactionSecond->allocated_type = $allocatedType;
+                $paymentTransactionSecond->leads_customers_id = $allocatedId;
                 $paymentTransactionSecond->booking_date = $bookingDate;
                 $paymentTransactionSecond->payment_due_date = $paymentDueDate;
                 $paymentTransactionSecond->token_amt = $tokenAmt;
@@ -340,7 +322,7 @@ class BookingController extends Controller
 
                 $paymentTransactionSecond->payment_type = $nextpaymenttype; // Use nextpaymenttype for the next transaction
                 $paymentTransactionSecond->reference_number = $nextpaymentreferencenumber; // Set reference number for the next transaction
-                $paymentTransactionSecond->transaction_notes = 'Next Booking entry created';
+                $paymentTransactionSecond->transaction_notes = $notes;
                 $paymentTransactionSecond->save();
             }
 
@@ -360,7 +342,7 @@ class BookingController extends Controller
                 $totalNextPayableAmt += $firstPaymentTransaction->token_amt;
             }
 
-            $leadUnit = LeadUnit::where('unit_id', $unitId)->first();
+            $leadUnit = LeadCustomerUnit::where('unit_id', $unitId)->first();
             $unitdata = UnitDetail::where('id', $unitId)->first();
             // Update LeadUnit booking status if totalNextPayableAmt reaches or exceeds the required amount
             if ($unitdata->price != '' && $leadUnit != '') {
@@ -383,18 +365,18 @@ class BookingController extends Controller
                 'status' => 'success',
                 'message' => 'Unit booking information saved successfully',
             ], 200);
-        } catch (\Exception $e) {
-            // Log the error
-            $errorFrom = 'addUnitBookingInfo';
-            $errorMessage = $e->getMessage();
-            $priority = 'high';
-            Helper::errorLog($errorFrom, $errorMessage, $priority);
+        // } catch (\Exception $e) {
+        //     // Log the error
+        //     $errorFrom = 'addUnitBookingInfo';
+        //     $errorMessage = $e->getMessage();
+        //     $priority = 'high';
+        //     Helper::errorLog($errorFrom, $errorMessage, $priority);
 
-            return response()->json([
-                'status' => 'error',
-                'message' => 'An error occurred while saving the data',
-            ], 400);
-        }
+        //     return response()->json([
+        //         'status' => 'error',
+        //         'message' => 'An error occurred while saving the data',
+        //     ], 400);
+        // }
     }
 
     public function addUnitPaymentDetail(Request $request)

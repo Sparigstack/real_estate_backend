@@ -381,7 +381,7 @@ class LeadController extends Controller
                     $leadUnitData = LeadCustomerUnitData::where('leads_customers_unit_id', $existingUnit->id)
                         ->where('leads_customers_id', $lead->id)
                         ->first();
-                    // return "nirali".$existingUnit->id. $leadUnitData;
+
 
                     if ($leadUnitData) {
                         // Update the budget if LeadUnitData exists
@@ -421,9 +421,19 @@ class LeadController extends Controller
                             'notes' => $notes,
                             'entity_type' => 1
                         ]);
+                        return response()->json([
+                            'status' => 'success',
+                            'message' => 'Lead added with unit successfully',
+                            'data' => null
+                        ], 200);
                     } else {
                         // If the lead exists, don't create a new lead, but pass it to the LeadUnit table
-                        $lead = $existingLead;
+                        // $lead = $existingLead;
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => $existingLead->name . ' is already added with this contact no.',
+                            'data' => null
+                        ], 200);
                     }
 
                     // Now handle the LeadUnit entry
