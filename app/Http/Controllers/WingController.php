@@ -61,7 +61,7 @@ class WingController extends Controller
         $fetchWings = WingDetail::with([
             'floorDetails.unitDetails' => function ($query) {
                 $query->with([
-                    'leadUnits',
+                    'leadCustomerUnits',
                     'paymentTransactions' // Ensure payment transactions are loaded
                 ]);
             }
@@ -74,11 +74,11 @@ class WingController extends Controller
         if ($fetchWings) {
             foreach ($fetchWings->floorDetails as $floor) {
                 foreach ($floor->unitDetails as $unit) {
-                    $unitLeads = $unit->leadUnits;
+                    $unitLeads = $unit->leadCustomerUnits;
 
                     // Calculate total interested leads count
-                    $unit->interested_lead_count = $unitLeads->sum(function ($leadUnit) {
-                        return count(explode(',', $leadUnit->interested_lead_id));
+                    $unit->interested_lead_count = $unitLeads->sum(function ($leadCustomerUnits) {
+                        return count(explode(',', $leadCustomerUnits->interested_lead_id));
                     });
 
                     $unit->booking_status = $unitLeads->pluck('booking_status')->first();
@@ -118,32 +118,31 @@ class WingController extends Controller
 
 
                     $allocatedEntities = [];
-                    foreach ($unitLeads as $leadUnit) {
+                    foreach ($unitLeads as $leadCustomerUnits) {
                         // Retrieve and format leads
-                        if ($leadUnit->allocated_lead_id) {
-                            $leadIds = explode(',', $leadUnit->allocated_lead_id);
-                            $allocatedLeads = Lead::whereIn('id', $leadIds)->get(['id', 'name']);
+                        if ($leadCustomerUnits->leads_customers_id) {
+                            $leadIds = explode(',', $leadCustomerUnits->leads_customers_id);
+                            $allocatedLeads = LeadCustomer::whereIn('id', $leadIds)->get(['id', 'name']);
                             foreach ($allocatedLeads as $lead) {
                                 $allocatedEntities[] = [
-                                    'allocated_customer_id' => null,
                                     'allocated_lead_id' => $lead->id,
                                     'allocated_name' => $lead->name
                                 ];
                             }
                         }
 
-                        // Retrieve and format customers
-                        if ($leadUnit->allocated_customer_id) {
-                            $customerIds = explode(',', $leadUnit->allocated_customer_id);
-                            $allocatedCustomers = Customer::whereIn('id', $customerIds)->get(['id', 'name']);
-                            foreach ($allocatedCustomers as $customer) {
-                                $allocatedEntities[] = [
-                                    'allocated_customer_id' => $customer->id,
-                                    'allocated_lead_id' => null,
-                                    'allocated_name' => $customer->name
-                                ];
-                            }
-                        }
+                        // // Retrieve and format customers
+                        // if ($leadUnit->allocated_customer_id) {
+                        //     $customerIds = explode(',', $leadUnit->allocated_customer_id);
+                        //     $allocatedCustomers = Customer::whereIn('id', $customerIds)->get(['id', 'name']);
+                        //     foreach ($allocatedCustomers as $customer) {
+                        //         $allocatedEntities[] = [
+                        //             'allocated_customer_id' => $customer->id,
+                        //             'allocated_lead_id' => null,
+                        //             'allocated_name' => $customer->name
+                        //         ];
+                        //     }
+                        // }
                     }
 
                     // Assign the aggregated allocated entities array to each unit

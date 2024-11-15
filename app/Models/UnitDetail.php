@@ -31,9 +31,9 @@ class UnitDetail extends Model
     {
         return $this->belongsTo(FloorDetail::class,'floor_id','id');
     }
-    public function leadUnits()
+    public function leadCustomerUnits()
     {
-        return $this->hasMany(LeadUnit::class, 'unit_id'); // Ensure unit_id is used here
+        return $this->hasMany(LeadCustomerUnit::class, 'unit_id'); // Ensure unit_id is used here
     }
     public function paymentTransactions()
     {
