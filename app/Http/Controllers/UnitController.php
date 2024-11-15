@@ -249,7 +249,7 @@ class UnitController extends Controller
 
             // Iterate through the leads_array from the request
             foreach ($request->leads_array as $lead) {
-                $leadId = $lead['leads_customers_id'];
+                $leadId = $lead['lead_id'];
                 $budget = $lead['budget'];
 
                 // Add lead ID if not already present
