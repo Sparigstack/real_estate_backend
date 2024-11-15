@@ -117,8 +117,8 @@ class BookingController extends Controller
 
                 // Prepare payment schedule
                 $paymentType = PaymentType::find($transaction->payment_type);
-                $paymentTypeName = $paymentType ? $paymentType->name : 'Unknown';
-                $paymentTypeId = $paymentType ? $paymentType->id : 'Unknown';
+                $paymentTypeName = $paymentType ? $paymentType->name : '';
+                $paymentTypeId = $paymentType ? $paymentType->id : '';
 
                 if ($transaction->token_amt || $transaction->next_payable_amt || $transaction->booking_date || $transaction->payment_due_date) {
                     // Only add the object if it has at least one non-null value
