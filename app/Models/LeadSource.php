@@ -10,8 +10,8 @@ class LeadSource extends Model
     use HasFactory;
     protected $fillable = ['name'];
 
-    public function leads()
+    public function leadscustomers()
     {
-        return $this->hasMany(Lead::class, 'source_id', 'id');
+        return $this->hasMany(LeadCustomer::class, 'source_id', 'id');
     }
 }

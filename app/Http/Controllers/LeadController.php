@@ -82,11 +82,8 @@ class LeadController extends Controller
                     if (in_array($sortbykey, ['name', 'email', 'contact_no'])) {
                         $allLeads->orderBy($sortbykey, $sort);
                     } elseif ($sortbykey == 'source') {
-                        $allLeads->orderBy(
-                            LeadSource::select('name')
-                                ->whereColumn('lead_sources.id', 'leads.source_id'),
-                            $sort
-                        );
+                        $allLeads->join('lead_sources', 'leads_customers.source_id', '=', 'lead_sources.id')
+                        ->orderBy('lead_sources.name', $sort);
                     }
                 }
     
