@@ -330,9 +330,21 @@ class LeadController extends Controller
                             'notes' => $notes,
                             'entity_type' => 1
                         ]);
+
+                        return response()->json([
+                            'status' => 'success',
+                            'message' => 'Lead added successfully.',
+                            'data' => $lead
+                        ], 200);
                     } else {
                         // If the lead exists, don't create a new lead, but pass it to the LeadUnit table
-                        $lead = $existingLead;
+                        // $lead = $existingLead;
+
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => $existingLead->name . ' is already added with this contact no.',
+                            'data' => null
+                        ], 200);
                     }
 
 
