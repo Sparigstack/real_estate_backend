@@ -15,9 +15,9 @@ use App\Models\Status;
 use App\Models\Amenity;
 use App\Models\Country;
 use App\Models\Customer;
-use App\Models\Lead;
-use App\Models\LeadUnit;
-use App\Models\LeadUnitData;
+use App\Models\LeadCustomer;
+use App\Models\LeadCustomerUnit;
+use App\Models\LeadCustomerUnitData;
 use App\Models\PaymentTransaction;
 use App\Models\State;
 use Exception;
@@ -87,7 +87,7 @@ class UnitController extends Controller
 
         try {
             if ($pid != 'null') {
-                $allLeads = Lead::where('property_id', $pid)->get();
+                $allLeads = LeadCustomer::where('property_id', $pid)->where('entity_type',1)->get();
 
                 return $allLeads;
             } else {
@@ -110,23 +110,7 @@ class UnitController extends Controller
     {
         try {
             if ($pid != 'null') {
-                $allLeads = Lead::where('property_id', $pid)->get();
-
-                // Retrieve all customers for the specified property
-                $allCustomers = Customer::where('property_id', $pid)->get();
-
-                $leadsWithType = $allLeads->map(function ($lead) {
-                    $lead->type = 'lead'; // Mark this record as a lead
-                    return $lead;
-                });
-
-                $customersWithType = $allCustomers->map(function ($customer) {
-                    $customer->type = 'customer'; // Mark this record as a customer
-                    return $customer;
-                });
-
-                // Merge both arrays into one
-                $allLeadsCustomers = $leadsWithType->merge($customersWithType);
+                $allLeadsCustomers = LeadCustomer::where('property_id', $pid)->get();
 
                 return $allLeadsCustomers;
             } else {
@@ -223,8 +207,8 @@ class UnitController extends Controller
 
     public function addInterestedLeads(Request $request)
     {
-        try {
-            $unit = UnitDetail::with('leadUnits')->where('id', $request->unit_id)->first();
+        // try {
+            $unit = UnitDetail::with('leadCustomerUnits')->where('id', $request->unit_id)->first();
 
             // Check if the unit exists
             if (!$unit) {
@@ -244,11 +228,11 @@ class UnitController extends Controller
 
             // Initialize variables
             $existingLeadIds = [];
-            $existingLeadUnit = $unit->leadUnits->first();
+            $existingLeadUnit = $unit->leadCustomerUnits->first();
 
             // If no existing lead unit, create a new one
             if (!$existingLeadUnit) {
-                $newLeadUnit = new LeadUnit();
+                $newLeadUnit = new LeadCustomerUnit();
                 $newLeadUnit->interested_lead_id = ''; // Will be updated later
                 $newLeadUnit->unit_id = $request->unit_id;
                 $newLeadUnit->booking_status = 2;
@@ -265,7 +249,7 @@ class UnitController extends Controller
 
             // Iterate through the leads_array from the request
             foreach ($request->leads_array as $lead) {
-                $leadId = $lead['lead_id'];
+                $leadId = $lead['leads_customers_id'];
                 $budget = $lead['budget'];
 
                 // Add lead ID if not already present
@@ -274,8 +258,8 @@ class UnitController extends Controller
                 }
 
                 // Check if there's an existing record in LeadUnitData
-                $leadUnitData = LeadUnitData::where('lead_unit_id', $leadUnitId)
-                    ->where('lead_id', $leadId)
+                $leadUnitData = LeadCustomerUnitData::where('leads_customers_unit_id', $leadUnitId)
+                    ->where('leads_customers_id', $leadId)
                     ->first();
 
                 if ($leadUnitData) {
@@ -286,9 +270,9 @@ class UnitController extends Controller
                     }
                 } else {
                     // Create new LeadUnitData entry if not exists
-                    LeadUnitData::create([
-                        'lead_unit_id' => $leadUnitId,
-                        'lead_id' => $leadId,
+                    LeadCustomerUnitData::create([
+                        'leads_customers_unit_id' => $leadUnitId,
+                        'leads_customers_id' => $leadId,
                         'budget' => $budget,
                     ]);
                 }
@@ -310,18 +294,18 @@ class UnitController extends Controller
                 'status' => 'success',
                 'message' => 'Interested leads updated successfully.',
             ], 200);
-        } catch (\Exception $e) {
-            // Log the error
-            $errorFrom = 'addInterestedLeads';
-            $errorMessage = $e->getMessage();
-            $priority = 'high';
-            Helper::errorLog($errorFrom, $errorMessage, $priority);
+        // } catch (\Exception $e) {
+        //     // Log the error
+        //     $errorFrom = 'addInterestedLeads';
+        //     $errorMessage = $e->getMessage();
+        //     $priority = 'high';
+        //     Helper::errorLog($errorFrom, $errorMessage, $priority);
 
-            return response()->json([
-                'status' => 'error',
-                'message' => 'An error occurred while saving the data',
-            ], 400);
-        }
+        //     return response()->json([
+        //         'status' => 'error',
+        //         'message' => 'An error occurred while saving the data',
+        //     ], 400);
+        // }
     }
 
 
@@ -330,25 +314,29 @@ class UnitController extends Controller
     {
         try {
             if ($uid != 'null') {
+                
                 // Fetch lead unit by unit ID
-                $leadUnit = LeadUnit::where('unit_id', $uid)->first();
+                $leadUnit = LeadCustomerUnit::where('unit_id', $uid)->first();
+             
 
                 // Check if the lead unit exists
                 if (!$leadUnit) {
                     return []; // Return an empty array if no lead unit is found
                 }
+                
 
                 // Get the interested lead IDs from the lead unit
                 $interestedLeadIds = explode(',', $leadUnit->interested_lead_id); // Convert comma-separated string to array
 
                 // Fetch details of interested leads
-                $interestedLeads = Lead::whereIn('id', $interestedLeadIds)->get();
+                $interestedLeads = LeadCustomer::whereIn('id', $interestedLeadIds)->get();
+               
 
                 // Fetch budget details from LeadUnitData based on lead_unit_id
-                $budgets = LeadUnitData::where('lead_unit_id', $leadUnit->id)
-                    ->whereIn('lead_id', $interestedLeadIds)
+                $budgets = LeadCustomerUnitData::where('leads_customers_unit_id', $leadUnit->id)
+                    ->whereIn('leads_customers_id', $interestedLeadIds)
                     ->get()
-                    ->keyBy('lead_id'); // Index by lead_id for easy access
+                    ->keyBy('leads_customers_id'); // Index by lead_id for easy access
 
                 // Map the budget to each lead
                 $leadsWithBudgets = $interestedLeads->map(function ($lead) use ($budgets) {
