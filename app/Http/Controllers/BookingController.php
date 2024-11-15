@@ -43,7 +43,7 @@ class BookingController extends Controller
             $responseData = [];
 
 
-            $leadUnit = LeadUnit::where('unit_id', $uid)->first();
+            $leadUnit = LeadCustomerUnit::where('unit_id', $uid)->first();
             if (!$leadUnit) {
                 return response()->json([
                     'status' => 'error',
@@ -52,22 +52,21 @@ class BookingController extends Controller
             }
 
             // Determine the contact details from Lead or Customer based on allocation fields
-            if (!is_null($leadUnit->allocated_lead_id)) {
-                $contact = Lead::find($leadUnit->allocated_lead_id);
-            } elseif (!is_null($leadUnit->allocated_customer_id)) {
-                $contact = Customer::find($leadUnit->allocated_customer_id);
-            }
+            if (!is_null($leadUnit->leads_customers_id)) {
+                $contact = LeadCustomer::find($leadUnit->leads_customers_id);
+            } 
 
             // Populate contact details if available
             if (isset($contact)) {
                 $responseData['contact_name'] = $contact->name;
-                $responseData['contact_email'] = $contact->email;
+                $responseData['contact_email'] = $contact->email ?? null;
                 $responseData['contact_number'] = $contact->contact_no;
+                $responseData['notes']=$contact->notes ?? null;
             }
 
 
             // Retrieve the LeadUnit with the necessary relationships
-            $leadUnit = LeadUnit::with(['paymentTransaction' => function ($query) {
+            $leadUnit = LeadCustomerUnit::with(['paymentTransaction' => function ($query) {
                 $query->orderBy('id', 'asc'); // Order by transaction ID in ascending order
             }])
                 ->where('unit_id', $uid)
@@ -243,7 +242,8 @@ class BookingController extends Controller
                         'email' => $contactEmail,
                         'name' => $contactName,
                         'contact_no' => $contactNumber,
-                        'entity_type' =>2
+                        'entity_type' =>2,
+                        'notes'=>$notes
                     ]);
                 }
 
@@ -297,7 +297,7 @@ class BookingController extends Controller
                 $paymentTransaction->payment_status = 2;
                 $paymentTransaction->payment_type = $bookingpaymenttype; // Use bookingpaymenttype for the first transaction
                 $paymentTransaction->reference_number = $bookingreferencenumber; // Set reference number for first transaction
-                $paymentTransaction->transaction_notes = $notes;
+                $paymentTransaction->transaction_notes = "Booking entry saved";
                 $paymentTransaction->save();
             }
 
@@ -322,7 +322,7 @@ class BookingController extends Controller
 
                 $paymentTransactionSecond->payment_type = $nextpaymenttype; // Use nextpaymenttype for the next transaction
                 $paymentTransactionSecond->reference_number = $nextpaymentreferencenumber; // Set reference number for the next transaction
-                $paymentTransactionSecond->transaction_notes = $notes;
+                $paymentTransactionSecond->transaction_notes = "Next payment saved";
                 $paymentTransactionSecond->save();
             }
 
