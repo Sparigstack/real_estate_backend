@@ -196,7 +196,7 @@ class BookingController extends Controller
     public function addUnitBookingInfo(Request $request)
     {
 
-        // try {
+        try {
             $unitId = $request->input('unit_id');
             $propertyId = $request->input('property_id');
             $entityId = $request->input('entity_id'); // Now used for lead_id or customer_id based on $type
@@ -365,18 +365,18 @@ class BookingController extends Controller
                 'status' => 'success',
                 'message' => 'Unit booking information saved successfully',
             ], 200);
-        // } catch (\Exception $e) {
-        //     // Log the error
-        //     $errorFrom = 'addUnitBookingInfo';
-        //     $errorMessage = $e->getMessage();
-        //     $priority = 'high';
-        //     Helper::errorLog($errorFrom, $errorMessage, $priority);
+        } catch (\Exception $e) {
+            // Log the error
+            $errorFrom = 'addUnitBookingInfo';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
 
-        //     return response()->json([
-        //         'status' => 'error',
-        //         'message' => 'An error occurred while saving the data',
-        //     ], 400);
-        // }
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while saving the data',
+            ], 400);
+        }
     }
 
     public function addUnitPaymentDetail(Request $request)
