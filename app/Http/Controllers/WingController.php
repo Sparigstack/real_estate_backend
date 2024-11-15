@@ -424,7 +424,7 @@ class WingController extends Controller
             }
 
             $unitdata = UnitDetail::where('id', $unitId)->first();
-            $leadUnit = LeadUnit::where('unit_id', $unitId)->first();
+            $leadUnit = LeadCustomerUnit::where('unit_id', $unitId)->first();
 
 
             // Update LeadUnit booking status if totalNextPayableAmt reaches or exceeds the required amount

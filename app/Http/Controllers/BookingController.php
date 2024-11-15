@@ -399,7 +399,7 @@ class BookingController extends Controller
             $bookingreferencenumber = $validatedData['bookingreferencenumber'];
 
             // Retrieve the LeadUnit associated with the unit_id
-            $leadUnit = LeadUnit::where('unit_id', $unitId)->first();
+            $leadUnit = LeadCustomerUnit::where('unit_id', $unitId)->first();
             $unitdata = UnitDetail::where('id', $unitId)->first();
 
             if (!$leadUnit) {
@@ -466,11 +466,10 @@ class BookingController extends Controller
                         $paymentTransaction->booking_date = $lastPaymentTransaction->booking_date ?? null; // Use the last booking date
                         $paymentTransaction->token_amt = $lastPaymentTransaction->token_amt ??  null; // Use the last token amount
                         $paymentTransaction->property_id = $lastPaymentTransaction->property_id ?? null; // Use the last payment due date
-                        $paymentTransaction->allocated_id = $lastPaymentTransaction->allocated_id ?? null;
-                        $paymentTransaction->allocated_type = $lastPaymentTransaction->allocated_type ?? null;
+                        $paymentTransaction->leads_customers_id = $lastPaymentTransaction->allocated_id ?? null;
                         $paymentTransaction->payment_type = $bookingpaymenttype; // Use bookingpaymenttype for the first transaction
                         $paymentTransaction->reference_number = $bookingreferencenumber;
-                        $paymentTransaction->transaction_notes = "payment added";
+                        $paymentTransaction->transaction_notes = "New payment added";
                         $paymentTransaction->payment_status = now()->gt($paymentDate) ? 2 : 1;
                     } else {
                         $unitDetail = UnitDetail::where('unit_id', $unitId)->first();
@@ -482,34 +481,23 @@ class BookingController extends Controller
                             $propertyId = null;
                         }
 
-                        $leadUnit = LeadUnit::where('unit_id', $unitId)->first();
+                        $leadUnit = LeadCustomerUnit::where('unit_id', $unitId)->first();
 
                         if ($leadUnit) {
                             // Check for allocated_lead_id or allocated_customer_id
-                            if ($leadUnit->allocated_lead_id) {
+                            if ($leadUnit->leads_customers_id) {
                                 // If allocated_lead_id exists, set allocated_type to 1 (Lead)
-                                $allocatedId = $leadUnit->allocated_lead_id;
-                                $allocatedType = 1; // Lead
-                            } elseif ($leadUnit->allocated_customer_id) {
-                                // If allocated_customer_id exists, set allocated_type to 2 (Customer)
-                                $allocatedId = $leadUnit->allocated_customer_id;
-                                $allocatedType = 2; // Customer
-                            } else {
-                                // If neither exists, handle accordingly (e.g., set to a default value or return an error)
-                                $allocatedId = null;
-                                $allocatedType = null;
-                            }
+                                $allocatedId = $leadUnit->leads_customers_id;
+                            } 
                         } else {
                             // Handle case where no LeadUnit is found for the given unit_id
                             $allocatedId = null;
-                            $allocatedType = null;
                         }
 
                         $paymentTransaction = new PaymentTransaction();
                         $paymentTransaction->unit_id = $unitId;
                         $paymentTransaction->property_id = $propertyId;
-                        $paymentTransaction->allocated_id = $allocatedId;
-                        $paymentTransaction->allocated_type = $allocatedType;
+                        $paymentTransaction->leads_customers_id = $allocatedId;
                         $paymentTransaction->booking_date = $paymentDate;
                         $paymentTransaction->token_amt = $amount;
                         $paymentTransaction->payment_status = 2;
