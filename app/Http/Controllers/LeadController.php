@@ -44,24 +44,25 @@ class LeadController extends Controller
                     // Flag 2: Customers (entity_type = 2)
                     $allLeads->where('entity_type', 2);
                 } elseif ($flag == 3) {
+                    $allLeads->where('entity_type', 1);
                     // Flag 3: Interested leads only (interested_lead_id not null in LeadCustomerUnits)
-                        $fetchLeadCustomerUnit = LeadCustomerUnit::with('unit')
-                        ->whereHas('unit', function ($query) use ($pid) {
-                            $query->where('property_id', $pid); // Filter based on property_id in UnitDetails table
-                        })
-                        ->whereNotNull('interested_lead_id') // Interested lead condition
-                        ->get();
+                    //     $fetchLeadCustomerUnit = LeadCustomerUnit::with('unit')
+                    //     ->whereHas('unit', function ($query) use ($pid) {
+                    //         $query->where('property_id', $pid); // Filter based on property_id in UnitDetails table
+                    //     })
+                    //     ->whereNotNull('interested_lead_id') // Interested lead condition
+                    //     ->get();
 
-                    // Iterate over the fetched LeadCustomerUnits and extract the comma-separated interested_lead_ids
-                    $interestedLeadIds = $fetchLeadCustomerUnit->pluck('interested_lead_id')
-                        ->map(function($interestedLeadId) {
-                            return explode(',', $interestedLeadId); // Convert comma-separated string to an array
-                        })
-                        ->flatten() // Flatten the array of arrays into a single array
-                        ->unique(); // Ensure IDs are unique
+                    // // Iterate over the fetched LeadCustomerUnits and extract the comma-separated interested_lead_ids
+                    // $interestedLeadIds = $fetchLeadCustomerUnit->pluck('interested_lead_id')
+                    //     ->map(function($interestedLeadId) {
+                    //         return explode(',', $interestedLeadId); // Convert comma-separated string to an array
+                    //     })
+                    //     ->flatten() // Flatten the array of arrays into a single array
+                    //     ->unique(); // Ensure IDs are unique
 
-                    // Filter allLeads by interested lead IDs
-                    $allLeads->whereIn('id', $interestedLeadIds);
+                    // // Filter allLeads by interested lead IDs
+                    // $allLeads->whereIn('id', $interestedLeadIds);
                 }
     
                 // Apply search filter
