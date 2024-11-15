@@ -54,7 +54,8 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     //inventory call
     Route::get('/all-inventories/{skey}&{sort}&{sortbykey}&{offset}&{limit}&{pid}', [InventoryController::class, 'allInventories']); 
     Route::post('/add-edit-inventory', [InventoryController::class, 'addOrEditInventories']); 
-    Route::get('/get-inventory-details/{id}', [InventoryController::class, 'getInventoryData']); 
+    Route::get('/get-inventory-details/{id}', [InventoryController::class, 'getInventoryData']);
+    
     //vendor call
     Route::get('/all-vendors/{skey}&{sort}&{sortbykey}&{offset}&{limit}', [VendorController::class, 'allVendors']); 
     Route::post('/add-edit-vendors', [VendorController::class, 'addOrEditVendors']); 
@@ -62,7 +63,7 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::get('/fetch-vendor-names', [VendorController::class, 'fetchAllVendorName']); 
     //usage call
       Route::post('/add-usage-log', [InventoryUsageController::class, 'AddInventoryUsage']); 
-      Route::get('/get-inventory-usage/{id}', [InventoryUsageController::class, 'GetInventoryUsage']); 
+      Route::get('/get-inventory-usage/{id}&{sdate}', [InventoryUsageController::class, 'GetInventoryUsage']); 
     //wings call
     Route::post('/add-wing-details', [WingController::class, 'addWingDetails']);
     Route::get('/get-wings-basic-details/{wid}', [WingController::class, 'getWingsBasicDetails']); 

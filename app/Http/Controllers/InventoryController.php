@@ -6,26 +6,38 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\InventoryDetail;
 use App\Models\InventoryLog;
+use App\Models\InventoryUsageLog;
 
 class InventoryController extends Controller
 {
 
-    public function allInventories($skey, $sort, $sortbykey, $offset, $limit,$pid)
+    public function allInventories($skey, $sort, $sortbykey, $offset, $limit, $pid)
     {
-        $inventoryData = InventoryDetail::with('InventoryLogDetails.Vendor')->where('property_id',$pid);
-        if ($skey != 'null') 
-        {
+
+        $inventoryData = InventoryDetail::query()
+            ->with('InventoryLogDetails.Vendor')  
+            ->where('inventory_details.property_id', $pid);
+
+        if ($skey !== 'null') {
             $inventoryData->where(function ($query) use ($skey) {
-                $query->where('name', 'like', "%{$skey}%")
-                    ->orWhere('price_per_quantity', 'like', "%{$skey}%");
+                $query->where('inventory_details.name', 'like', "%{$skey}%")
+                    ->orWhere('inventory_details.price_per_quantity', 'like', "%{$skey}%");
             });
         }
 
-        if ($sortbykey && in_array($sortbykey, ['name', 'price_per_quantity', 'id'])) 
-        {
-            $inventoryData->orderBy($sortbykey, $sort);
+        if ($sortbykey && in_array($sortbykey, ['name', 'price_per_quantity', 'id'])) {
+
+            $inventoryData->orderBy("inventory_details.$sortbykey", $sort);
+        } elseif ($sortbykey === 'vendor_name') {
+            $inventoryData->join('inventory_logs', 'inventory_details.id', '=', 'inventory_logs.inventory_id')
+                ->join('vendor_details', 'inventory_logs.vendor_id', '=', 'vendor_details.id')
+                ->orderBy('vendor_details.name', $sort);
+        } else {
+            $inventoryData->orderBy('inventory_details.id', 'desc');
         }
-        $getDetails = $inventoryData->paginate($limit, ['*'], 'page', $offset);
+
+        $getDetails = $inventoryData->paginate($limit, ['inventory_details.*'], 'page', $offset);
+
         return $getDetails;
     }
     public function addOrEditInventories(Request $request)
@@ -89,17 +101,28 @@ class InventoryController extends Controller
                 'message' => 'Something Went Wrong',
             ], 400);
         }
- 
- 
+
+
     }
 
     public function getInventoryData($id)
     {
-        $getInventoryDetail = InventoryDetail::with('InventoryLogDetails.Vendor','PropertyDetails')->where('id', $id)->first();
-        if ($getInventoryDetail) 
-        {
+        $getInventoryDetail = InventoryDetail::with('InventoryLogDetails.Vendor', 'PropertyDetails')->where('id', $id)->first();
+        if ($getInventoryDetail) {
             return $getInventoryDetail;
         } else {
+            return null;
+        }
+    }
+
+    public function getInventoryUsage($id)
+    {
+        $getInventoryusage = InventoryUsageLog::where('inventory_id', $id)->get();
+        if ($getInventoryusage) 
+        {
+            return $getInventoryusage;
+        } else 
+        {
             return null;
         }
     }
