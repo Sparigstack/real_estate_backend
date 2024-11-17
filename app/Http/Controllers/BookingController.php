@@ -389,6 +389,7 @@ class BookingController extends Controller
                 'payment_id' => 'nullable|integer',
                 'bookingpaymenttype' => 'nullable|integer',
                 'bookingreferencenumber' => 'nullable|numeric',
+                'userid' =>'required|integer' //lead/customerid
             ]);
 
             $amount = $validatedData['amount'];
@@ -397,6 +398,8 @@ class BookingController extends Controller
             $paymentId = $validatedData['payment_id'];
             $bookingpaymenttype = $validatedData['bookingpaymenttype'];
             $bookingreferencenumber = $validatedData['bookingreferencenumber'];
+            $leadscustomerid=$validatedData['userid'];
+
 
             // Retrieve the LeadUnit associated with the unit_id
             $leadUnit = LeadCustomerUnit::where('unit_id', $unitId)->first();
@@ -412,6 +415,7 @@ class BookingController extends Controller
             $lastPaymentTransaction = PaymentTransaction::where('unit_id', $unitId)
                 ->orderBy('created_at', 'desc') // Get the most recent transaction
                 ->first();
+              
 
             if ($paymentId != null) {
                 // Update existing payment record
@@ -425,10 +429,12 @@ class BookingController extends Controller
                 }
 
                 // Update payment details
+                $paymentTransaction->leads_customers_id = $leadscustomerid;
                 $paymentTransaction->next_payable_amt = $amount; // Assuming amount is the next payable amount
                 $paymentTransaction->payment_due_date = $paymentDate;
                 $paymentTransaction->payment_type = $bookingpaymenttype; // Use bookingpaymenttype for the first transaction
                 $paymentTransaction->reference_number = $bookingreferencenumber;
+                // $paymentTransaction->payment_status = now()->gt($paymentDate) ? 1 : 2;
                 $paymentTransaction->payment_status = 2;
                 $paymentTransaction->save();
             } else {
@@ -439,78 +445,95 @@ class BookingController extends Controller
                 $existingPayment = $previousPayments->first();
 
                 // Check if booking_date and token_amt are both null and have only one previous entry
-                if ((is_null($existingPayment->booking_date) && is_null($existingPayment->token_amt)) && $previousPayments->count() == 1) {
-                    // Update the existing payment entry
-                    $existingPayment->token_amt = $amount; // Update token_amt
-                    $existingPayment->booking_date = $paymentDate; // Update booking_date
-                    $existingPayment->payment_type = $bookingpaymenttype; // Use bookingpaymenttype for the first transaction
-                    $existingPayment->reference_number = $bookingreferencenumber;
-                    $existingPayment->payment_status = 2;
-                    $existingPayment->save();
-                    return response()->json([
-                        'status' => 'success',
-                        'message' => 'Payment details updated successfully.',
-                    ], 200);
-                } else {
-                    // Create a new payment record
-                    // Retrieve the last payment transaction for the unit
-
-
-                    $paymentTransaction = new PaymentTransaction();
-                    $paymentTransaction->unit_id = $unitId;
-                    $paymentTransaction->payment_due_date = $paymentDate; // The new payment amount
-                    $paymentTransaction->next_payable_amt = $amount; // Set the initial amount
-
-                    if ($lastPaymentTransaction) {
-                        // Populate fields from the last payment transaction if it exists
-                        $paymentTransaction->booking_date = $lastPaymentTransaction->booking_date ?? null; // Use the last booking date
-                        $paymentTransaction->token_amt = $lastPaymentTransaction->token_amt ??  null; // Use the last token amount
-                        $paymentTransaction->property_id = $lastPaymentTransaction->property_id ?? null; // Use the last payment due date
-                        $paymentTransaction->leads_customers_id = $lastPaymentTransaction->allocated_id ?? null;
-                        $paymentTransaction->payment_type = $bookingpaymenttype; // Use bookingpaymenttype for the first transaction
-                        $paymentTransaction->reference_number = $bookingreferencenumber;
-                        $paymentTransaction->transaction_notes = "New payment added";
-                        $paymentTransaction->payment_status = now()->gt($paymentDate) ? 2 : 1;
+                if($existingPayment){
+                    if ((is_null($existingPayment->token_amt)) && $previousPayments->count() == 1) {
+                        // Update the existing payment entry
+                        $existingPayment->leads_customers_id = $existingPayment->leads_customers_id;
+                        $existingPayment->token_amt = $amount; // Update token_amt
+                        $existingPayment->booking_date = $paymentDate; // Update booking_date
+                        $existingPayment->payment_type = $bookingpaymenttype; // Use bookingpaymenttype for the first transaction
+                        $existingPayment->reference_number = $bookingreferencenumber;
+                        $existingPayment->payment_status = 2;
+                        $existingPayment->save();
+                        return response()->json([
+                            'status' => 'success',
+                            'message' => 'Payment details updated successfully.',
+                        ], 200);
                     } else {
-                        $unitDetail = UnitDetail::where('unit_id', $unitId)->first();
-
-                        if ($unitDetail) {
-                            $propertyId = $unitDetail->property_id; // Get the property_id
-                        } else {
-                            // Handle case where no unit_detail is found for the given unit_id
-                            $propertyId = null;
-                        }
-
-                        $leadUnit = LeadCustomerUnit::where('unit_id', $unitId)->first();
-
-                        if ($leadUnit) {
-                            // Check for allocated_lead_id or allocated_customer_id
-                            if ($leadUnit->leads_customers_id) {
-                                // If allocated_lead_id exists, set allocated_type to 1 (Lead)
-                                $allocatedId = $leadUnit->leads_customers_id;
-                            } 
-                        } else {
-                            // Handle case where no LeadUnit is found for the given unit_id
-                            $allocatedId = null;
-                        }
-
+                        // Create a new payment record
+                        // Retrieve the last payment transaction for the unit
+    
+    
                         $paymentTransaction = new PaymentTransaction();
                         $paymentTransaction->unit_id = $unitId;
-                        $paymentTransaction->property_id = $propertyId;
-                        $paymentTransaction->leads_customers_id = $allocatedId;
-                        $paymentTransaction->booking_date = $paymentDate;
-                        $paymentTransaction->token_amt = $amount;
-                        $paymentTransaction->payment_status = 2;
-                        $paymentTransaction->payment_type = $bookingpaymenttype; // Use bookingpaymenttype for the first transaction
-                        $paymentTransaction->reference_number = $bookingreferencenumber; // Set reference number for first transaction
-                        $paymentTransaction->transaction_notes = 'Booking entry created';
-
+                        $paymentTransaction->payment_due_date = $paymentDate; // The new payment amount
+                        $paymentTransaction->next_payable_amt = $amount; // Set the initial amount
+    
+                        if ($lastPaymentTransaction) {
+                            // Populate fields from the last payment transaction if it exists
+                            $paymentTransaction->booking_date = $lastPaymentTransaction->booking_date ?? null; // Use the last booking date
+                            $paymentTransaction->token_amt = $lastPaymentTransaction->token_amt ??  null; // Use the last token amount
+                            $paymentTransaction->property_id = $lastPaymentTransaction->property_id ?? null; // Use the last payment due date
+                            $paymentTransaction->leads_customers_id =  $leadscustomerid;
+                            $paymentTransaction->payment_type = $bookingpaymenttype; // Use bookingpaymenttype for the first transaction
+                            $paymentTransaction->reference_number = $bookingreferencenumber;
+                            $paymentTransaction->transaction_notes = "New payment added";
+                            $paymentTransaction->payment_status = now()->gt($paymentDate) ? 1 : 2;
+                        } else {
+                            $unitDetail = UnitDetail::where('id', $unitId)->first();
+    
+                            if ($unitDetail) {
+                                $propertyId = $unitDetail->property_id; // Get the property_id
+                            } else {
+                                // Handle case where no unit_detail is found for the given unit_id
+                                $propertyId = null;
+                            }
+    
+                            $leadUnit = LeadCustomerUnit::where('unit_id', $unitId)->first();
+    
+                            if ($leadUnit) {
+                                // Check for allocated_lead_id or allocated_customer_id
+                                if ($leadUnit->leads_customers_id) {
+                                    // If allocated_lead_id exists, set allocated_type to 1 (Lead)
+                                    $allocatedId = $leadUnit->leads_customers_id;
+                                } 
+                            } else {
+                                // Handle case where no LeadUnit is found for the given unit_id
+                                $allocatedId = null;
+                            }
+    
+                          
+    
+                        }
+    
+                        // Set the initial payment status
+    
+                        $paymentTransaction->save();
                     }
-
-                    // Set the initial payment status
-
+                }
+                else{
+                    $unitDetail = UnitDetail::where('id', $unitId)->first();
+    
+                    if ($unitDetail) {
+                        $propertyId = $unitDetail->property_id; // Get the property_id
+                    } else {
+                        // Handle case where no unit_detail is found for the given unit_id
+                        $propertyId = null;
+                    }
+                    //down payment adding if not
+                    $paymentTransaction = new PaymentTransaction();
+                    $paymentTransaction->unit_id = $unitId;
+                    $paymentTransaction->property_id = $propertyId;
+                    $paymentTransaction->leads_customers_id = $leadscustomerid;
+                    $paymentTransaction->booking_date = $paymentDate;
+                    $paymentTransaction->token_amt = $amount;
+                    $paymentTransaction->payment_status = 2;
+                    $paymentTransaction->payment_type = $bookingpaymenttype; // Use bookingpaymenttype for the first transaction
+                    $paymentTransaction->reference_number = $bookingreferencenumber; // Set reference number for first transaction
+                    $paymentTransaction->transaction_notes = 'Booking entry created';
                     $paymentTransaction->save();
                 }
+               
             }
 
 
