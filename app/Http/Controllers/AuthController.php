@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Log;
 class AuthController extends Controller
 {
 
-    public function generateAndSendOtp($mobile_number)
+    public function generateAndSendOtp($mobile_number,$flag)
     {
         try {
             $otp = rand(100000, 999999);
@@ -43,6 +43,7 @@ class AuthController extends Controller
                 // User::where('contact_no', $contact_no)->update(['name' =>$username]);
             } else {
                 $otpExpire = UserOtp::where('contact_no', $mobile_number)->where('expire_at', '<', now())->first();
+                $fetchotpuser=UserOtp::where('contact_no', $mobile_number)->first();
                 if ($otpExpire) {
                     $otpExpire->delete();
                 }
@@ -50,8 +51,18 @@ class AuthController extends Controller
                 $userOtp->otp = $otp;
                 $userOtp->contact_no = $mobile_number;
                 $userOtp->verified = false;
-                $userOtp->expire_at = now()->addMinutes(2);
+                if($flag==1){ //first setp when phone number adds then add minutes otherwise in resend time flag==2 dont add minutes
+                    $userOtp->expire_at = now()->addMinutes(3);
+                }else{
+                  if($fetchotpuser=="" && $flag==2){
+                    $userOtp->expire_at = now()->addMinutes(3);
+                  }
+                   
+                }
+                
                 $userOtp->save();
+
+               
                 // User::where('email', $email)->update(['name' =>$username]);
                 try {
                     // Mail::to($email)->send(new GetOtpMail($otp));
@@ -93,7 +104,7 @@ class AuthController extends Controller
             }
             // return $flag;
            
-            $response = $this->generateAndSendOtp($contact_no);
+            $response = $this->generateAndSendOtp($contact_no,$request->flag);
 
 
             if ($response == 'success') {
