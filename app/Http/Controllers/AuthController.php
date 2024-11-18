@@ -52,10 +52,10 @@ class AuthController extends Controller
                 $userOtp->contact_no = $mobile_number;
                 $userOtp->verified = false;
                 if($flag==1){ //first setp when phone number adds then add minutes otherwise in resend time flag==2 dont add minutes
-                    $userOtp->expire_at = now()->addMinutes(3);
+                    $userOtp->expire_at = now()->addMinutes(15);
                 }else{
                   if($fetchotpuser=="" && $flag==2){
-                    $userOtp->expire_at = now()->addMinutes(3);
+                    $userOtp->expire_at = now()->addMinutes(15);
                   }
                    
                 }
@@ -102,7 +102,7 @@ class AuthController extends Controller
                     $flag=0;
                 }
             }
-            // return $flag;
+
            
             $response = $this->generateAndSendOtp($contact_no,$request->flag);
 
