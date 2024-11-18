@@ -91,7 +91,7 @@ class AuthController extends Controller
                     $flag=0;
                 }
             }
-            return $flag;
+            // return $flag;
            
             $response = $this->generateAndSendOtp($contact_no);
 
