@@ -54,6 +54,8 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/add-edit-leads', [LeadController::class, 'addOrEditLeads']); 
     Route::post('/add-leads-csv', [LeadController::class, 'addLeadsCsv']); 
     Route::post('/lead-messages/send', [LeadController::class, 'sendBulkMessages']);
+    Route::get('/fetch-lead-intersted-booked-detail/{pid}/{lid}', [LeadController::class, 'fetchLeadInterestedBookedDetail']); 
+
     
     //wings call
     Route::post('/add-wing-details', [WingController::class, 'addWingDetails']);

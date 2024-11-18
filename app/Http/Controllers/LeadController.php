@@ -29,16 +29,16 @@ use Barryvdh\DomPDF\Facade as PDF;
 class LeadController extends Controller
 {
 
-    public function getLeads($pid,$flag,$skey, $sort, $sortbykey, $offset, $limit)
+    public function getLeads($pid, $flag, $skey, $sort, $sortbykey, $offset, $limit)
     {
-     // flag  1->allleads,2->members(customers),3->non members(interested leads)
+        // flag  1->allleads,2->members(customers),3->non members(interested leads)
 
         try {
             if ($pid != 'null') {
                 // Base query
                 $allLeads = LeadCustomer::with(['userproperty', 'leadSource', 'leadCustomerUnits.unit.wingDetail'])
                     ->where('property_id', $pid);
-    
+
                 // Apply filtering based on flag
                 if ($flag == 2) {
                     // Flag 2: Customers (entity_type = 2)
@@ -64,7 +64,7 @@ class LeadController extends Controller
                     // // Filter allLeads by interested lead IDs
                     // $allLeads->whereIn('id', $interestedLeadIds);
                 }
-    
+
                 // Apply search filter
                 if ($skey != 'null') {
                     $allLeads->where(function ($q) use ($skey) {
@@ -76,25 +76,25 @@ class LeadController extends Controller
                             });
                     });
                 }
-    
+
                 // Apply sorting
                 if ($sortbykey != 'null') {
                     if (in_array($sortbykey, ['name', 'email', 'contact_no'])) {
                         $allLeads->orderBy($sortbykey, $sort);
                     } elseif ($sortbykey == 'source') {
                         $allLeads->join('lead_sources', 'leads_customers.source_id', '=', 'lead_sources.id')
-                        ->orderBy('lead_sources.name', $sort);
+                            ->orderBy('lead_sources.name', $sort);
                     }
                 }
-    
+
                 // Paginate results
                 $allLeads = $allLeads->paginate($limit, ['*'], 'page', $offset);
-    
+
                 // Modify the response to include unit name and wing name at the top level
                 foreach ($allLeads as $lead) {
                     $lead->unit_name = null; // Default value
                     $lead->wing_name = null; // Default value
-    
+
                     if ($lead->leadCustomerUnits->isNotEmpty()) {
                         foreach ($lead->leadCustomerUnits as $leadUnit) {
                             if ($leadUnit->allocated_lead_id) {
@@ -107,7 +107,7 @@ class LeadController extends Controller
                         }
                     }
                 }
-    
+
                 return $allLeads;
             } else {
                 return null;
@@ -222,7 +222,7 @@ class LeadController extends Controller
             $notes = $request->input('notes');
 
 
-    
+
             if ($flag == 1) {
                 // Flag 1: Normal lead add
 
@@ -278,7 +278,7 @@ class LeadController extends Controller
                         ->where('id', '!=', $leadid)  // Exclude the current lead
                         ->first();
 
-                       
+
                     if ($duplicateLead) {
                         return response()->json([
                             'status' => 'error',
@@ -331,9 +331,63 @@ class LeadController extends Controller
                             'entity_type' => 1
                         ]);
 
+                        // Now handle the LeadUnit entry
+                        $existingUnit = LeadCustomerUnit::where('unit_id', $unit_id)->first();
+
+                        if ($existingUnit) {
+                            // Append the new lead ID to the interested_lead_id (comma-separated)
+                            // Convert the comma-separated string of IDs to an array
+                            $interestedLeadIds = explode(',', $existingUnit->interested_lead_id);
+
+                            // Check if the current lead ID is already in the array
+                            if (!in_array($lead->id, $interestedLeadIds)) {
+                                // Append the new lead ID only if it's not already in the array
+                                $interestedLeadIds[] = $lead->id;
+                                $existingUnit->interested_lead_id = implode(',', $interestedLeadIds);
+
+                                // Update the lead_unit entry
+                                $existingUnit->save();
+                            }
+                        } else {
+                            // Create a new lead_unit entry if no existing entry for the unit
+                            $existingUnit = LeadCustomerUnit::create([
+                                'interested_lead_id' => $lead->id,
+                                'leads_customers_id' => null,
+                                'unit_id' => $unit_id,
+                                'booking_status' => 2,
+                            ]);
+                        }
+
+
+
+                        // Now handle the LeadUnitData entry
+                        $leadUnitData = LeadCustomerUnitData::where('leads_customers_unit_id', $existingUnit->id)
+                            ->where('leads_customers_id', $lead->id)
+                            ->first();
+
+
+                        if ($leadUnitData) {
+                            // Update the budget if LeadUnitData exists
+                            $leadUnitData->update([
+                                'budget' => $budget,
+                            ]);
+                        } else {
+                            // Create a new LeadUnitData entry if it doesn't exist
+                            $leadcustomerunitdata = new LeadCustomerUnitData();
+                            $leadcustomerunitdata->leads_customers_unit_id = $existingUnit->id;
+                            $leadcustomerunitdata->leads_customers_id = $lead->id;
+                            $leadcustomerunitdata->budget = $budget;
+                            $leadcustomerunitdata->save();
+                            // LeadCustomerUnitData::create([
+                            //     'leads_customers_unit_id' => $existingUnit->id,
+                            //     'leads_customers_id' => $lead->id,
+                            //     'budget' => $budget,
+                            // ]);
+                        }
+
                         return response()->json([
                             'status' => 'success',
-                            'message' => 'Lead added successfully.',
+                            'message' => 'Lead added with unit successfully.',
                             'data' => $lead
                         ], 200);
                     } else {
@@ -348,54 +402,7 @@ class LeadController extends Controller
                     }
 
 
-                    // Now handle the LeadUnit entry
-                    $existingUnit = LeadCustomerUnit::where('unit_id', $unit_id)->first();
 
-                    if ($existingUnit) {
-                        // Append the new lead ID to the interested_lead_id (comma-separated)
-                        // Convert the comma-separated string of IDs to an array
-                        $interestedLeadIds = explode(',', $existingUnit->interested_lead_id);
-
-                        // Check if the current lead ID is already in the array
-                        if (!in_array($lead->id, $interestedLeadIds)) {
-                            // Append the new lead ID only if it's not already in the array
-                            $interestedLeadIds[] = $lead->id;
-                            $existingUnit->interested_lead_id = implode(',', $interestedLeadIds);
-
-                            // Update the lead_unit entry
-                            $existingUnit->save();
-                        }
-                    } else {
-                        // Create a new lead_unit entry if no existing entry for the unit
-                        $existingUnit = LeadCustomerUnit::create([
-                            'interested_lead_id' => $lead->id,
-                            'leads_customers_id' => null,
-                            'unit_id' => $unit_id,
-                            'booking_status' => 2,
-                        ]);
-                    }
-
-
-
-                    // Now handle the LeadUnitData entry
-                    $leadUnitData = LeadCustomerUnitData::where('leads_customers_unit_id', $existingUnit->id)
-                        ->where('leads_customers_id', $lead->id)
-                        ->first();
-
-
-                    if ($leadUnitData) {
-                        // Update the budget if LeadUnitData exists
-                        $leadUnitData->update([
-                            'budget' => $budget,
-                        ]);
-                    } else {
-                        // Create a new LeadUnitData entry if it doesn't exist
-                        LeadCustomerUnitData::create([
-                            'leads_customers_unit_id' => $existingUnit->id,
-                            'leads_customers_id' => $lead->id,
-                            'budget' => $budget,
-                        ]);
-                    }
 
                     // Return success response
                     return response()->json([
@@ -421,6 +428,59 @@ class LeadController extends Controller
                             'notes' => $notes,
                             'entity_type' => 1
                         ]);
+
+                        // Now handle the LeadUnit entry
+                        $existingUnit = LeadCustomerUnit::where('unit_id', $unit_id)->first();
+
+                        if ($existingUnit) {
+                            // Append the new lead ID to the interested_lead_id (comma-separated)
+                            // Convert the comma-separated string of IDs to an array
+                            $interestedLeadIds = explode(',', $existingUnit->interested_lead_id);
+
+                            // Check if the current lead ID is already in the array
+                            if (!in_array($lead->id, $interestedLeadIds)) {
+                                // Append the new lead ID only if it's not already in the array
+                                $interestedLeadIds[] = $lead->id;
+                                $existingUnit->interested_lead_id = implode(',', $interestedLeadIds);
+
+                                // Update the lead_unit entry
+                                $existingUnit->save();
+                            }
+                        } else {
+                            // Create a new lead_unit entry if no existing entry for the unit
+                            $existingUnit = LeadCustomerUnit::create([
+                                'interested_lead_id' => $lead->id,
+                                'leads_customers_id' => null,
+                                'unit_id' => $unit_id,
+                                'booking_status' => 2,
+                            ]);
+                        }
+
+
+                        // Now handle the LeadUnitData entry
+                        $leadUnitData = LeadCustomerUnitData::where('leads_customers_unit_id', $existingUnit->id)
+                            ->where('leads_customers_id', $lead->id)
+                            ->first();
+
+                        if ($leadUnitData) {
+                            // Update the budget if LeadUnitData exists
+                            $leadUnitData->update([
+                                'budget' => $budget,
+                            ]);
+                        } else {
+                            // Create a new LeadUnitData entry if it doesn't exist
+                            $leadcustomerunitdata = new LeadCustomerUnitData();
+                            $leadcustomerunitdata->leads_customers_unit_id = $existingUnit->id;
+                            $leadcustomerunitdata->leads_customers_id = $lead->id;
+                            $leadcustomerunitdata->budget = $budget;
+                            $leadcustomerunitdata->save();
+                            // LeadCustomerUnitData::create([
+                            //     'leads_customers_unit_id' => $existingUnit->id,
+                            //     'leads_customers_id' => $lead->id,
+                            //     'budget' => $budget,
+                            // ]);
+                        }
+
                         return response()->json([
                             'status' => 'success',
                             'message' => 'Lead added with unit successfully',
@@ -436,52 +496,7 @@ class LeadController extends Controller
                         ], 200);
                     }
 
-                    // Now handle the LeadUnit entry
-                    $existingUnit = LeadCustomerUnit::where('unit_id', $unit_id)->first();
 
-                    if ($existingUnit) {
-                        // Append the new lead ID to the interested_lead_id (comma-separated)
-                        // Convert the comma-separated string of IDs to an array
-                        $interestedLeadIds = explode(',', $existingUnit->interested_lead_id);
-
-                        // Check if the current lead ID is already in the array
-                        if (!in_array($lead->id, $interestedLeadIds)) {
-                            // Append the new lead ID only if it's not already in the array
-                            $interestedLeadIds[] = $lead->id;
-                            $existingUnit->interested_lead_id = implode(',', $interestedLeadIds);
-
-                            // Update the lead_unit entry
-                            $existingUnit->save();
-                        }
-                    } else {
-                        // Create a new lead_unit entry if no existing entry for the unit
-                        $existingUnit = LeadCustomerUnit::create([
-                            'interested_lead_id' => $lead->id,
-                            'leads_customers_id' => null,
-                            'unit_id' => $unit_id,
-                            'booking_status' => 2,
-                        ]);
-                    }
-
-
-                    // Now handle the LeadUnitData entry
-                    $leadUnitData = LeadCustomerUnitData::where('leads_customers_unit_id', $existingUnit->id)
-                        ->where('leads_customers_id', $lead->id)
-                        ->first();
-
-                    if ($leadUnitData) {
-                        // Update the budget if LeadUnitData exists
-                        $leadUnitData->update([
-                            'budget' => $budget,
-                        ]);
-                    } else {
-                        // Create a new LeadUnitData entry if it doesn't exist
-                        LeadCustomerUnitData::create([
-                            'leads_customers_unit_id' => $existingUnit->id,
-                            'leads_customers_id' => $lead->id,
-                            'budget' => $budget,
-                        ]);
-                    }
 
                     // Return success response
                     return response()->json([
@@ -527,7 +542,7 @@ class LeadController extends Controller
             // Open the CSV file
             $csvFile = fopen($file, 'r');
             $header = fgetcsv($csvFile);
-            $expectedHeaders = ['name', 'email(optional)', 'contact', 'source','notes(optional)'];
+            $expectedHeaders = ['name', 'email(optional)', 'contact', 'source', 'notes(optional)'];
             $escapedHeader = [];
 
             foreach ($header as $value) {
@@ -537,7 +552,7 @@ class LeadController extends Controller
             }
 
             // Define the expected headers in the same format
-            $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source','notes'];
+            $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source', 'notes'];
 
             // Validate CSV headers
             if (array_diff($normalizedExpectedHeaders, $escapedHeader)) {
@@ -711,8 +726,8 @@ class LeadController extends Controller
     {
         try {
             // Validate client_id and client_secret
-            $client_id = $request->header('client_id');
-            $client_secret_key = $request->header('client_secret_key');
+            $client_id = $request->query('client_id');
+            $client_secret_key = $request->query('client_secret_key');
 
             // Check if client_id and client_secret are provided
             if (!$client_id || !$client_secret_key) {
@@ -842,13 +857,32 @@ class LeadController extends Controller
 
             // Step 2: Referrer validation
             $referer = $request->header('referer'); // Get referer from headers
-            $allowedDomains = [env('APP_FRONTEND_URL'), '127.0.0.1', 'localhost'];
+
+            // $referer="http://superbuildup.s3-website.ap-south-1.amazonaws.com/";
+            //env('APP_FRONTEND_URL')= http://superbuildup.s3-website.ap-south-1.amazonaws.com/
+            // $allowedDomains = [env('APP_FRONTEND_URL'), '127.0.0.1', 'localhost'];
+
+
+            $frontendUrl = env('APP_FRONTEND_URL');
+
+            // Normalize the domain by extracting the host part
+            $refererHost = parse_url($referer, PHP_URL_HOST);
+            $frontendHost = parse_url($frontendUrl, PHP_URL_HOST);
+
+            $allowedDomains = [$frontendHost, '127.0.0.1', 'localhost'];
+
+            if (!$referer || !in_array($refererHost, $allowedDomains)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unauthorized domain.',
+                ], 200);
+            }
 
             if (!$referer || !in_array(parse_url($referer, PHP_URL_HOST), $allowedDomains)) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Unauthorized domain.',
-                ], 403);
+                ], 200);
             }
 
             // Step 3: Validate form inputs
@@ -915,5 +949,86 @@ class LeadController extends Controller
         }
     }
 
-   
+    public function fetchLeadInterestedBookedDetail($pid, $lid)
+    {
+        try {
+            if ($pid != 'null') {
+
+                // Fetch Lead Customer details
+                // Get the lead customer details based on property ID and lead ID
+                $leadcustomerdetails = LeadCustomer::with(['leadCustomerUnits.unit', 'leadCustomerUnits.paymentTransaction', 'leadCustomerUnits.leadCustomer', 'leadCustomerUnits.leadCustomerUnitData'])
+                    ->where('property_id', $pid)
+                    ->where('id', $lid)
+                    ->first();
+
+                if ($leadcustomerdetails) {
+                    // Initialize arrays for interested and booked units
+                    $interestedLeads = [];
+                    $bookedDetails = [];
+
+                    // Loop through the lead customer's units
+                    foreach ($leadcustomerdetails->leadCustomerUnits as $unit) {
+                        // Interested leads (unit interests)
+                        $interestedLeads[] = [
+                            'wing_name' => $unit->unit->wingDetail->name ?? 'N/A',
+                            'unit_name' => $unit->unit->name,
+                            'lead_name' => $unit->leadCustomer->name,
+                            'budget' => $unit->leadCustomerUnitData->pluck('budget')->first() ?? 'N/A',
+                        ];
+
+                        // Booked units (booking details)
+                        if ($unit->paymentTransaction) {
+                            $bookedDetails[] = [
+                                'wing_name' => $unit->unit->wingDetail->name ?? 'N/A',
+                                'unit_name' => $unit->unit->name,
+                                'customer_name' => $unit->leadCustomer->name,
+                                'unit_price' => $unit->unit->price,
+                                'total_paid_amount' => $unit->paymentTransaction->amount ?? 0,
+                                'booking_date' => $unit->paymentTransaction->booking_date,
+                            ];
+                        }
+                    }
+
+                    // Return the response with the lead customer details, interested units, and booked units inside one object
+                    return response()->json([
+                        'leadcustomerdetails' => [
+                            'id' => $leadcustomerdetails->id,
+                            'property_id' => $leadcustomerdetails->property_id,
+                            'name' => $leadcustomerdetails->name,
+                            'email' => $leadcustomerdetails->email,
+                            'contact_no' => $leadcustomerdetails->contact_no,
+                            'source_id' => $leadcustomerdetails->source_id,
+                            'status' => $leadcustomerdetails->status,
+                            'type' => $leadcustomerdetails->type,
+                            'entity_type' => $leadcustomerdetails->entity_type,
+                            'notes' => $leadcustomerdetails->notes,
+                            'created_at' => $leadcustomerdetails->created_at,
+                            'updated_at' => $leadcustomerdetails->updated_at,
+                            'interested_units' => $interestedLeads,
+                            'booked_units' => $bookedDetails,
+                        ],
+                    ], 200);
+                } else {
+                    return response()->json([
+                        'leadcustomerdetails' => null,
+                    ], 200);
+                }
+            } else {
+                return response()->json([
+                    'leadcustomerdetails' => null,
+                ], 200);
+            }
+        } catch (Exception $e) {
+            // Log the error
+            $errorFrom = 'fetchLeadInterestedBookedDetail';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
 }
