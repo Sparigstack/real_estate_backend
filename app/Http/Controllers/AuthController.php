@@ -79,17 +79,19 @@ class AuthController extends Controller
             $contact_no=$request->mobile_number;
             // $checkUser = User::where('contact_no', $validatedData['contact_no'])->first();
             $checkUserDetails = UserOtp::withTrashed()->where('contact_no', $contact_no)->first();
+            $ifUser=User::where('contact_no', $contact_no)->first();
           
             if($checkUserDetails==""){
                 $flag=0;
             }else if($checkUserDetails){
                 $verifiedStatus = $checkUserDetails->verified;
-                if( $verifiedStatus==1){
+                if( $verifiedStatus==1 || $ifUser){
                     $flag=1;
                 }else{
                     $flag=0;
                 }
             }
+            return $flag;
            
             $response = $this->generateAndSendOtp($contact_no);
 
