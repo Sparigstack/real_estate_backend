@@ -995,16 +995,21 @@ class LeadController extends Controller
                     $totalPaidAmount = 0;
                 
                     foreach ($paymentTransactions as $index => $transaction) {
-                        if ($index === 0) {
-                            // Add the token amount from the first transaction
-                            $totalPaidAmount += $transaction->token_amt;
-                        } else {
-                            // Add the next payable amount from subsequent transactions
-                            $totalPaidAmount += $transaction->next_payable_amt;
+                        if ($transaction->payment_status == 2) { // Only include payments where status is 2
+                            if ($index == 0) {
+                                // Add the token amount from the first transaction
+                                $totalPaidAmount += $transaction->token_amt;
+                            } else {
+                                // Add the next payable amount from subsequent transactions
+                                $totalPaidAmount += $transaction->next_payable_amt;
+                            }
                         }
                     }
-                       
-                        if ($unit->paymentTransaction) {
+                    $bookedUnits = LeadCustomerUnit::where(function ($query) use ($lid) {
+                        $query->where('leads_customers_id', $lid)
+                            ->orWhereRaw('FIND_IN_SET(?, leads_customers_id)', [$lid]);
+                    })->with(['unit.wingDetail', 'leadCustomerUnitData'])->get();
+                        if ($unit->paymentTransaction || $bookedUnits) {
                             $bookedDetails[] = [
                                 'wing_name' => $unit->unit->wingDetail->name,
                                 'unit_name' => $unit->unit->name,
