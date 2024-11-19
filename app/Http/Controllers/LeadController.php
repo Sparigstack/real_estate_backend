@@ -1035,8 +1035,6 @@ class LeadController extends Controller
                             'type' => $leadcustomerdetails->type,
                             'entity_type' => $leadcustomerdetails->entity_type,
                             'notes' => $leadcustomerdetails->notes ??  null,
-                            'created_at' => $leadcustomerdetails->created_at,
-                            'updated_at' => $leadcustomerdetails->updated_at,
                             'interested_units' => $interestedLeads,
                             'booked_units' => $bookedDetails,
                         ],
