@@ -11,6 +11,7 @@ use App\Models\LeadCustomer;
 use App\Models\LeadCustomerUnit;
 use App\Models\LeadCustomerUnitData;
 use App\Models\LeadSource;
+use App\Models\PaymentTransaction;
 use App\Models\Property;
 use App\Models\UserProperty;
 use App\Models\User;
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Barryvdh\DomPDF\Facade as PDF;
+
 
 
 
@@ -966,25 +968,50 @@ class LeadController extends Controller
                     $interestedLeads = [];
                     $bookedDetails = [];
 
+                    // Fetch interested leads where this lead is marked as interested_lead_id
+                    $interestedUnits = LeadCustomerUnit::where(function ($query) use ($lid) {
+                        $query->where('interested_lead_id', $lid)
+                            ->orWhereRaw('FIND_IN_SET(?, interested_lead_id)', [$lid]);
+                    })->with(['unit.wingDetail', 'leadCustomerUnitData'])->get();
+
+                    foreach ($interestedUnits as $unit) {
+                        $interestedLeads[] = [
+                            'wing_name' => $unit->unit->wingDetail->name ?? null,
+                            'unit_name' => $unit->unit->name ?? null,
+                            'lead_name' => $unit->leadCustomer->name ?? null,
+                            'budget' => $unit->leadCustomerUnitData->pluck('budget')->first() ?? null,
+                        ];
+                    }
+
                     // Loop through the lead customer's units
                     foreach ($leadcustomerdetails->leadCustomerUnits as $unit) {
-                        // Interested leads (unit interests)
-                        $interestedLeads[] = [
-                            'wing_name' => $unit->unit->wingDetail->name ?? 'N/A',
-                            'unit_name' => $unit->unit->name,
-                            'lead_name' => $unit->leadCustomer->name,
-                            'budget' => $unit->leadCustomerUnitData->pluck('budget')->first() ?? 'N/A',
-                        ];
-
                         // Booked units (booking details)
+                        $paymentTransactions = PaymentTransaction::where('unit_id', $unit->unit_id)
+                        ->where('leads_customers_id', $unit->leadCustomer->id)
+                        ->orderBy('id', 'asc') // Ensure the first transaction is first in the results
+                        ->get();
+                
+                    // Calculate the total paid amount
+                    $totalPaidAmount = 0;
+                
+                    foreach ($paymentTransactions as $index => $transaction) {
+                        if ($index === 0) {
+                            // Add the token amount from the first transaction
+                            $totalPaidAmount += $transaction->token_amt;
+                        } else {
+                            // Add the next payable amount from subsequent transactions
+                            $totalPaidAmount += $transaction->next_payable_amt;
+                        }
+                    }
+                       
                         if ($unit->paymentTransaction) {
                             $bookedDetails[] = [
-                                'wing_name' => $unit->unit->wingDetail->name ?? 'N/A',
+                                'wing_name' => $unit->unit->wingDetail->name,
                                 'unit_name' => $unit->unit->name,
                                 'customer_name' => $unit->leadCustomer->name,
-                                'unit_price' => $unit->unit->price,
-                                'total_paid_amount' => $unit->paymentTransaction->amount ?? 0,
-                                'booking_date' => $unit->paymentTransaction->booking_date,
+                                'unit_price' => $unit->unit->price ?? 0,
+                                'total_paid_amount' => $totalPaidAmount ?? 0,
+                                'booking_date' => $unit->paymentTransaction->booking_date ?? null,
                             ];
                         }
                     }
@@ -995,13 +1022,14 @@ class LeadController extends Controller
                             'id' => $leadcustomerdetails->id,
                             'property_id' => $leadcustomerdetails->property_id,
                             'name' => $leadcustomerdetails->name,
-                            'email' => $leadcustomerdetails->email,
+                            'email' => $leadcustomerdetails->email ?? null,
                             'contact_no' => $leadcustomerdetails->contact_no,
                             'source_id' => $leadcustomerdetails->source_id,
+                            'source_name' => $leadcustomerdetails->leadSource->name ?? null, // Add lead source name
                             'status' => $leadcustomerdetails->status,
                             'type' => $leadcustomerdetails->type,
                             'entity_type' => $leadcustomerdetails->entity_type,
-                            'notes' => $leadcustomerdetails->notes,
+                            'notes' => $leadcustomerdetails->notes ??  null,
                             'created_at' => $leadcustomerdetails->created_at,
                             'updated_at' => $leadcustomerdetails->updated_at,
                             'interested_units' => $interestedLeads,
