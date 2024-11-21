@@ -434,36 +434,36 @@ class UnitController extends Controller
 
 
                  // Validate the series for all floors
-        foreach ($floorDetails as $floorIndex => $floor) {
-            // Validate floor-wise incrementing logic
-            $firstUnitOnFloor = $floor['unit_details'][0]['name'];
-            $firstUnitOnFloorNum = (int) filter_var($firstUnitOnFloor, FILTER_SANITIZE_NUMBER_INT);
-            
-            // Check if the first unit on the floor follows the series pattern of the first floor's first unit
-            if (substr($firstUnitOnFloor, 0, strlen($seriesBase)) !== $seriesBase) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => "Invalid unit series increment on Floor {$floor['floorId']}. Series should start with '{$seriesBase}' and not '{$firstUnitOnFloor}'.",
-                ], 200);
-            }
-
-            // Validate unit-wise increment for this floor
-            for ($i = 0; $i < count($floor['unit_details']); $i++) {
-                $unitName = $floor['unit_details'][$i]['name'];
-                $unitNum = (int) filter_var($unitName, FILTER_SANITIZE_NUMBER_INT);
+            foreach ($floorDetails as $floorIndex => $floor) {
+                // Validate floor-wise incrementing logic
+                $firstUnitOnFloor = $floor['unit_details'][0]['name'];
+                $firstUnitOnFloorNum = (int) filter_var($firstUnitOnFloor, FILTER_SANITIZE_NUMBER_INT);
                 
-                // Check if each unit's number follows the correct increment pattern
-                if ($i > 0) {
-                    $prevUnitNum = (int) filter_var($floor['unit_details'][$i - 1]['name'], FILTER_SANITIZE_NUMBER_INT);
-                    if ($unitNum !== $prevUnitNum + 1) {
-                        return response()->json([
-                            'status' => 'error',
-                            'message' => "Invalid unit increment on Floor {$floor['floorId']}. Unit '{$unitName}' is incorrectly incremented.",
-                        ], 200);
+                // Check if the first unit on the floor follows the series pattern of the first floor's first unit
+                if (substr($firstUnitOnFloor, 0, strlen($seriesBase)) !== $seriesBase) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Invalid unit series increment on Floor {$floor['floorId']}. Series should start with '{$seriesBase}' and not '{$firstUnitOnFloor}'.",
+                    ], 400);
+                }
+
+                // Validate unit-wise increment for this floor
+                for ($i = 0; $i < count($floor['unit_details']); $i++) {
+                    $unitName = $floor['unit_details'][$i]['name'];
+                    $unitNum = (int) filter_var($unitName, FILTER_SANITIZE_NUMBER_INT);
+                    
+                    // Check if each unit's number follows the correct increment pattern
+                    if ($i > 0) {
+                        $prevUnitNum = (int) filter_var($floor['unit_details'][$i - 1]['name'], FILTER_SANITIZE_NUMBER_INT);
+                        if ($unitNum !== $prevUnitNum + 1) {
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => "Invalid unit increment on Floor {$floor['floorId']}. Unit '{$unitName}' is incorrectly incremented.",
+                            ], 400);
+                        }
                     }
                 }
             }
-        }
 
             // Loop through all floors and update units
             foreach ($allFloors as $floorIndex => $floor) {
