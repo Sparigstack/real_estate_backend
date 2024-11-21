@@ -419,6 +419,28 @@ class UnitController extends Controller
             $seriesBase = preg_replace('/\d+$/', '', $startingSeries); // Extract the series base, e.g., ""
             $unitIndexStart = (int) filter_var($startingSeries, FILTER_SANITIZE_NUMBER_INT); // Extract the number part, e.g., 101 -> 101
     
+
+
+        //      // Determine the gap based on the number of digits in the first unit
+        // $unitLength = strlen((string)$unitIndexStart);
+        // $gap = 0;
+        
+
+        // switch ($unitLength) {
+        //     case 1:
+        //     case 2:
+        //         $gap = 10;  // Single or double digit units
+        //         break;
+        //     case 3:
+        //         $gap = 100;  // Triple digit units
+        //         break;
+        //     case 4:
+        //         $gap = 1000; // Quadruple digit units
+        //         break;
+        //     default:
+        //         throw new \Exception("Invalid unit number length.");
+        // }
+
             // Determine the gap between floors using the first unit of the first two floors
             $floorIndexGap = count($floorDetails) > 1
                 ? (int) filter_var($floorDetails[1]['unit_details'][0]['name'], FILTER_SANITIZE_NUMBER_INT) -
@@ -443,7 +465,7 @@ class UnitController extends Controller
                 if (substr($firstUnitOnFloor, 0, strlen($seriesBase)) !== $seriesBase) {
                     return response()->json([
                         'status' => 'error',
-                        'message' => "Invalid unit series increment on Floor {$floor['floorId']}. Series should start with '{$seriesBase}' and not '{$firstUnitOnFloor}'.",
+                        'message' => "Invalid unit series increment on Floor ." ($floorIndex + 1) . ". Series should start with '{$seriesBase}' and not '{$firstUnitOnFloor}'.",
                     ], 400);
                 }
 
