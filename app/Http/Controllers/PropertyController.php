@@ -373,6 +373,13 @@ class PropertyController extends Controller
     {
         try {
             if ($pid != 'null') {
+
+                $fetchWings = WingDetail::with(['unitDetails', 'floorDetails']) // Eager load unit details
+                ->where('property_id', $pid)
+                ->get();
+
+               
+
                 $propertyDetails = UserProperty::where('id', $pid)->first();
                 // return $propertyDetails;
 
@@ -387,6 +394,27 @@ class PropertyController extends Controller
                     $propertyDetails->wingsflag = $wingsflag;
                     $propertyDetails->property_name = $propertyDetails->property->name ?? null;
 
+
+                    if ($fetchWings->isNotEmpty()) {
+                        // Update the response structure with actual data
+                        $propertyDetails->building_wings_count = $fetchWings->count();
+                        $propertyDetails->total_units= $fetchWings->sum(function ($wing) {
+                            return $wing->unitDetails->count(); // Count of units for each wing
+                        });
+    
+                    }
+
+
+                    $propertyDetails['wing_details'] = $fetchWings->map(function ($wing) {
+                        return [
+                            'id' => $wing->id,
+                            'name' => $wing->name,
+                            'total_floors' => $wing->total_floors,
+                            'total_units_in_wing' => $wing->unitDetails->count(), // Count units in this wing
+                        ];
+                    });
+
+                    unset($propertyDetails->wingDetails);
                     return $propertyDetails;
                 } else {
                     return null;

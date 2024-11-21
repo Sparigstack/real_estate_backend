@@ -413,51 +413,48 @@ class UnitController extends Controller
             $propertyId = $request->input('propertyId');
             $wingId = $request->input('wingId');
             $floorDetails = $request->input('floordetails');
-
+    
             // Retrieve all floors for the given wing
             $allFloors = FloorDetail::where('wing_id', $wingId)
                 ->where('property_id', $propertyId)
                 ->orderBy('id', 'asc')
                 ->get();
-
-            // Map unit naming series from the request JSON
-            $startingSeries = $floorDetails[0]['unit_details'][0]['name']; // Assuming the first unit sets the series base
-            $seriesBase = preg_replace('/\d+$/', '', $startingSeries); // Extract the series base
-            $unitIndexStart = (int) filter_var($startingSeries, FILTER_SANITIZE_NUMBER_INT); // Extract initial number
-            $unitsPerFloor = count($floorDetails[0]['unit_details']); // Units provided per floor in the request
-            $floorIndexGap = (int) filter_var($floorDetails[1]['unit_details'][0]['name'], FILTER_SANITIZE_NUMBER_INT) -
+    
+            // Retrieve the series base and initial starting number from the first unit of the first floor
+            $startingSeries = $floorDetails[0]['unit_details'][0]['name']; // First unit of the first floor
+            $seriesBase = preg_replace('/\d+$/', '', $startingSeries); // Extract the non-numeric prefix
+            $unitIndexStart = (int) filter_var($startingSeries, FILTER_SANITIZE_NUMBER_INT); // Extract the numeric part
+    
+            // Calculate the increment gap between floors
+            $floorIncrementGap = (int) filter_var($floorDetails[1]['unit_details'][0]['name'], FILTER_SANITIZE_NUMBER_INT) -
                 (int) filter_var($floorDetails[0]['unit_details'][0]['name'], FILTER_SANITIZE_NUMBER_INT);
-
-
-            $this->validateIncrement($floorDetails[0]['unit_details'], $unitIndexStart);
-            return;
-            
-            // Loop through all floors
+    
+            // Loop through all floors and update units
             foreach ($allFloors as $floorIndex => $floor) {
                 $floorId = $floor->id;
-
+    
                 // Retrieve all units for this floor
                 $units = UnitDetail::where('floor_id', $floorId)
                     ->where('wing_id', $wingId)
                     ->where('property_id', $propertyId)
                     ->orderBy('id', 'asc')
                     ->get();
-
+    
                 // Calculate the starting index for this floor
-                $floorStartIndex = $unitIndexStart + ($floorIndex * $floorIndexGap);
-
-                // Loop through all units and assign names
+                $floorStartIndex = $unitIndexStart + ($floorIndex * $floorIncrementGap);
+    
+                // Update each unit with the calculated name
                 foreach ($units as $unitIndex => $unit) {
                     $unitName = $seriesBase . ($floorStartIndex + $unitIndex);
-
-                    // Update the database record for the unit
+    
+                    // Update the unit in the database
                     $unit->update([
                         'name' => $unitName,
                         'updated_at' => now(),
                     ]);
                 }
             }
-
+    
             return response()->json([
                 'status' => 'success',
                 'message' => 'Unit series numbers updated successfully.',
