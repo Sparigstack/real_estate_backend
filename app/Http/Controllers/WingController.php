@@ -225,67 +225,78 @@ class WingController extends Controller
             $wingId = $request->input('wingId');
             $propertyId = $request->input('propertyId');
             $sameUnitCount = $request->input('sameUnitCount');
-
+    
             $floorCountOfWing = WingDetail::where('id', $wingId)->pluck('total_floors')->first();
             WingDetail::where('id', $wingId)->update(['total_floors' => $floorCountOfWing + $numberOfFloors]);
-
-
+    
             $floorCountOfWing = $floorCountOfWing + 1;
-
-            // Retrieve the last floor's unit details to calculate the starting unit number for the new floor
-                $lastFloor = FloorDetail::where('wing_id', $wingId)
+    
+            // Check if there are any existing floors
+            $lastFloor = FloorDetail::where('wing_id', $wingId)
                 ->orderBy('id', 'desc')
                 ->first();
-            $lastFloorUnits = $lastFloor ? UnitDetail::where('floor_id', $lastFloor->id)->get() : [];
-
+    
             $lastUnitNumber = 0;
-            $unitGap = 0; // The gap between floors (10, 100, 1000, etc.)
-
-            if (count($lastFloorUnits) > 0) {
-                // Get the last unit number of the previous floor
-                $lastUnitName = $lastFloorUnits->last()->name;
-                $lastUnitNumber = (int) filter_var($lastUnitName, FILTER_SANITIZE_NUMBER_INT);
-
-                // Calculate the gap based on the number of digits in the last unit number
-                $lastUnitLength = strlen($lastUnitNumber);
-                switch ($lastUnitLength) {
-                    case 1:
-                        $unitGap = 10;
-                        break;
-                    case 2:
-                        $unitGap = 10;
-                        break;
-                    case 3:
-                        $unitGap = 100;
-                        break;
-                    case 4:
-                        $unitGap = 1000;
-                        break;
-                    default:
-                        $unitGap = 10; // Default case, in case of other unexpected scenarios
-                        break;
+            $unitGap = 10; // Default gap (for first time)
+    
+            $lastFloorexists=false;
+            if ($lastFloor) {
+                $lastFloorexists=true;
+                // Retrieve the last floor's unit details if any exist
+                $lastFloorUnits = UnitDetail::where('floor_id', $lastFloor->id)->get();
+                
+               
+                if (count($lastFloorUnits) > 0) {
+                    // Get the last unit number of the previous floor
+                    $lastUnitName = $lastFloorUnits->first()->name;
+                  
+                    $lastUnitNumber = (int) filter_var($lastUnitName, FILTER_SANITIZE_NUMBER_INT);
+    
+                    // Calculate the gap based on the number of digits in the last unit number
+                    $lastUnitLength = strlen($lastUnitNumber);
+                    switch ($lastUnitLength) {
+                        case 1:
+                        case 2:
+                            $unitGap = 10;
+                            break;
+                        case 3:
+                            $unitGap = 100; //Default gap in case of unexpected scenarios
+                            break;
+                        case 4:
+                            $unitGap = 1000;
+                            break;
+                        default:
+                            $unitGap = 10; 
+                            break;
+                    }
                 }
             }
-
+    
+            // Add the floors
             for ($floorNumber = 1; $floorNumber <= $numberOfFloors; $floorNumber++) {
                 $floorDetail = new FloorDetail();
                 $floorDetail->property_id = $propertyId;
                 $floorDetail->wing_id = $wingId;
                 $floorDetail->save();
-
+    
                 $startingUnitNumber = $lastUnitNumber + $unitGap;
-
+    
                 if ($sameUnitsFlag == 1) {
+                    // Add units if the flag is set for same units on each floor
                     for ($unitIndex = 1; $unitIndex <= $sameUnitCount; $unitIndex++) {
                         $unitDetail = new UnitDetail();
                         $unitDetail->property_id = $propertyId;
                         $unitDetail->wing_id = $wingId;
                         $unitDetail->floor_id = $floorDetail->id;
-                        $unitDetail->name = ($startingUnitNumber + $unitIndex - 1);
-                        // $unitDetail->name = sprintf('%d%02d', $floorCountOfWing, $startingUnitNumber + $unitIndex - 1);
+                        if($lastFloorexists==false){
+                            $unitDetail->name = sprintf('%d%02d', $floorCountOfWing, $unitIndex);
+                        }else{
+                            $unitDetail->name = ($startingUnitNumber + $unitIndex - 1);
+                        }
                         $unitDetail->save();
                     }
                 } else {
+                    // Add units based on provided unit details for each floor
                     foreach ($unitDetails as $unit) {
                         if ($unit['floorNo'] == $floorNumber) {
                             for ($unitIndex = 1; $unitIndex <= $unit['unitCount']; $unitIndex++) {
@@ -293,20 +304,24 @@ class WingController extends Controller
                                 $unitDetail->property_id = $propertyId;
                                 $unitDetail->wing_id = $wingId;
                                 $unitDetail->floor_id = $floorDetail->id;
-                                $unitDetail->name =($startingUnitNumber + $unitIndex - 1);
-                                // $unitDetail->name = sprintf('%d%02d', $floorCountOfWing, $startingUnitNumber + $unitIndex - 1);
+                                if($lastFloorexists==false){
+                                    $unitDetail->name = sprintf('%d%02d', $floorCountOfWing, $unitIndex);
+                                }else{
+                                    $unitDetail->name = ($startingUnitNumber + $unitIndex - 1);
+                                }
                                 $unitDetail->save();
                             }
                         }
                     }
                 }
+    
                 $floorCountOfWing++;
                 $lastUnitNumber = $startingUnitNumber + $unitIndex - 1;
             }
-
+    
             return response()->json([
                 'status' => 'success',
-                'message' => null,
+                'message' => 'Floor details added successfully.',
             ], 200);
         } catch (\Exception $e) {
             $errorFrom = 'AddWingsFloorDetails';
