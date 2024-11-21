@@ -458,8 +458,8 @@ class UnitController extends Controller
                         if ($unitNum !== $prevUnitNum + 1) {
                             return response()->json([
                                 'status' => 'error',
-                                'message' => "Invalid unit increment on Floor {$floor['floorId']}. Unit '{$unitName}' is incorrectly incremented.",
-                            ], 400);
+                                'message' => "Invalid unit increment on Floor " . ($floorIndex + 1) . ". Unit '{$unitName}' is incorrectly incremented.",
+                            ], 200);
                         }
                     }
                 }
