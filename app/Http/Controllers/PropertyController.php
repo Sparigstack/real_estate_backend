@@ -402,6 +402,9 @@ class PropertyController extends Controller
                             return $wing->unitDetails->count(); // Count of units for each wing
                         });
     
+                    }else{
+                        $propertyDetails->building_wings_count = 0;
+                        $propertyDetails->total_units=0
                     }
 
 

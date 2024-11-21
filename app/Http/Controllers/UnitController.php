@@ -414,21 +414,57 @@ class UnitController extends Controller
             $wingId = $request->input('wingId');
             $floorDetails = $request->input('floordetails');
     
+            // Use only the first unit of the first floor to determine the series base
+            $startingSeries = $floorDetails[0]['unit_details'][0]['name']; // Example: "101"
+            $seriesBase = preg_replace('/\d+$/', '', $startingSeries); // Extract the series base, e.g., ""
+            $unitIndexStart = (int) filter_var($startingSeries, FILTER_SANITIZE_NUMBER_INT); // Extract the number part, e.g., 101 -> 101
+    
+            // Determine the gap between floors using the first unit of the first two floors
+            $floorIndexGap = count($floorDetails) > 1
+                ? (int) filter_var($floorDetails[1]['unit_details'][0]['name'], FILTER_SANITIZE_NUMBER_INT) -
+                  (int) filter_var($floorDetails[0]['unit_details'][0]['name'], FILTER_SANITIZE_NUMBER_INT)
+                : 0;
+    
             // Retrieve all floors for the given wing
             $allFloors = FloorDetail::where('wing_id', $wingId)
                 ->where('property_id', $propertyId)
                 ->orderBy('id', 'asc')
                 ->get();
     
-            // Retrieve the series base and initial starting number from the first unit of the first floor
-            $startingSeries = $floorDetails[0]['unit_details'][0]['name']; // First unit of the first floor
-            $seriesBase = preg_replace('/\d+$/', '', $startingSeries); // Extract the non-numeric prefix
-            $unitIndexStart = (int) filter_var($startingSeries, FILTER_SANITIZE_NUMBER_INT); // Extract the numeric part
-    
-            // Calculate the increment gap between floors
-            $floorIncrementGap = (int) filter_var($floorDetails[1]['unit_details'][0]['name'], FILTER_SANITIZE_NUMBER_INT) -
-                (int) filter_var($floorDetails[0]['unit_details'][0]['name'], FILTER_SANITIZE_NUMBER_INT);
-    
+
+
+                 // Validate the series for all floors
+        foreach ($floorDetails as $floorIndex => $floor) {
+            // Validate floor-wise incrementing logic
+            $firstUnitOnFloor = $floor['unit_details'][0]['name'];
+            $firstUnitOnFloorNum = (int) filter_var($firstUnitOnFloor, FILTER_SANITIZE_NUMBER_INT);
+            
+            // Check if the first unit on the floor follows the series pattern of the first floor's first unit
+            if (substr($firstUnitOnFloor, 0, strlen($seriesBase)) !== $seriesBase) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Invalid unit series increment on Floor {$floor['floorId']}. Series should start with '{$seriesBase}' and not '{$firstUnitOnFloor}'.",
+                ], 200);
+            }
+
+            // Validate unit-wise increment for this floor
+            for ($i = 0; $i < count($floor['unit_details']); $i++) {
+                $unitName = $floor['unit_details'][$i]['name'];
+                $unitNum = (int) filter_var($unitName, FILTER_SANITIZE_NUMBER_INT);
+                
+                // Check if each unit's number follows the correct increment pattern
+                if ($i > 0) {
+                    $prevUnitNum = (int) filter_var($floor['unit_details'][$i - 1]['name'], FILTER_SANITIZE_NUMBER_INT);
+                    if ($unitNum !== $prevUnitNum + 1) {
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => "Invalid unit increment on Floor {$floor['floorId']}. Unit '{$unitName}' is incorrectly incremented.",
+                        ], 200);
+                    }
+                }
+            }
+        }
+
             // Loop through all floors and update units
             foreach ($allFloors as $floorIndex => $floor) {
                 $floorId = $floor->id;
@@ -441,13 +477,13 @@ class UnitController extends Controller
                     ->get();
     
                 // Calculate the starting index for this floor
-                $floorStartIndex = $unitIndexStart + ($floorIndex * $floorIncrementGap);
+                $floorStartIndex = $unitIndexStart + ($floorIndex * $floorIndexGap);
     
-                // Update each unit with the calculated name
+                // Loop through all units and assign names
                 foreach ($units as $unitIndex => $unit) {
                     $unitName = $seriesBase . ($floorStartIndex + $unitIndex);
     
-                    // Update the unit in the database
+                    // Update the database record for the unit
                     $unit->update([
                         'name' => $unitName,
                         'updated_at' => now(),
@@ -472,23 +508,25 @@ class UnitController extends Controller
             ], 400);
         }
     }
-    private function validateIncrement($unitDetails, $unitIndexStart)
-    {
-        echo "here";
-        foreach ($unitDetails as $index => $unitDetail) {
-            $unitName = $unitDetail['name'];
-            $expectedUnitName = (string) ($unitIndexStart + $index); // Expected name should be the incremented number
-            echo $expectedUnitName;
-            // If the unit name doesn't match the expected name, return an error
-            if ($unitName != $expectedUnitName) {
-                return response()->json([
-                                        'status' => 'error',
-                                        'message' => 'Please enter proper series names with proper increment.',
-                                    ], 200);
-                // throw new Exception('Please enter proper series names with proper increment.');
-            }
-        }
-    }
+
+
+
+    // private function validateIncrement($unitDetails, $unitIndexStart)
+    // {
+    //     foreach ($unitDetails as $index => $unitDetail) {
+    //         $unitName = $unitDetail['name'];
+    //         $expectedUnitName = (string) ($unitIndexStart + $index); // Expected name should be the incremented number
+    //         echo $expectedUnitName;
+    //         // If the unit name doesn't match the expected name, return an error
+    //         if ($unitName != $expectedUnitName) {
+    //             return response()->json([
+    //                                     'status' => 'error',
+    //                                     'message' => 'Please enter proper series names with proper increment.',
+    //                                 ], 200);
+    //             // throw new Exception('Please enter proper series names with proper increment.');
+    //         }
+    //     }
+    // }
 
     // private function validateUnitSeries($floorDetails, $seriesBase, $unitIndexStart)
     // {
