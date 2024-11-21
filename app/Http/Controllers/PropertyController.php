@@ -409,6 +409,7 @@ class PropertyController extends Controller
                         return [
                             'id' => $wing->id,
                             'name' => $wing->name,
+                            'property_id'=>$wing->property_id,
                             'total_floors' => $wing->total_floors,
                             'total_units_in_wing' => $wing->unitDetails->count(), // Count units in this wing
                         ];
