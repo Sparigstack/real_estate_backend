@@ -6,16 +6,17 @@ use Illuminate\Http\Request;
 use Google\Cloud\Vision\V1\ImageAnnotatorClient;
 use Illuminate\Support\Facades\Storage;
 use App\Helper;
-use App\Models\Customer;
 use Google\Cloud\DocumentAI\V1\Client\DocumentProcessorServiceClient;
 use Google\Cloud\Core\Exception\GoogleException;
 use Google\Cloud\DocumentAI\V1\RawDocument;
 use Google\Cloud\DocumentAI\V1\ProcessRequest;
-use App\Models\Lead;
-use App\Models\LeadUnit;
 use App\Models\PaymentTransaction;
 use App\Models\UnitDetail;
 use App\Models\WingDetail;
+use App\Models\LeadCustomer;
+use App\Models\LeadCustomerUnit;
+use App\Models\LeadCustomerUnitData;
+use App\Models\LeadSource;
 use Exception;
 
 class ChequeScanController extends Controller

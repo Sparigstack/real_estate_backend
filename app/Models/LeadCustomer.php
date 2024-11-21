@@ -18,10 +18,6 @@ class LeadCustomer  extends Model
         return $this->belongsTo(UserProperty::class,'property_id','id');
     }
 
-    public function messages()
-    {
-        return $this->hasMany(LeadMessage::class);
-    }
     public function leadSource()
     {
         return $this->belongsTo(LeadSource::class, 'source_id', 'id');

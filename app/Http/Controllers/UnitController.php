@@ -11,10 +11,6 @@ use App\Models\UserProperty;
 use App\Models\WingDetail;
 use Illuminate\Http\Request;
 use App\Helper;
-use App\Models\Status;
-use App\Models\Amenity;
-use App\Models\Country;
-use App\Models\Customer;
 use App\Models\LeadCustomer;
 use App\Models\LeadCustomerUnit;
 use App\Models\LeadCustomerUnitData;
@@ -87,7 +83,7 @@ class UnitController extends Controller
 
         try {
             if ($pid != 'null') {
-                $allLeads = LeadCustomer::where('property_id', $pid)->where('entity_type',1)->get();
+                $allLeads = LeadCustomer::where('property_id', $pid)->where('entity_type', 1)->get();
 
                 return $allLeads;
             } else {
@@ -152,7 +148,7 @@ class UnitController extends Controller
             $tokenAmt = $request->input('token_amt') == 0 ? null : $request->input('token_amt');
 
             // First, add the entry to `lead_units`
-            $leadUnit = LeadUnit::create([
+            $leadUnit = LeadCustomerUnit::create([
                 'lead_id' => $leadId,
                 'unit_id' => $unitId,
                 'booking_status' => 0, // Default status, update as needed
@@ -207,7 +203,7 @@ class UnitController extends Controller
 
     public function addInterestedLeads(Request $request)
     {
-        // try {
+        try {
             $unit = UnitDetail::with('leadCustomerUnits')->where('id', $request->unit_id)->first();
 
             // Check if the unit exists
@@ -294,18 +290,18 @@ class UnitController extends Controller
                 'status' => 'success',
                 'message' => 'Interested leads updated successfully.',
             ], 200);
-        // } catch (\Exception $e) {
-        //     // Log the error
-        //     $errorFrom = 'addInterestedLeads';
-        //     $errorMessage = $e->getMessage();
-        //     $priority = 'high';
-        //     Helper::errorLog($errorFrom, $errorMessage, $priority);
+        } catch (\Exception $e) {
+            // Log the error
+            $errorFrom = 'addInterestedLeads';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
 
-        //     return response()->json([
-        //         'status' => 'error',
-        //         'message' => 'An error occurred while saving the data',
-        //     ], 400);
-        // }
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while saving the data',
+            ], 400);
+        }
     }
 
 
@@ -314,23 +310,23 @@ class UnitController extends Controller
     {
         try {
             if ($uid != 'null') {
-                
+
                 // Fetch lead unit by unit ID
                 $leadUnit = LeadCustomerUnit::where('unit_id', $uid)->first();
-             
+
 
                 // Check if the lead unit exists
                 if (!$leadUnit) {
                     return []; // Return an empty array if no lead unit is found
                 }
-                
+
 
                 // Get the interested lead IDs from the lead unit
                 $interestedLeadIds = explode(',', $leadUnit->interested_lead_id); // Convert comma-separated string to array
 
                 // Fetch details of interested leads
                 $interestedLeads = LeadCustomer::whereIn('id', $interestedLeadIds)->get();
-               
+
 
                 // Fetch budget details from LeadUnitData based on lead_unit_id
                 $budgets = LeadCustomerUnitData::where('leads_customers_unit_id', $leadUnit->id)
@@ -409,4 +405,173 @@ class UnitController extends Controller
             ], 400);
         }
     }
+
+
+    public function updateUnitSeriesNumber(Request $request)
+    {
+        try {
+            $propertyId = $request->input('propertyId');
+            $wingId = $request->input('wingId');
+            $floorDetails = $request->input('floordetails');
+
+            // Retrieve all floors for the given wing
+            $allFloors = FloorDetail::where('wing_id', $wingId)
+                ->where('property_id', $propertyId)
+                ->orderBy('id', 'asc')
+                ->get();
+
+            // Map unit naming series from the request JSON
+            $startingSeries = $floorDetails[0]['unit_details'][0]['name']; // Assuming the first unit sets the series base
+            $seriesBase = preg_replace('/\d+$/', '', $startingSeries); // Extract the series base
+            $unitIndexStart = (int) filter_var($startingSeries, FILTER_SANITIZE_NUMBER_INT); // Extract initial number
+            $unitsPerFloor = count($floorDetails[0]['unit_details']); // Units provided per floor in the request
+            $floorIndexGap = (int) filter_var($floorDetails[1]['unit_details'][0]['name'], FILTER_SANITIZE_NUMBER_INT) -
+                (int) filter_var($floorDetails[0]['unit_details'][0]['name'], FILTER_SANITIZE_NUMBER_INT);
+
+
+            $this->validateIncrement($floorDetails[0]['unit_details'], $unitIndexStart);
+            return;
+            
+            // Loop through all floors
+            foreach ($allFloors as $floorIndex => $floor) {
+                $floorId = $floor->id;
+
+                // Retrieve all units for this floor
+                $units = UnitDetail::where('floor_id', $floorId)
+                    ->where('wing_id', $wingId)
+                    ->where('property_id', $propertyId)
+                    ->orderBy('id', 'asc')
+                    ->get();
+
+                // Calculate the starting index for this floor
+                $floorStartIndex = $unitIndexStart + ($floorIndex * $floorIndexGap);
+
+                // Loop through all units and assign names
+                foreach ($units as $unitIndex => $unit) {
+                    $unitName = $seriesBase . ($floorStartIndex + $unitIndex);
+
+                    // Update the database record for the unit
+                    $unit->update([
+                        'name' => $unitName,
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Unit series numbers updated successfully.',
+            ], 200);
+        } catch (Exception $e) {
+            // Log the error
+            $errorFrom = 'updateUnitSeriesNumber';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
+    private function validateIncrement($unitDetails, $unitIndexStart)
+    {
+        echo "here";
+        foreach ($unitDetails as $index => $unitDetail) {
+            $unitName = $unitDetail['name'];
+            $expectedUnitName = (string) ($unitIndexStart + $index); // Expected name should be the incremented number
+            echo $expectedUnitName;
+            // If the unit name doesn't match the expected name, return an error
+            if ($unitName != $expectedUnitName) {
+                return response()->json([
+                                        'status' => 'error',
+                                        'message' => 'Please enter proper series names with proper increment.',
+                                    ], 200);
+                // throw new Exception('Please enter proper series names with proper increment.');
+            }
+        }
+    }
+
+    // private function validateUnitSeries($floorDetails, $seriesBase, $unitIndexStart)
+    // {
+    //     // Get the expected series starting number from the first floor, first unit
+    //     // Determine the length of the number part of the unit name from the first unit
+    //     foreach ($floorDetails as $floorDetail) {
+    //         $unitDetails = $floorDetail['unit_details'];
+
+    //         // Validate the units on the floor start with the correct unit index
+    //         foreach ($unitDetails as $index => $unitDetail) {
+    //             $unitName = $unitDetail['name'];
+    //             $expectedUnitName = $seriesBase . ($unitIndexStart + $index);
+
+    //             // Check if the unit name matches the expected pattern
+    //             if ($unitName !== $expectedUnitName) {
+    //                 return response()->json([
+    //                     'status' => 'error',
+    //                     'message' => 'Unit series name is not properly formatted. Please provide proper series names.',
+    //                 ], 200);
+    //             }
+    //         }
+    //     }
+    //     return;
+    // }
+    // /**
+    //  * Extract the base series, starting index, and increment step for the unit series.
+    //  */
+    // private function extractSeriesIncrement($firstFloorDetails)
+    // {
+    //     // Get the first unit's name from the first floor's unit details
+    //     $firstUnitName = $firstFloorDetails['unit_details'][0]['name'];
+
+    //     // Extract the numeric part of the unit name
+    //     preg_match('/\d+$/', $firstUnitName, $matches);
+    //     $unitIndexStart = (int) $matches[0]; // Extract starting number (e.g., 1, 233, 11, 101, etc.)
+    //     $seriesBase = preg_replace('/\d+$/', '', $firstUnitName); // Extract base (e.g., '1', '233', '11', '101')
+
+    //     // Determine the increment step based on the difference between first floor units
+    //     $incrementStep = $this->determineIncrementStep($firstFloorDetails);
+
+    //     return [$seriesBase, $unitIndexStart, $incrementStep];
+    // }
+
+    // /**
+    //  * Determine the increment step based on the difference between units in the first floor.
+    //  */
+    // private function determineIncrementStep($firstFloorDetails)
+    // {
+    //     // Get the units of the first floor
+    //     $unitDetails = $firstFloorDetails['unit_details'];
+
+    //     // Determine the step between the first two units of the first floor
+    //     if (isset($unitDetails[1]) && isset($unitDetails[0])) {
+    //         $step = $unitDetails[1]['name'] - $unitDetails[0]['name'];
+    //     } else {
+    //         $step = 1; // Default step if there's no valid difference
+    //     }
+
+    //     return $step;
+    // }
+
+    // /**
+    //  * Validate that the unit names in the request are properly formatted and incremented.
+    //  */
+    // private function validateUnitSeries($floorDetails, $seriesBase, $unitIndexStart, $incrementStep)
+    // {
+    //     foreach ($floorDetails as $floorDetail) {
+    //         $unitDetails = $floorDetail['unit_details'];
+    //         foreach ($unitDetails as $index => $unitDetail) {
+    //             $unitName = $unitDetail['name'];
+    //             $expectedUnitName = $seriesBase . ($unitIndexStart + $index * $incrementStep);
+
+    //             // Check if the unit name matches the expected pattern
+    //             if ($unitName !== $expectedUnitName) {
+    //                 return response()->json([
+    //                     'status' => 'error',
+    //                     'message' => 'Unit series name is not properly formatted. Please provide proper series names.',
+    //                 ], 200);
+    //             }
+    //         }
+    //     }
+    // }
 }

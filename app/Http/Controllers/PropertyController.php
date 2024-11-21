@@ -377,7 +377,7 @@ class PropertyController extends Controller
                 // return $propertyDetails;
 
                 // Fetch the property details along with wings
-                $propertyDetails = UserProperty::with('wingDetails')->where('id', $pid)->first();
+                $propertyDetails = UserProperty::with('wingDetails', 'property')->where('id', $pid)->first();
 
                 if ($propertyDetails) {
                     // Check if the property has any wings
@@ -385,6 +385,7 @@ class PropertyController extends Controller
 
                     // Add wingsflag to the property details
                     $propertyDetails->wingsflag = $wingsflag;
+                    $propertyDetails->property_name = $propertyDetails->property->name ?? null;
 
                     return $propertyDetails;
                 } else {
