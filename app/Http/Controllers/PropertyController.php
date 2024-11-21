@@ -404,7 +404,7 @@ class PropertyController extends Controller
     
                     }else{
                         $propertyDetails->building_wings_count = 0;
-                        $propertyDetails->total_units=0
+                        $propertyDetails->total_units=0;
                     }
 
 
