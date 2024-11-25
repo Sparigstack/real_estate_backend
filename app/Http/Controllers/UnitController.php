@@ -406,127 +406,106 @@ class UnitController extends Controller
         }
     }
 
-
-    public function updateUnitSeriesNumberss(Request $request)
+    public function updateUnitSeriesNumber(Request $request)
     {
         try {
             $propertyId = $request->input('propertyId');
             $wingId = $request->input('wingId');
             $floorDetails = $request->input('floordetails');
-    
-    
+            $unitdetails= $request->input('unitdetails');
+            $flag = 1; //1 scheme with floors and , 2 scheme with only units
 
 
-        //      // Determine the gap based on the number of digits in the first unit
-        // $unitLength = strlen((string)$unitIndexStart);
-        // $gap = 0;
+            if ($flag == 1) {
+                // Extract the starting series base and unit number from the first floor and unit
+                $startingSeries = $floorDetails[0]['unit_details'][0]['name'];
+                $seriesBase = preg_replace('/\d+$/', '', $startingSeries);
+                $unitIndexStart = (int) filter_var($startingSeries, FILTER_SANITIZE_NUMBER_INT);
 
+                // Determine the unit gap based on the first unit number
+                $unitGap = $this->calculateUnitGap($unitIndexStart);
 
-        // switch ($unitLength) {
-        //     case 1:
-        //     case 2:
-        //         $gap = 10;  // Single or double digit units
-        //         break;
-        //     case 3:
-        //         $gap = 100;  // Triple digit units
-        //         break;
-        //     case 4:
-        //         $gap = 1000; // Quadruple digit units
-        //         break;
-        //     default:
-        //         throw new \Exception("Invalid unit number length.");
-        // }
+                // Retrieve all floors for this wing and property, to update all dynamic floors
+                $allFloors = FloorDetail::where('property_id', $propertyId)
+                    ->where('wing_id', $wingId)
+                    ->get(); // Fetch all floors for the given property and wing
 
-            // Determine the gap between floors using the first unit of the first two floors
-            $floorIndexGap = count($floorDetails) > 1
-                ? (int) filter_var($floorDetails[1]['unit_details'][0]['name'], FILTER_SANITIZE_NUMBER_INT) -
-                  (int) filter_var($floorDetails[0]['unit_details'][0]['name'], FILTER_SANITIZE_NUMBER_INT)
-                : 0;
-    
-            // Retrieve all floors for the given wing
-            $allFloors = FloorDetail::where('wing_id', $wingId)
-                ->where('property_id', $propertyId)
-                ->orderBy('id', 'asc')
-                ->get();
-    
+                // Validate and correct the series pattern for all floors
+                foreach ($allFloors as $floorIndex => $floor) {
+                    // Find corresponding floor details from the request (if any)
+                    $floorFromRequest = isset($floorDetails[$floorIndex]) ? $floorDetails[$floorIndex] : null;
+                    $expectedFloorStart = $unitIndexStart + ($floorIndex * $unitGap);
 
-
-                 // Validate the series for all floors
-            foreach ($floorDetails as $floorIndex => $floor) {
-                // Validate floor-wise incrementing logic
-                $firstUnitOnFloor = $floor['unit_details'][0]['name'];
-                $firstUnitOnFloorNum = (int) filter_var($firstUnitOnFloor, FILTER_SANITIZE_NUMBER_INT);
-                
-                // Check if the first unit on the floor follows the series pattern of the first floor's first unit
-                if (substr($firstUnitOnFloor, 0, strlen($seriesBase)) !== $seriesBase) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => "Invalid unit series increment on Floor ." ($floorIndex + 1) . ". Series should start with '{$seriesBase}' and not '{$firstUnitOnFloor}'.",
-                    ], 400);
-                }
-
-                // Validate unit-wise increment for this floor
-                for ($i = 0; $i < count($floor['unit_details']); $i++) {
-                    $unitName = $floor['unit_details'][$i]['name'];
-                    $unitNum = (int) filter_var($unitName, FILTER_SANITIZE_NUMBER_INT);
-                    
-                    // Check if each unit's number follows the correct increment pattern
-                    if ($i > 0) {
-                        $prevUnitNum = (int) filter_var($floor['unit_details'][$i - 1]['name'], FILTER_SANITIZE_NUMBER_INT);
-                        if ($unitNum !== $prevUnitNum + 1) {
+                    // Check if the floor series matches the expected start
+                    $firstUnitOnFloor = $floorFromRequest ? $floorFromRequest['unit_details'][0]['name'] : null;
+                    if ($firstUnitOnFloor) {
+                        $firstUnitNum = (int) filter_var($firstUnitOnFloor, FILTER_SANITIZE_NUMBER_INT);
+                        if ($firstUnitNum !== $expectedFloorStart) {
                             return response()->json([
                                 'status' => 'error',
-                                'message' => "Invalid unit increment on Floor " . ($floorIndex + 1) . ". Unit '{$unitName}' is incorrectly incremented.",
+                                'message' => "Invalid starting unit on Floor " . ($floorIndex + 1) . ". Expected '{$seriesBase}{$expectedFloorStart}', got '{$firstUnitOnFloor}'.",
                             ], 200);
                         }
                     }
+
+                    // Validate unit increment on the floor (if floor details are provided)
+                    if ($floorFromRequest) {
+                        foreach ($floorFromRequest['unit_details'] as $unitIndex => $unit) {
+                            $currentUnitNum = (int) filter_var($unit['name'], FILTER_SANITIZE_NUMBER_INT);
+                            $expectedUnitNum = $expectedFloorStart + $unitIndex;
+
+                            if ($currentUnitNum !== $expectedUnitNum) {
+                                return response()->json([
+                                    'status' => 'error',
+                                    'message' => "Invalid unit number on Floor " . ($floorIndex + 1) . ". Expected '{$seriesBase}{$expectedUnitNum}', got '{$unit['name']}'.",
+                                ], 200);
+                            }
+                        }
+                    }
                 }
+
+                // Update all units for all floors in the wing, regardless of request details
+                foreach ($allFloors as $floorIndex => $floor) {
+                    $expectedFloorStart = $unitIndexStart + ($floorIndex * $unitGap);
+                    $floorFromRequest = isset($floorDetails[$floorIndex]) ? $floorDetails[$floorIndex] : null;
+
+                    // Update all units for this floor
+                    $units = UnitDetail::where('floor_id', $floor->id)->get();
+                    foreach ($units as $unitIndex => $unit) {
+                        // Calculate the new unit name based on the floor index and unit index
+                        $newUnitName = $seriesBase . ($expectedFloorStart + $unitIndex);
+                        UnitDetail::where('id', $unit->id)
+                            ->update(['name' => $newUnitName, 'updated_at' => now()]);
+                    }
+
+                    // If floor details are provided in the request, update the units in the request
+                    if ($floorFromRequest) {
+                        foreach ($floorFromRequest['unit_details'] as $unitIndex => $unit) {
+                            $newUnitName = $seriesBase . ($expectedFloorStart + $unitIndex);
+                            UnitDetail::where('id', $unit['unitId'])
+                                ->update(['name' => $newUnitName, 'updated_at' => now()]);
+                        }
+                    }
+                }
+            }else if($flag==2){
+
             }
 
-            // Loop through all floors and update units
-            foreach ($allFloors as $floorIndex => $floor) {
-                $floorId = $floor->id;
-    
-                // Retrieve all units for this floor
-                $units = UnitDetail::where('floor_id', $floorId)
-                    ->where('wing_id', $wingId)
-                    ->where('property_id', $propertyId)
-                    ->orderBy('id', 'asc')
-                    ->get();
-    
-                // Calculate the starting index for this floor
-                $floorStartIndex = $unitIndexStart + ($floorIndex * $floorIndexGap);
-    
-                // Loop through all units and assign names
-                foreach ($units as $unitIndex => $unit) {
-                    $unitName = $seriesBase . ($floorStartIndex + $unitIndex);
-    
-                    // Update the database record for the unit
-                    $unit->update([
-                        'name' => $unitName,
-                        'updated_at' => now(),
-                    ]);
-                }
-            }
-    
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Unit series numbers updated successfully.',
             ], 200);
-        } catch (Exception $e) {
-            // Log the error
-            $errorFrom = 'updateUnitSeriesNumber';
-            $errorMessage = $e->getMessage();
-            $priority = 'high';
-            Helper::errorLog($errorFrom, $errorMessage, $priority);
-
+        } catch (\Exception $e) {
+            Helper::errorLog('updateUnitSeriesNumber', $e->getLine() . $e->getMessage(), 'high');
             return response()->json([
                 'status' => 'error',
-                'message' => 'Not found',
+                'message' => 'Something went wrong.',
             ], 400);
         }
     }
-    public function updateUnitSeriesNumber(Request $request)
+   
+    public function updateUnitSeriesNumbermain(Request $request)
 {
     try {
         $propertyId = $request->input('propertyId');

@@ -420,7 +420,7 @@ class WingController extends Controller
     public function bulkUpdatesForWingsDetails(Request $request)
     {
         try {
-            $flagforvilla=1; //0 means commercials floors and wings , 1 means without wings floors
+            $flagforvilla=$request->input('flagforvilla'); //0 means commercials floors and wings , 1 means without wings floors
             $wingDetails = $request->input('wingDetails');
             $unitDetails= $request->input('unitDetails');
             $wingId = $request->input('wingId');
