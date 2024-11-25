@@ -35,7 +35,7 @@ class AuthController extends Controller
             ->forceDelete();
             if ($checkUserOtp) {
                 try {
-                    // $response = $this->sendOtpToWhatsapp($mobile_number, $otp);
+                    $response = $this->sendOtpToWhatsapp($mobile_number, $otp);
                     // Mail::to($email)->send(new GetOtpMail($checkUserOtp->otp));
                 } catch (\Exception $e) {
                     Log::error("Otp message sending failed: " . $e->getMessage());
@@ -66,7 +66,7 @@ class AuthController extends Controller
                
                 // User::where('email', $email)->update(['name' =>$username]);
                 try {
-                    // $response = $this->sendOtpToWhatsapp($mobile_number, $otp);
+                    $response = $this->sendOtpToWhatsapp($mobile_number, $otp);
                     // Mail::to($email)->send(new GetOtpMail($otp));
                 } catch (\Exception $e) {
                     Log::error("Otp message sending failed: " . $e->getMessage());

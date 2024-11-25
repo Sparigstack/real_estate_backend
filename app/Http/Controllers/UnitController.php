@@ -493,20 +493,53 @@ class UnitController extends Controller
 
                 // Determine the starting series base and number
                 $startingSeries = $unitDetails[0]['name'];
-                $seriesBase = preg_replace('/\d+$/', '', $startingSeries);
-                $unitIndexStart = (int) filter_var($startingSeries, FILTER_SANITIZE_NUMBER_INT);
-            
+                
+                // Check if the input is valid (either all letters or all digits)
+                if (ctype_alpha($startingSeries)) {
+                    $isAlphabetical = true;
+                    $isLowercase = ctype_lower($startingSeries); // Check if the input is lowercase
+                    $seriesBase = $startingSeries;
+                    $unitIndexStart = ord(strtoupper($startingSeries)); // Convert to uppercase for consistency
+                } elseif (ctype_digit($startingSeries)) {
+                    $isAlphabetical = false;
+                    $seriesBase = '';
+                    $unitIndexStart = (int)$startingSeries;
+                } else {
+                    // Invalid format (e.g., `A1` or `10G1`)
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Invalid unit name format. Please use either pure letters (A, B, ...) or numbers (1, 2, ...).',
+                    ], 200);
+                }
+                
                 // Retrieve all units for this property
                 $units = UnitDetail::where('property_id', $propertyId)->orderBy('id')->get();
-            
-                // Update unit names sequentially (increment by 1)
+                
+                // Update unit names sequentially
                 foreach ($units as $index => $unit) {
-                    $newUnitName = $seriesBase . ($unitIndexStart + $index); // Increment by 1
+                    if ($isAlphabetical) {
+                        // Increment alphabetically with wrapping
+                        $newUnitIndex = ($unitIndexStart + $index - ord('A')) % 26; // Wrap after 26 letters
+                        $newUnitName = chr(ord('A') + $newUnitIndex);
+                        if ($isLowercase) {
+                            $newUnitName = strtolower($newUnitName); // Convert back to lowercase if necessary
+                        }
+                    } else {
+                        // Increment numerically
+                        $newUnitName = $seriesBase . ($unitIndexStart + $index);
+                    }
+                
+                    // Update the unit name in the database
                     UnitDetail::where('id', $unit->id)
                         ->update(['name' => $newUnitName, 'updated_at' => now()]);
                 }
+                
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Unit series numbers updated successfully.',
+                ], 200);
+                
             }
-
 
             return response()->json([
                 'status' => 'success',
