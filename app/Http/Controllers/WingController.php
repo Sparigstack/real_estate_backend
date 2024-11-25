@@ -423,24 +423,34 @@ class WingController extends Controller
             $flagforvilla=$request->input('flagforvilla'); //0 means commercials floors and wings , 1 means without wings floors
             $wingDetails = $request->input('wingDetails');
             $unitDetails= $request->input('unitDetails');
-            $wingId = $request->input('wingId');
-            if($flagforvilla==0){
-                foreach ($wingDetails as $data) {
-                    foreach ($data['unit_details'] as $unitData) {
-                        UnitDetail::where('id', $unitData['unitId'])->update([ 'square_feet' => $unitData['square_feet'], 'price' => $unitData['price']]);
+            $propertyId=$request->input('propertyId');
+
+            if ($propertyId) {
+                if($flagforvilla==0){
+                    foreach ($wingDetails as $data) {
+                        foreach ($data['unit_details'] as $unitData) {
+                            UnitDetail::where('property_id',$propertyId)->where('id', $unitData['unitId'])->update([ 'square_feet' => $unitData['square_feet'], 'price' => $unitData['price']]);
+                        }
+                    }
+                }elseif($flagforvilla==1){
+                    foreach ($unitDetails as $unitData) {
+                        UnitDetail::where('property_id',$propertyId)->where('id', $unitData['unitId'])->update(['square_feet' => $unitData['square_feet'], 'price' => $unitData['price']]);
                     }
                 }
-            }elseif($flagforvilla==1){
-                foreach ($unitDetails as $unitData) {
-                    UnitDetail::where('id', $unitData['unitId'])->update(['square_feet' => $unitData['square_feet'], 'price' => $unitData['price']]);
-                }
+                return response()->json([
+                    'status' => 'success',
+                    'message' => null,
+                ], 200);
+            }else{
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid property id',
+                ], 200);
             }
+         
             
 
-            return response()->json([
-                'status' => 'success',
-                'message' => null,
-            ], 200);
+           
         } catch (\Exception $e) {
             $errorFrom = 'bulkUpdatesForWingsDetails';
             $errorMessage = $e->getMessage();
