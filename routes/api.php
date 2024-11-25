@@ -9,9 +9,7 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WingController;
 use App\Http\Controllers\ChequeScanController;
-
-
-
+use App\Http\Controllers\VillaBunglowController;
 
 Route::post('/register-user', [AuthController::class, 'registerUser']);
 // Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
@@ -90,6 +88,9 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
     Route::post('/add-matched-entity-using-cheque', [BookingController::class, 'addMatchedEntityUsingCheque']); 
     Route::post('/add-entity-attach-with-units-using-cheque', [BookingController::class, 'addEntityAttachWithUnitsUsingCheque']); 
 
+
+    //villa/bunglow calls
+    Route::post('/add-villa-bunglow-details', [VillaBunglowController::class, 'addVillaBunglowDetails']);
 
 // });
 

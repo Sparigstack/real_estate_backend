@@ -384,7 +384,7 @@ class PropertyController extends Controller
                 // return $propertyDetails;
 
                 // Fetch the property details along with wings
-                $propertyDetails = UserProperty::with('wingDetails', 'property')->where('id', $pid)->first();
+                $propertyDetails = UserProperty::with('wingDetails', 'property','unitDetails')->where('id', $pid)->first();
 
                 if ($propertyDetails) {
                     // Check if the property has any wings

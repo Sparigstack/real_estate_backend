@@ -35,6 +35,7 @@ class AuthController extends Controller
             ->forceDelete();
             if ($checkUserOtp) {
                 try {
+                    // $response = $this->sendOtpToWhatsapp($mobile_number, $otp);
                     // Mail::to($email)->send(new GetOtpMail($checkUserOtp->otp));
                 } catch (\Exception $e) {
                     Log::error("Otp message sending failed: " . $e->getMessage());
@@ -65,6 +66,7 @@ class AuthController extends Controller
                
                 // User::where('email', $email)->update(['name' =>$username]);
                 try {
+                    // $response = $this->sendOtpToWhatsapp($mobile_number, $otp);
                     // Mail::to($email)->send(new GetOtpMail($otp));
                 } catch (\Exception $e) {
                     Log::error("Otp message sending failed: " . $e->getMessage());
@@ -103,7 +105,14 @@ class AuthController extends Controller
                 }
             }
 
-           
+            // $isValid = $this->isValidWhatsappNumber($contact_no);
+            // if (!$isValid['isWhatsApp']) {
+            //     return response()->json([
+            //         'status' => 'error', 
+            //         'userExists'=>null,
+            //         'message' => 'Invalid WhatsApp number'
+            //     ]);
+            // }
             $response = $this->generateAndSendOtp($contact_no,$request->flag);
 
 
@@ -234,6 +243,40 @@ class AuthController extends Controller
     }
     
 
+    public function sendOtpToWhatsapp($contact_no, $otp)
+        {
+            $apiUrl = config('services.gupshup.api_url');
+            $apiKey = config('services.gupshup.api_key');
+
+            $payload = [
+                'channel' => 'whatsapp',
+                'source' => 'YOUR_WHATSAPP_NUMBER', // Your registered number in Gupshup
+                'destination' => $contact_no,
+                'template' => 'otp_verification',
+                'message' => json_encode(['otp' => $otp]), // Replace `otp` with the placeholder in your template
+            ];
+
+            $response = Http::withHeaders([
+                'apikey' => $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post($apiUrl, $payload);
+
+            return $response->json();
+        }
+
+
+        public function isValidWhatsappNumber($contact_no)
+    {
+    $apiUrl = "https://api.gupshup.io/wa/phone/verify"; // Example endpoint
+    $apiKey = config('services.gupshup.api_key');
+
+    $response = Http::withHeaders([
+        'apikey' => $apiKey,
+        'Content-Type' => 'application/json',
+    ])->get($apiUrl, ['phone' => $contact_no]);
+
+    return $response->json();
+    }
     // public function checkUserOtp(Request $request)
     // {
     //     try

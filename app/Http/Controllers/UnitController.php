@@ -414,10 +414,6 @@ class UnitController extends Controller
             $wingId = $request->input('wingId');
             $floorDetails = $request->input('floordetails');
     
-            // Use only the first unit of the first floor to determine the series base
-            $startingSeries = $floorDetails[0]['unit_details'][0]['name']; // Example: "101"
-            $seriesBase = preg_replace('/\d+$/', '', $startingSeries); // Extract the series base, e.g., ""
-            $unitIndexStart = (int) filter_var($startingSeries, FILTER_SANITIZE_NUMBER_INT); // Extract the number part, e.g., 101 -> 101
     
 
 
