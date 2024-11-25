@@ -34,16 +34,63 @@ class VillaBunglowController extends Controller
             // Get the incoming request data
             $propertyId = $request->input('propertyId');
             $totalUnits = $request->input('totalUnits');
-
             $unitSize = $request->input('unitSize', null); // Default to null if not provided
 
-            $units = [];
-            $startingUnitName = 101; // Start unit names from 101
+            // Retrieve the last unit for this property, ordered by ID
+            $lastUnit = UnitDetail::where('property_id', $propertyId)
+                ->orderBy('id', 'desc')
+                ->first();
 
+            $units = [];
+            if ($lastUnit) {
+                // Extract the last unit's name and determine the starting point
+                $lastUnitName = $lastUnit->name;
+
+                if (ctype_digit($lastUnitName)) {
+                    // If the last unit is numeric, continue incrementing numbers
+                    $startingUnitName = (int)$lastUnitName + 1;
+                } elseif (ctype_alpha($lastUnitName)) {
+                    // If the last unit is alphabetical, continue incrementing letters
+                    $isLowercase = ctype_lower($lastUnitName);
+                    $startingUnitName = chr(ord(strtoupper($lastUnitName)) + 1);
+                    if ($startingUnitName > 'Z') {
+                        $startingUnitName = 'A'; // Wrap around to 'A' after 'Z'
+                    }
+                    if ($isLowercase) {
+                        $startingUnitName = strtolower($startingUnitName); // Preserve lowercase
+                    }
+                } else {
+                    // Invalid format, return an error
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Invalid last unit name format. The series must be numeric or alphabetical.',
+                    ], 200);
+                }
+            } else {
+                // If no units exist, start series with 101
+                $startingUnitName = 101;
+            }
+
+            // Create new units starting from the determined point
             for ($i = 0; $i < $totalUnits; $i++) {
+                if (ctype_digit((string)$startingUnitName)) {
+                    // Increment numerically
+                    $unitName = (string)($startingUnitName + $i);
+                } else {
+                    // Increment alphabetically with wrapping
+                    $currentIndex = ord(strtoupper($startingUnitName)) + $i;
+                    if ($currentIndex > ord('Z')) {
+                        $currentIndex = ord('A') + ($currentIndex - ord('Z') - 1);
+                    }
+                    $unitName = chr($currentIndex);
+                    if (ctype_lower($startingUnitName)) {
+                        $unitName = strtolower($unitName); // Preserve lowercase
+                    }
+                }
+
                 $units[] = [
                     'property_id' => $propertyId,
-                    'name' => (string)($startingUnitName + $i), // Incrementing unit name
+                    'name' => $unitName,
                     'square_feet' => ($unitSize !== null && $unitSize !== '') ? $unitSize : null, // Assign unitSize if available
                     'wing_id' => null, // Wing ID is null as per the requirements
                     'floor_id' => null, // Floor ID is null as per the requirements
@@ -53,7 +100,7 @@ class VillaBunglowController extends Controller
             }
 
             // Insert units data into the database
-            UnitDetail::insert($units); // This assumes the `Unit` model handles the database insertion
+            UnitDetail::insert($units);
 
             // Return success response
             return response()->json([
