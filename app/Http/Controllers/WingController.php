@@ -420,13 +420,22 @@ class WingController extends Controller
     public function bulkUpdatesForWingsDetails(Request $request)
     {
         try {
+            $flagforvilla=1; //0 means commercials floors and wings , 1 means without wings floors
             $wingDetails = $request->input('wingDetails');
+            $unitDetails= $request->input('unitDetails');
             $wingId = $request->input('wingId');
-            foreach ($wingDetails as $data) {
-                foreach ($data['unit_details'] as $unitData) {
-                    UnitDetail::where('id', $unitData['unitId'])->update(['name' => $unitData['name'], 'square_feet' => $unitData['square_feet'], 'price' => $unitData['price']]);
+            if($flagforvilla==0){
+                foreach ($wingDetails as $data) {
+                    foreach ($data['unit_details'] as $unitData) {
+                        UnitDetail::where('id', $unitData['unitId'])->update([ 'square_feet' => $unitData['square_feet'], 'price' => $unitData['price']]);
+                    }
+                }
+            }elseif($flagforvilla==1){
+                foreach ($unitDetails as $unitData) {
+                    UnitDetail::where('id', $unitData['unitId'])->update(['square_feet' => $unitData['square_feet'], 'price' => $unitData['price']]);
                 }
             }
+            
 
             return response()->json([
                 'status' => 'success',
