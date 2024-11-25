@@ -14,7 +14,9 @@ use App\Helper;
 use App\Models\Status;
 use App\Models\Amenity;
 use App\Models\Country;
+use App\Models\LeadCustomer;
 use App\Models\State;
+
 
 
 class PropertyController extends Controller
@@ -463,6 +465,27 @@ class PropertyController extends Controller
 
                         // Add total_paid_amount to the unit details
                         $unit->total_paid_amount = $totalPaidAmount;
+
+
+
+                        $allocatedEntities = [];
+                        foreach ($unitLeads as $leadCustomerUnits) {
+                            // Retrieve and format leads
+                            if ($leadCustomerUnits->leads_customers_id) {
+                                $leadIds = explode(',', $leadCustomerUnits->leads_customers_id);
+                                $allocatedLeads = LeadCustomer::whereIn('id', $leadIds)->get(['id', 'name']);
+                                foreach ($allocatedLeads as $lead) {
+                                    $allocatedEntities[] = [
+                                        'allocated_lead_id' => $lead->id,
+                                        'allocated_name' => $lead->name
+                                    ];
+                                }
+                            }
+    
+                        }
+    
+                        // Assign the aggregated allocated entities array to each unit
+                        $unit->allocated_entities = $allocatedEntities;
 
                         return $unit;
                     });
