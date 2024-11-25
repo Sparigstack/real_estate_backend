@@ -81,33 +81,33 @@ class PropertyController extends Controller
             if ($propertyImg) {
                 // Define the base properties folder path
                 $baseFolderPath = public_path("properties");
-            
+
                 // Check if the base properties folder exists, if not, create it
                 if (!file_exists($baseFolderPath)) {
                     mkdir($baseFolderPath, 0777, true);
                 }
-            
+
                 // Define user-specific folder path
                 $folderPath = public_path("properties/$userId/{$userProperty->id}");
-            
+
                 // Ensure user-specific directory exists
                 if (!file_exists($folderPath)) {
                     mkdir($folderPath, 0777, true);
                 }
-            
+
                 // Decode base64 image
                 $image_parts = explode(";base64,", $propertyImg);
                 $image_type_aux = explode("image/", $image_parts[0]);
                 $image_type = $image_type_aux[1];
                 $image_base64 = base64_decode($image_parts[1]);
-            
+
                 // Create unique file name
                 $fileName = uniqid() . '.' . $image_type;
-            
+
                 // Save the image in the defined folder
                 $filePath = $folderPath . '/' . $fileName;
                 file_put_contents($filePath, $image_base64);
-            
+
                 // Save file path relative to the public folder
                 $userProperty->property_img = "properties/$userId/{$userProperty->id}/$fileName";
                 $userProperty->save();
@@ -192,7 +192,7 @@ class PropertyController extends Controller
         }
     }
 
-   
+
     // public function addWingDetails(Request $request)
     // {
     //     try {
@@ -375,16 +375,25 @@ class PropertyController extends Controller
             if ($pid != 'null') {
 
                 $fetchWings = WingDetail::with(['unitDetails', 'floorDetails']) // Eager load unit details
-                ->where('property_id', $pid)
-                ->get();
+                    ->where('property_id', $pid)
+                    ->get();
 
-               
+
 
                 $propertyDetails = UserProperty::where('id', $pid)->first();
                 // return $propertyDetails;
 
                 // Fetch the property details along with wings
-                $propertyDetails = UserProperty::with('wingDetails', 'property','unitDetails')->where('id', $pid)->first();
+                $propertyDetails = UserProperty::with([
+                    'wingDetails',
+                    'property',
+                    'unitDetails' => function ($query) {
+                        $query->with([
+                            'leadCustomerUnits',
+                            'paymentTransactions' // Ensure payment transactions are loaded
+                        ]);
+                    }
+                ])->where('id', $pid)->first();
 
                 if ($propertyDetails) {
                     // Check if the property has any wings
@@ -398,28 +407,71 @@ class PropertyController extends Controller
                     if ($fetchWings->isNotEmpty()) {
                         // Update the response structure with actual data
                         $propertyDetails->building_wings_count = $fetchWings->count();
-                        $propertyDetails->total_units= $fetchWings->sum(function ($wing) {
+                        $propertyDetails->total_units = $fetchWings->sum(function ($wing) {
                             return $wing->unitDetails->count(); // Count of units for each wing
                         });
-    
-                    }else{
-                       
-                        if($propertyDetails->unitDetails){
+                    } else {
+
+                        if ($propertyDetails->unitDetails) {
                             $propertyDetails->building_wings_count = 0;
                             // $propertyDetails->total_units=0;
-                            $propertyDetails->total_units=$propertyDetails->unitDetails->count();
-                        }else{
+                            $propertyDetails->total_units = $propertyDetails->unitDetails->count();
+                        } else {
                             $propertyDetails->building_wings_count = 0;
-                            $propertyDetails->total_units=0;
+                            $propertyDetails->total_units = 0;
                         }
                     }
 
+
+
+                    // Process unit details to include total_paid_amount
+                    $propertyDetails->unitDetails = $propertyDetails->unitDetails->map(function ($unit) {
+                        $unitLeads = $unit->leadCustomerUnits;
+
+                        // Calculate total interested leads count
+                        $unit->interested_lead_count = $unitLeads->sum(function ($leadCustomerUnits) {
+                            return count(explode(',', $leadCustomerUnits->interested_lead_id));
+                        });
+    
+                        $unit->booking_status = $unitLeads->pluck('booking_status')->first();
+                        $totalPaidAmount = 0;
+
+                        // Check payment transactions for this unit
+                        $paymentTransactions = $unit->paymentTransactions;
+
+                        if ($paymentTransactions->isNotEmpty()) {
+                            // Filter transactions with payment_status = 2
+                            $filteredTransactions = $paymentTransactions->where('payment_status', 2);
+
+                            // Get the first transaction
+                            $firstTransaction = $filteredTransactions->first();
+
+                            // Add token_amt from the first transaction if it exists
+                            if ($firstTransaction && $firstTransaction->token_amt) {
+                                $totalPaidAmount += $firstTransaction->token_amt;
+                            }
+
+                            // Add next_payable_amt from all transactions
+                            foreach ($filteredTransactions as $index => $transaction) {
+                                if ($index == 0 && $firstTransaction && $firstTransaction->next_payable_amt) {
+                                    $totalPaidAmount += $firstTransaction->next_payable_amt;
+                                } elseif ($index > 0 && $transaction->next_payable_amt) {
+                                    $totalPaidAmount += $transaction->next_payable_amt;
+                                }
+                            }
+                        }
+
+                        // Add total_paid_amount to the unit details
+                        $unit->total_paid_amount = $totalPaidAmount;
+
+                        return $unit;
+                    });
 
                     $propertyDetails['wing_details'] = $fetchWings->map(function ($wing) {
                         return [
                             'id' => $wing->id,
                             'name' => $wing->name,
-                            'property_id'=>$wing->property_id,
+                            'property_id' => $wing->property_id,
                             'total_floors' => $wing->total_floors,
                             'total_units_in_wing' => $wing->unitDetails->count(), // Count units in this wing
                         ];

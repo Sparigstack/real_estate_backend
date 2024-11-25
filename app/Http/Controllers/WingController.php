@@ -98,7 +98,7 @@ class WingController extends Controller
 
                         // Sum next_payable_amt from the first transaction and all subsequent ones
                         foreach ($filteredTransactions as $index => $transaction) {
-                            if ($index === 0 && $firstTransaction && $firstTransaction->next_payable_amt) {
+                            if ($index == 0 && $firstTransaction && $firstTransaction->next_payable_amt) {
                                 $totalPaidAmount += $firstTransaction->next_payable_amt; // Add next payable amt from the first
                             } elseif ($index > 0 && $transaction->next_payable_amt) {
                                 $totalPaidAmount += $transaction->next_payable_amt; // Add next payable amt from subsequent transactions
