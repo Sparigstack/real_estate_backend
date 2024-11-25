@@ -431,10 +431,12 @@ class PropertyController extends Controller
                         $unitLeads = $unit->leadCustomerUnits;
 
                         // Calculate total interested leads count
-                        $unit->interested_lead_count = $unitLeads->sum(function ($leadCustomerUnits) {
-                            return count(explode(',', $leadCustomerUnits->interested_lead_id));
+                        $unit->interested_lead_count = $unitLeads->filter(function ($leadCustomerUnits) {
+                            return !empty($leadCustomerUnits->interested_lead_id); // Exclude empty or null `interested_lead_id`
+                        })->sum(function ($leadCustomerUnits) {
+                            return count(explode(',', $leadCustomerUnits->interested_lead_id)); // Count valid IDs
                         });
-    
+    // echo $unitLeads->interested_lead_id;
                         $unit->booking_status = $unitLeads->pluck('booking_status')->first();
                         $totalPaidAmount = 0;
 
