@@ -20,6 +20,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Barryvdh\DomPDF\Facade as PDF;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\Csv;
+use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
 
 
@@ -202,6 +205,8 @@ class LeadController extends Controller
                 'propertyinterest' => 'required|integer',  // Assuming propertyinterest is an integer (property_id)
                 'name' => 'required|string|max:255',       // Name is required and must be a string
                 'contactno' => 'required|string|max:15',   // Contact number is required, can be a string
+                'agent_name' => 'required|string|max:255',
+                'agent_contact' =>  'required|string|max:15',
                 'source' => 'required|integer',            // Source ID is required (1-reference, 2-social media, etc.)
                 'budget' => 'nullable|numeric',            // Budget is optional and must be a number if provided
                 'leadid' => 'required|numeric',
@@ -214,6 +219,8 @@ class LeadController extends Controller
             $propertyid = $validatedData['propertyinterest'];
             $name = $validatedData['name'];
             $contactno = $validatedData['contactno'];
+            $agentname = $validatedData['agent_name'];
+            $agentcontact = $validatedData['agent_contact'];
             $sourceid = $validatedData['source'];
             $budget = $request->input('budget'); // Budget remains nullable
             $leadid = $request->input('leadid');
@@ -239,6 +246,8 @@ class LeadController extends Controller
                             'property_id' => $propertyid,
                             'name' => $name,
                             'contact_no' => $contactno,
+                            'agent_name' => $agentname,
+                            'agent_contact' => $agentcontact,
                             'email' => $email,
                             'source_id' => $sourceid,
                             'status' => 0, // 0-new
@@ -293,6 +302,8 @@ class LeadController extends Controller
                         'property_id' => $propertyid,
                         'name' => $name,
                         'contact_no' => $contactno,
+                        'agent_name' => $agentname,
+                        'agent_contact' => $agentcontact,
                         'email' => $email,
                         'source_id' => $sourceid,
                         'status' => 0, // You can change this to another value if needed
@@ -325,6 +336,8 @@ class LeadController extends Controller
                             'name' => $name,
                             'contact_no' => $contactno,
                             'email' => $email,
+                            'agent_name' => $agentname,
+                            'agent_contact' => $agentcontact,
                             'source_id' => $sourceid,
                             'status' => 0, // 0-new
                             'type' => 0,  // manual
@@ -423,6 +436,8 @@ class LeadController extends Controller
                             'name' => $name,
                             'contact_no' => $contactno,
                             'email' => $email,
+                            'agent_name' => $agentname,
+                            'agent_contact' => $agentcontact,
                             'source_id' => $sourceid,
                             'status' => 0, // 0-new
                             'type' => 0, // manual
@@ -533,54 +548,94 @@ class LeadController extends Controller
             $propertyUserEmail = $property->user->email; // Assuming `user` is the relationship to the user
 
 
-            if (!$file) {
+            // Validate file extension (CSV or XLSX)
+            $extension = $file->getClientOriginalExtension();
+            if (!in_array($extension, ['csv', 'xlsx'])) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'CSV file not found.',
+                    'message' => 'Invalid file format. Only CSV and XLSX files are allowed.',
                 ], 200);
             }
 
-            // Open the CSV file
-            $csvFile = fopen($file, 'r');
-            $header = fgetcsv($csvFile);
-            $expectedHeaders = ['name', 'email(optional)', 'contact', 'source', 'notes(optional)'];
-            $escapedHeader = [];
+            // Read file based on extension
+            if ($extension == 'csv') {
+                // Open CSV file and process it
+                $csvFile = fopen($file, 'r');
+                $header = fgetcsv($csvFile);
+                $expectedHeaders = ['name', 'email(optional)', 'contact', 'source', 'notes(optional)'];
+                $escapedHeader = [];
 
-            foreach ($header as $value) {
-                // Normalize headers by removing spaces and setting to lowercase
-                $normalizedHeader = strtolower(str_replace([' ', '(optional)'], '', $value));
-                $escapedHeader[] = $normalizedHeader;
+                foreach ($header as $value) {
+                    // Normalize headers by removing spaces and setting to lowercase
+                    $normalizedHeader = strtolower(str_replace([' ', '(optional)'], '', $value));
+                    $escapedHeader[] = $normalizedHeader;
+                }
+
+                $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source', 'notes'];
+
+                // Validate CSV headers
+                if (array_diff($normalizedExpectedHeaders, $escapedHeader)) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Invalid CSV headers.',
+                    ], 200);
+                }
+
+              // Read the rest of the rows
+                $fileContent = [];
+                while (($row = fgetcsv($csvFile)) !== false) {
+                    $fileContent[] = array_combine($escapedHeader, $row);
+                }
+
+            } else {
+                // Read XLSX file using PhpSpreadsheet
+                $reader = IOFactory::createReaderForFile($file);
+                $spreadsheet = $reader->load($file);
+                $sheet = $spreadsheet->getActiveSheet();
+                $header = $sheet->rangeToArray('A1:E1')[0]; // Assuming headers are in the first row
+
+                $expectedHeaders = ['name', 'email(optional)', 'contact', 'source', 'notes(optional)'];
+                $escapedHeader = [];
+
+                foreach ($header as $value) {
+                    $normalizedHeader = strtolower(str_replace([' ', '(optional)'], '', $value));
+                    $escapedHeader[] = $normalizedHeader;
+                }
+
+                $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source', 'notes'];
+
+                // Validate XLSX headers
+                if (array_diff($normalizedExpectedHeaders, $escapedHeader)) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Invalid XLSX headers.',
+                    ], 200);
+                }
+
+                // Get all rows (excluding the header)
+                $fileContent = $sheet->toArray(null, true, true, true);
             }
 
-            // Define the expected headers in the same format
-            $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source', 'notes'];
-
-            // Validate CSV headers
-            if (array_diff($normalizedExpectedHeaders, $escapedHeader)) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Invalid CSV headers.',
-                ], 200);
-            }
-
-            // $leads = [];
-
+            // Initialize arrays for processed leads and issues
             $leadsAdded = [];
             $leadsIssues = [];
 
-
-            // Process CSV rows
-            while (($columns = fgetcsv($csvFile)) !== false) {
-                $data = array_combine($escapedHeader, $columns);
+            // Process rows
+            foreach ($fileContent as $row) {
+                if ($extension == 'csv') {
+                    $data = array_combine($escapedHeader, $row);
+                } else {
+                    // For XLSX, adjust to map the data properly
+                    $data = array_combine($escapedHeader, $row);
+                }
 
                 if (empty($data['name']) && empty($data['contact']) && empty($data['source'])) {
                     continue;
                 }
 
-                // Validate required fields (name, contact, source, budget)
+                // Validate required fields (name, contact, source)
                 if (empty($data['name']) || empty($data['contact']) || empty($data['source'])) {
                     Helper::errorLog('addLeadDetailsfailed', 'Missing required field(s)', 'high');
-
                     $leadsIssues[] = [
                         'name' => $data['name'] ?? 'N/A',
                         'email' => $data['email'] ?? 'N/A',
@@ -592,56 +647,42 @@ class LeadController extends Controller
                     continue;
                 }
 
-                // Check if the phone number is 10 digits
+                // Validate phone number (10 digits)
                 if (!preg_match('/^\d{10}$/', $data['contact'])) {
-                    Log::info('Skipping due to invalid phone number', $data);
                     $leadsIssues[] = [
                         'name' => $data['name'],
-                        'email' => $data['email'] ?? 'N/A',
-                        'notes' => $data['notes'] ?? 'N/A',
                         'contact' => $data['contact'],
-                        'source' => $data['source'],
                         'reason' => 'Invalid phone number (must be 10 digits)',
                     ];
                     continue;
                 }
 
-                // Validate email format if email is provided
+                // Validate email format
                 if (!empty($data['email']) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
                     Helper::errorLog('addLeadDetailsfailed', 'Invalid email format', 'high');
-
                     $leadsIssues[] = [
                         'name' => $data['name'],
                         'email' => $data['email'] ?? 'N/A',
-                        'contact' => $data['contact'],
-                        'source' => $data['source'],
-                        'notes' => $data['notes'] ?? 'N/A',
                         'reason' => 'Invalid email format',
                     ];
                     continue;
                 }
 
                 try {
-                    // Check if source exists; if not, assign it to "others" (source_id = 5)
+
+                    // Process the lead (same logic as before)
                     $source = LeadSource::whereRaw('LOWER(name) = ?', [strtolower($data['source'])])->first();
                     if (!$source) {
                         $source = LeadSource::find(5);
                     }
 
-                    // Check uniqueness based on contact number and property ID
                     $existingLead = LeadCustomer::where('contact_no', $data['contact'])
                         ->where('property_id', $propertyId)
                         ->first();
 
                     if ($existingLead) {
-                        Log::info('Lead skipped for property id: ' . $propertyId, $data);
-
                         $leadsIssues[] = [
                             'name' => $data['name'],
-                            'email' => $data['email'] ?? 'N/A',
-                            'notes' => $data['notes'] ?? 'N/A',
-                            'contact' => $data['contact'],
-                            'source' => $data['source'],
                             'reason' => 'Duplicate entry based on contact number',
                         ];
                         continue;
@@ -656,25 +697,24 @@ class LeadController extends Controller
                         'notes' => $data['notes'] ?? null,
                         'source_id' => $source->id,
                         'status' => 0, // New lead
-                        'type' => 1, // From CSV
+                        'type' => 1, // From CSV/XLSX
                     ]);
+
 
                     $leadsAdded[] = $lead;
                 } catch (\Exception $e) {
                     $leadsIssues[] = [
                         'name' => $data['name'],
-                        'email' => $data['email'] ?? 'N/A',
-                        'notes' => $data['notes'] ?? 'N/A',
-                        'contact' => $data['contact'],
-                        'source' => $data['source'],
                         'reason' => "Error: " . $e->getMessage(),
                     ];
-
                     Helper::errorLog('addLeadDetailsfailed', $e->getMessage(), 'high');
                 }
             }
 
-            fclose($csvFile); // Close the file after processing
+            // Close file for CSV
+            // if ($extension == 'csv') {
+            //     fclose($fileContent);
+            // } // Close the file after processing
 
             // if (count($leadsIssues) > 0) {
             //     // Create a temporary CSV file for skipped/failed leads
@@ -710,7 +750,7 @@ class LeadController extends Controller
         } catch (\Exception $e) {
             // Log the error
             $errorFrom = 'addLeadDetails';
-            $errorMessage = $e->getMessage();
+            $errorMessage = $e->getLine().$e->getMessage();
             $priority = 'high';
             Helper::errorLog($errorFrom, $errorMessage, $priority);
 
@@ -903,6 +943,8 @@ class LeadController extends Controller
             $contactno = $validatedData['contactno'];
             $sourceid = $validatedData['source'];
             $notes = $request->input('notes'); // notes remains nullable
+            $agentname = $request->input('agent_name');
+            $agentcontact = $request->input('agent_contact');
 
             // Check if the same email and property combination already exists
             $existingLead = LeadCustomer::where('contact_no', $contactno)
@@ -917,6 +959,8 @@ class LeadController extends Controller
                     'name' => $name,
                     'email' => $email,
                     'contact_no' => $contactno,
+                    'agent_name' => $agentname,
+                    'agent_contact' => $agentcontact,
                     'source_id' => $sourceid,
                     'notes' => $notes,
                     'status' => 0, //0-new, 1-negotiation, 2-in contact, 3-highly interested, 4-closed
@@ -986,28 +1030,28 @@ class LeadController extends Controller
                     foreach ($leadcustomerdetails->leadCustomerUnits as $unit) {
                         // Booked units (booking details)
                         $paymentTransactions = PaymentTransaction::where('unit_id', $unit->unit_id)
-                        ->where('leads_customers_id', $unit->leadCustomer->id)
-                        ->orderBy('id', 'asc') // Ensure the first transaction is first in the results
-                        ->get();
-                
-                    // Calculate the total paid amount
-                    $totalPaidAmount = 0;
-                
-                    foreach ($paymentTransactions as $index => $transaction) {
-                        if ($transaction->payment_status == 2) { // Only include payments where status is 2
-                            if ($index == 0) {
-                                // Add the token amount from the first transaction
-                                $totalPaidAmount += $transaction->token_amt;
-                            } else {
-                                // Add the next payable amount from subsequent transactions
-                                $totalPaidAmount += $transaction->next_payable_amt;
+                            ->where('leads_customers_id', $unit->leadCustomer->id)
+                            ->orderBy('id', 'asc') // Ensure the first transaction is first in the results
+                            ->get();
+
+                        // Calculate the total paid amount
+                        $totalPaidAmount = 0;
+
+                        foreach ($paymentTransactions as $index => $transaction) {
+                            if ($transaction->payment_status == 2) { // Only include payments where status is 2
+                                if ($index == 0) {
+                                    // Add the token amount from the first transaction
+                                    $totalPaidAmount += $transaction->token_amt;
+                                } else {
+                                    // Add the next payable amount from subsequent transactions
+                                    $totalPaidAmount += $transaction->next_payable_amt;
+                                }
                             }
                         }
-                    }
-                    $bookedUnits = LeadCustomerUnit::where(function ($query) use ($lid) {
-                        $query->where('leads_customers_id', $lid)
-                            ->orWhereRaw('FIND_IN_SET(?, leads_customers_id)', [$lid]);
-                    })->with(['unit.wingDetail', 'leadCustomerUnitData'])->get();
+                        $bookedUnits = LeadCustomerUnit::where(function ($query) use ($lid) {
+                            $query->where('leads_customers_id', $lid)
+                                ->orWhereRaw('FIND_IN_SET(?, leads_customers_id)', [$lid]);
+                        })->with(['unit.wingDetail', 'leadCustomerUnitData'])->get();
                         if ($unit->paymentTransaction || $bookedUnits) {
                             $bookedDetails[] = [
                                 'wing_name' => $unit->unit->wingDetail->name,

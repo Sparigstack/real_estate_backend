@@ -14,6 +14,8 @@ use App\Http\Controllers\VillaBunglowController;
 Route::post('/register-user', [AuthController::class, 'registerUser']);
 // Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
+Route::post('/send-bulk-messages', [AuthController::class, 'sendBulkMessages']);
+Route::post('/send-template-messages', [AuthController::class, 'sendGupshupTemplateMessage']);
 
 // Route::middleware('auth:api')->group(function (){
     Route::post('/logout', [AuthController::class, 'logout']);
