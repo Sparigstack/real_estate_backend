@@ -1070,6 +1070,8 @@ class LeadController extends Controller
                             'id' => $leadcustomerdetails->id,
                             'property_id' => $leadcustomerdetails->property_id,
                             'name' => $leadcustomerdetails->name,
+                            'agent_name' => $leadcustomerdetails->agent_name ?? null,
+                            'agent_contact' => $leadcustomerdetails->agent_contact ?? null,
                             'email' => $leadcustomerdetails->email ?? null,
                             'contact_no' => $leadcustomerdetails->contact_no,
                             'source_id' => $leadcustomerdetails->source_id,
