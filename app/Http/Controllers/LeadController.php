@@ -1016,13 +1016,18 @@ class LeadController extends Controller
                         $query->where('interested_lead_id', $lid)
                             ->orWhereRaw('FIND_IN_SET(?, interested_lead_id)', [$lid]);
                     })->with(['unit.wingDetail', 'leadCustomerUnitData'])->get();
+                    // return $interestedUnits;
 
                     foreach ($interestedUnits as $unit) {
+                        $leadWiseBudget = $unit->leadCustomerUnitData
+                        ->where('leads_customers_id', $lid) // Filter by the current lead ID
+                        ->pluck('budget')
+                        ->first();
                         $interestedLeads[] = [
                             'wing_name' => $unit->unit->wingDetail->name ?? null,
                             'unit_name' => $unit->unit->name ?? null,
                             'lead_name' => $unit->leadCustomer->name ?? null,
-                            'budget' => $unit->leadCustomerUnitData->pluck('budget')->first() ?? null,
+                            'budget' => $leadWiseBudget ?? null,
                         ];
                     }
 
