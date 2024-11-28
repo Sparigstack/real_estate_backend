@@ -175,6 +175,17 @@ class WingController extends Controller
 
             // Insert wings into the wing_details table
             foreach ($request->wingsArray as $wing) {
+
+                $existingWing = WingDetail::where('property_id', $propertyId)
+                    ->whereRaw('LOWER(name) = ?', [strtolower($wing['wingName'])])
+                    ->first();
+
+                if ($existingWing) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Wing '{$wing['wingName']}' already exists for the given scheme.",
+                    ], 200);
+                }
                 $newWing =   WingDetail::create([
                     'property_id' => $propertyId,
                     'name' => $wing['wingName'],
@@ -225,33 +236,33 @@ class WingController extends Controller
             $wingId = $request->input('wingId');
             $propertyId = $request->input('propertyId');
             $sameUnitCount = $request->input('sameUnitCount');
-    
+
             $floorCountOfWing = WingDetail::where('id', $wingId)->pluck('total_floors')->first();
             WingDetail::where('id', $wingId)->update(['total_floors' => $floorCountOfWing + $numberOfFloors]);
-    
+
             $floorCountOfWing = $floorCountOfWing + 1;
-    
+
             // Check if there are any existing floors
             $lastFloor = FloorDetail::where('wing_id', $wingId)
                 ->orderBy('id', 'desc')
                 ->first();
-    
+
             $lastUnitNumber = 0;
             $unitGap = 10; // Default gap (for first time)
-    
-            $lastFloorexists=false;
+
+            $lastFloorexists = false;
             if ($lastFloor) {
-                $lastFloorexists=true;
+                $lastFloorexists = true;
                 // Retrieve the last floor's unit details if any exist
                 $lastFloorUnits = UnitDetail::where('floor_id', $lastFloor->id)->get();
-                
-               
+
+
                 if (count($lastFloorUnits) > 0) {
                     // Get the last unit number of the previous floor
                     $lastUnitName = $lastFloorUnits->first()->name;
-                  
+
                     $lastUnitNumber = (int) filter_var($lastUnitName, FILTER_SANITIZE_NUMBER_INT);
-    
+
                     // Calculate the gap based on the number of digits in the last unit number
                     $lastUnitLength = strlen($lastUnitNumber);
                     switch ($lastUnitLength) {
@@ -266,12 +277,12 @@ class WingController extends Controller
                             $unitGap = 1000;
                             break;
                         default:
-                            $unitGap = 10; 
+                            $unitGap = 10;
                             break;
                     }
                 }
             }
-    
+
             // Add the floors
             for ($floorNumber = 1; $floorNumber <= $numberOfFloors; $floorNumber++) {
 
@@ -284,11 +295,11 @@ class WingController extends Controller
                 // $unitNamepreviousfloor = UnitDetail::where('floor_id', $previousFloor->id)->get();
                 // $unitNamepreviousfloor=$previousFloorUnits->first()->name;
                 // $unitNamepreviousfloor = (int) filter_var($lastUnitName, FILTER_SANITIZE_NUMBER_INT);
-                
+
                 // $startingUnitNumber = $lastUnitNumber + $unitGap;
 
-                 // Calculate starting unit number dynamically            
-    // echo  $unitNamepreviousfloor. "/n" .$unitGap."/n". $startingUnitNumber ."/n".$unitNamepreviousfloor ."/n";
+                // Calculate starting unit number dynamically            
+                // echo  $unitNamepreviousfloor. "/n" .$unitGap."/n". $startingUnitNumber ."/n".$unitNamepreviousfloor ."/n";
                 $floorDetail = new FloorDetail();
                 $floorDetail->property_id = $propertyId;
                 $floorDetail->wing_id = $wingId;
@@ -296,15 +307,15 @@ class WingController extends Controller
 
                 // echo $floorCountOfWing;
                 if ($lastFloorexists) {
-                   // Set starting unit number for the new floor
-                   $startingUnitNumber = $floorCountOfWing * $unitGap + 1; // Base for current floor (e.g., 301, 401, etc.)
-               } else {
-                   $startingUnitNumber = 101; // Default starting point for new property/wing
-               }
-    
+                    // Set starting unit number for the new floor
+                    $startingUnitNumber = $floorCountOfWing * $unitGap + 1; // Base for current floor (e.g., 301, 401, etc.)
+                } else {
+                    $startingUnitNumber = 101; // Default starting point for new property/wing
+                }
 
 
-              
+
+
                 if ($sameUnitsFlag == 1) {
                     // Add units if the flag is set for same units on each floor
                     for ($unitIndex = 1; $unitIndex <= $sameUnitCount; $unitIndex++) {
@@ -312,10 +323,10 @@ class WingController extends Controller
                         $unitDetail->property_id = $propertyId;
                         $unitDetail->wing_id = $wingId;
                         $unitDetail->floor_id = $floorDetail->id;
-                        if($lastFloorexists==false){
+                        if ($lastFloorexists == false) {
                             $unitDetail->name = sprintf('%d%02d', $floorCountOfWing, $unitIndex);
-                        }else{
-                            $unitDetail->name = ($startingUnitNumber + $unitIndex-1 );
+                        } else {
+                            $unitDetail->name = ($startingUnitNumber + $unitIndex - 1);
                         }
                         $unitDetail->save();
                     }
@@ -328,21 +339,21 @@ class WingController extends Controller
                                 $unitDetail->property_id = $propertyId;
                                 $unitDetail->wing_id = $wingId;
                                 $unitDetail->floor_id = $floorDetail->id;
-                                if($lastFloorexists==false){
+                                if ($lastFloorexists == false) {
                                     $unitDetail->name = sprintf('%d%02d', $floorCountOfWing, $unitIndex);
-                                }else{
-                                    $unitDetail->name = ($startingUnitNumber + $unitIndex -1);
+                                } else {
+                                    $unitDetail->name = ($startingUnitNumber + $unitIndex - 1);
                                 }
                                 $unitDetail->save();
                             }
                         }
                     }
                 }
-    
+
                 $floorCountOfWing++;
                 $lastUnitNumber = $startingUnitNumber + $unitIndex - 1;
             }
-    
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Floor details added successfully.',
@@ -444,37 +455,33 @@ class WingController extends Controller
     public function bulkUpdatesForWingsDetails(Request $request)
     {
         try {
-            $flagforvilla=$request->input('flagforvilla'); //0 means commercials floors and wings , 1 means without wings floors
+            $flagforvilla = $request->input('flagforvilla'); //0 means commercials floors and wings , 1 means without wings floors
             $wingDetails = $request->input('wingDetails');
-            $unitDetails= $request->input('unitDetails');
-            $propertyId=$request->input('propertyId');
+            $unitDetails = $request->input('unitDetails');
+            $propertyId = $request->input('propertyId');
 
             if ($propertyId) {
-                if($flagforvilla==0){
+                if ($flagforvilla == 0) {
                     foreach ($wingDetails as $data) {
                         foreach ($data['unit_details'] as $unitData) {
-                            UnitDetail::where('property_id',$propertyId)->where('id', $unitData['unitId'])->update([ 'square_feet' => $unitData['square_feet'], 'price' => $unitData['price']]);
+                            UnitDetail::where('property_id', $propertyId)->where('id', $unitData['unitId'])->update(['square_feet' => $unitData['square_feet'], 'price' => $unitData['price']]);
                         }
                     }
-                }elseif($flagforvilla==1){
+                } elseif ($flagforvilla == 1) {
                     foreach ($unitDetails as $unitData) {
-                        UnitDetail::where('property_id',$propertyId)->where('id', $unitData['unitId'])->update(['square_feet' => $unitData['square_feet'], 'price' => $unitData['price']]);
+                        UnitDetail::where('property_id', $propertyId)->where('id', $unitData['unitId'])->update(['square_feet' => $unitData['square_feet'], 'price' => $unitData['price']]);
                     }
                 }
                 return response()->json([
                     'status' => 'success',
                     'message' => null,
                 ], 200);
-            }else{
+            } else {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Invalid property id',
                 ], 200);
             }
-         
-            
-
-           
         } catch (\Exception $e) {
             $errorFrom = 'bulkUpdatesForWingsDetails';
             $errorMessage = $e->getMessage();
@@ -740,7 +747,7 @@ class WingController extends Controller
                     ->get(['id', 'name']);  // Only select id and name columns
 
                 return  $wings;
-            }else{
+            } else {
                 return null;
             }
         } catch (\Exception $e) {
