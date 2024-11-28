@@ -274,13 +274,37 @@ class WingController extends Controller
     
             // Add the floors
             for ($floorNumber = 1; $floorNumber <= $numberOfFloors; $floorNumber++) {
+
+
+
+                // $previousFloor = FloorDetail::where('wing_id', $wingId)
+                // ->orderBy('id', 'desc')
+                // ->first();
+                // $previousFloorUnits = UnitDetail::where('floor_id', $previousFloor->id)->get();
+                // $unitNamepreviousfloor = UnitDetail::where('floor_id', $previousFloor->id)->get();
+                // $unitNamepreviousfloor=$previousFloorUnits->first()->name;
+                // $unitNamepreviousfloor = (int) filter_var($lastUnitName, FILTER_SANITIZE_NUMBER_INT);
+                
+                // $startingUnitNumber = $lastUnitNumber + $unitGap;
+
+                 // Calculate starting unit number dynamically            
+    // echo  $unitNamepreviousfloor. "/n" .$unitGap."/n". $startingUnitNumber ."/n".$unitNamepreviousfloor ."/n";
                 $floorDetail = new FloorDetail();
                 $floorDetail->property_id = $propertyId;
                 $floorDetail->wing_id = $wingId;
                 $floorDetail->save();
+
+                // echo $floorCountOfWing;
+                if ($lastFloorexists) {
+                   // Set starting unit number for the new floor
+                   $startingUnitNumber = $floorCountOfWing * $unitGap + 1; // Base for current floor (e.g., 301, 401, etc.)
+               } else {
+                   $startingUnitNumber = 101; // Default starting point for new property/wing
+               }
     
-                $startingUnitNumber = $lastUnitNumber + $unitGap;
-    
+
+
+              
                 if ($sameUnitsFlag == 1) {
                     // Add units if the flag is set for same units on each floor
                     for ($unitIndex = 1; $unitIndex <= $sameUnitCount; $unitIndex++) {
@@ -291,7 +315,7 @@ class WingController extends Controller
                         if($lastFloorexists==false){
                             $unitDetail->name = sprintf('%d%02d', $floorCountOfWing, $unitIndex);
                         }else{
-                            $unitDetail->name = ($startingUnitNumber + $unitIndex - 1);
+                            $unitDetail->name = ($startingUnitNumber + $unitIndex-1 );
                         }
                         $unitDetail->save();
                     }
@@ -307,7 +331,7 @@ class WingController extends Controller
                                 if($lastFloorexists==false){
                                     $unitDetail->name = sprintf('%d%02d', $floorCountOfWing, $unitIndex);
                                 }else{
-                                    $unitDetail->name = ($startingUnitNumber + $unitIndex - 1);
+                                    $unitDetail->name = ($startingUnitNumber + $unitIndex -1);
                                 }
                                 $unitDetail->save();
                             }
