@@ -8,14 +8,24 @@ use Illuminate\Database\Eloquent\Model;
 class LeadCustomer  extends Model
 {
     use HasFactory;
-    protected $table="leads_customers";
+    protected $table = "leads_customers";
     protected $fillable = [
-        'property_id', 'name', 'email', 'contact_no', 'source_id','type','status_id','notes','entity_type','agent_name','agent_contact'
+        'property_id',
+        'name',
+        'email',
+        'contact_no',
+        'source_id',
+        'type',
+        'status_id',
+        'notes',
+        'entity_type',
+        'agent_name',
+        'agent_contact'
     ];
 
     public function userproperty()
     {
-        return $this->belongsTo(UserProperty::class,'property_id','id');
+        return $this->belongsTo(UserProperty::class, 'property_id', 'id');
     }
 
     public function leadSource()
@@ -37,6 +47,9 @@ class LeadCustomer  extends Model
     {
         return $this->entity_type === 1 ? 'Lead' : 'Customer';
     }
-   
 
+    public function leadStatus()
+    {
+        return $this->belongsTo(leadStatus::class, 'status_id', 'id');
+    }
 }
