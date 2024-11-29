@@ -36,7 +36,7 @@ class AuthController extends Controller
                 ->forceDelete();
             if ($checkUserOtp) {
                 try {
-                    $response = $this->sendOtpToWhatsapp($mobile_number, $otp);
+                    // $response = $this->sendOtpToWhatsapp($mobile_number, $otp);
                     // Mail::to($email)->send(new GetOtpMail($checkUserOtp->otp));
                 } catch (\Exception $e) {
                     Log::error("Otp message sending failed: " . $e->getMessage());
@@ -66,7 +66,7 @@ class AuthController extends Controller
 
                 // User::where('email', $email)->update(['name' =>$username]);
                 try {
-                    $response = $this->sendOtpToWhatsapp($mobile_number, $otp);
+                    // $response = $this->sendOtpToWhatsapp($mobile_number, $otp);
                     // Mail::to($email)->send(new GetOtpMail($otp));
                 } catch (\Exception $e) {
                     Log::error("Otp message sending failed: " . $e->getMessage());
@@ -243,24 +243,56 @@ class AuthController extends Controller
 
     public function sendOtpToWhatsapp($contact_no, $otp)
     {
-        $apiUrl = env('GUPSHUP_API_URL');
-        $apiKey = env('GUPSHUP_API_KEY');
-        $officialNumber = env('GUPSHUP_NUMBER');
 
+
+        $apiUrl = 'https://api.gupshup.io/wa/api/v1/template/msg';
+        $apiKey = 'x7pcbvdpvzxjfdnc1qelyqja4slvu9va'; // Replace with your actual API key
+        $sourceNumber = '916359506160'; // Your WhatsApp source number
+        $appName = 'Superbuildup'; // Your application name
+        $templateId = 'ca17eedb-8261-4fe0-8bd9-6f82c2bccb9c'; // Replace with your template ID
+        $destination = $contact_no; // Recipient's WhatsApp number
+        $params = [$otp]; 
+
+        // API request payload
         $payload = [
             'channel' => 'whatsapp',
-            'source' => $officialNumber, // Your registered number in Gupshup
-            'destination' => $contact_no,
-            'template' => 'otp_verification',
-            'params' =>  [$otp], // Replace `otp` with the placeholder in your template
+            'source' => $sourceNumber,
+            'destination' => $destination,
+            'src.name' => $appName,
+            'template' => json_encode([
+                'id' => $templateId,
+                'params' => $params, // Dynamic parameters for the template
+            ]),
         ];
-
-        $response = Http::withHeaders([
-            'apikey' => $apiKey,
-            'Content-Type' => 'application/json',
-        ])->post($apiUrl, $payload);
-
-        return $response->json();
+        // $apiUrl = env('GUPSHUP_API_URL'); // Example: 'https://api.gupshup.io/sm/api/v1/msg'
+        // $apiKey = env('GUPSHUP_API_KEY');
+        // $officialNumber = env('GUPSHUP_NUMBER');
+    
+        // $payload = [
+        //     'channel' => 'whatsapp',
+        //     'source' => $officialNumber, // Your registered number in Gupshup
+        //     'destination' => $contact_no,
+        //     'template' => 'otp_verification',
+        //     'template_id' => 'ca17eedb-8261-4fe0-8bd9-6f82c2bccb9c',
+        //     'params' => [$otp], // Maps to the dynamic placeholder in your template
+        // ];
+    
+        try {
+            $response = Http::withHeaders([
+                'apikey' => $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post($apiUrl, $payload);
+    
+            if ($response->successful()) {
+                return $response->json(); // Response from Gupshup
+            } else {
+                Log::error("Gupshup OTP send failed", ['response' => $response->body()]);
+                return ['error' => 'Failed to send OTP'];
+            }
+        } catch (\Exception $e) {
+            Log::error("Exception in sending OTP via Gupshup: " . $e->getMessage());
+            return ['error' => 'Exception occurred while sending OTP'];
+        }
     }
 
 
@@ -438,13 +470,14 @@ class AuthController extends Controller
 
     function sendGupshupTemplateMessage()
     {
+        $otp="123456";
         $apiUrl = 'https://api.gupshup.io/wa/api/v1/template/msg';
         $apiKey = 'x7pcbvdpvzxjfdnc1qelyqja4slvu9va'; // Replace with your actual API key
         $sourceNumber = '916359506160'; // Your WhatsApp source number
         $appName = 'Superbuildup'; // Your application name
-        $templateId = '6e0a5ea7-7e03-49bf-aeec-ee88616f9393'; // Replace with your template ID
-        $destination = '+917202077138'; // Recipient's WhatsApp number
-        $params = []; 
+        $templateId = 'ca17eedb-8261-4fe0-8bd9-6f82c2bccb9c'; // Replace with your template ID
+        $destination = '+918320064478'; // Recipient's WhatsApp number
+        $params = [$otp]; 
 
         // API request payload
         $payload = [

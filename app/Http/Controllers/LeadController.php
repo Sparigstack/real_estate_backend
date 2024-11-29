@@ -10,6 +10,7 @@ use App\Models\LeadCustomer;
 use App\Models\LeadCustomerUnit;
 use App\Models\LeadCustomerUnitData;
 use App\Models\LeadSource;
+use App\Models\LeadStatus;
 use App\Models\PaymentTransaction;
 use App\Models\Property;
 use App\Models\UserProperty;
@@ -23,6 +24,7 @@ use Barryvdh\DomPDF\Facade as PDF;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\Csv;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
+
 
 
 
@@ -153,7 +155,7 @@ class LeadController extends Controller
         }
     }
 
-    public function getSources(Request $request)
+    public function getLeadSources(Request $request)
     {
 
         try {
@@ -162,6 +164,25 @@ class LeadController extends Controller
         } catch (Exception $e) {
             // Log the error
             $errorFrom = 'getSources';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
+    public function getLeadStatus(Request $request)
+    {
+
+        try {
+            $allStatus = LeadStatus::all();
+            return $allStatus;
+        } catch (Exception $e) {
+            // Log the error
+            $errorFrom = 'getLeadStatus';
             $errorMessage = $e->getMessage();
             $priority = 'high';
             Helper::errorLog($errorFrom, $errorMessage, $priority);
@@ -205,8 +226,8 @@ class LeadController extends Controller
                 'propertyinterest' => 'required|integer',  // Assuming propertyinterest is an integer (property_id)
                 'name' => 'required|string|max:255',       // Name is required and must be a string
                 'contactno' => 'required|string|max:15',   // Contact number is required, can be a string
-                'agent_name' => 'required|string|max:255',
-                'agent_contact' =>  'required|string|max:15',
+                'agent_name' => 'nullable|string|max:255',
+                'agent_contact' =>  'nullable|string|max:15',
                 'source' => 'required|integer',            // Source ID is required (1-reference, 2-social media, etc.)
                 'budget' => 'nullable|numeric',            // Budget is optional and must be a number if provided
                 'leadid' => 'required|numeric',

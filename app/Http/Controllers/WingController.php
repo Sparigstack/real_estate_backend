@@ -300,19 +300,39 @@ class WingController extends Controller
 
                 // Calculate starting unit number dynamically            
                 // echo  $unitNamepreviousfloor. "/n" .$unitGap."/n". $startingUnitNumber ."/n".$unitNamepreviousfloor ."/n";
+                if ($lastFloorexists) {
+                    // Set starting unit number for the new floor
+                    $lastunitFloor = FloorDetail::where('wing_id', $wingId)
+                    ->orderBy('id', 'desc')
+                    ->first();
+                    $lastFloorUnits = UnitDetail::where('floor_id', $lastunitFloor->id)->get();
+
+
+                    if (count($lastFloorUnits) > 0) {
+                        // Get the last unit number of the previous floor
+                        $lastUnitName = $lastFloorUnits->first()->name;
+                        
+    
+                        $lastUnitNumber = (int) filter_var($lastUnitName, FILTER_SANITIZE_NUMBER_INT);
+                        // echo $lastUnitNumber ;
+                        // return;
+                    }
+                    // echo $lastUnitNumber ."/n";
+                    $startingUnitNumber = $lastUnitNumber + $unitGap ;
+                    // echo $startingUnitNumber;
+                    // $startingUnitNumber = $lastUnitNumber * $unitGap + 1; // Base for current floor (e.g., 301, 401, etc.)
+                } else {
+                    $startingUnitNumber = 101; // Default starting point for new property/wing
+                }
+
+              
                 $floorDetail = new FloorDetail();
                 $floorDetail->property_id = $propertyId;
                 $floorDetail->wing_id = $wingId;
                 $floorDetail->save();
 
                 // echo $floorCountOfWing;
-                if ($lastFloorexists) {
-                    // Set starting unit number for the new floor
-                    $startingUnitNumber = $floorCountOfWing * $unitGap + 1; // Base for current floor (e.g., 301, 401, etc.)
-                } else {
-                    $startingUnitNumber = 101; // Default starting point for new property/wing
-                }
-
+                
 
 
 
@@ -328,7 +348,7 @@ class WingController extends Controller
                         } else {
                             $unitDetail->name = ($startingUnitNumber + $unitIndex - 1);
                         }
-                        $unitDetail->save();
+                       $unitDetail->save();
                     }
                 } else {
                     // Add units based on provided unit details for each floor
@@ -344,7 +364,7 @@ class WingController extends Controller
                                 } else {
                                     $unitDetail->name = ($startingUnitNumber + $unitIndex - 1);
                                 }
-                                $unitDetail->save();
+                               $unitDetail->save();
                             }
                         }
                     }

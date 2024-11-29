@@ -17,7 +17,7 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 Route::post('/send-bulk-messages', [AuthController::class, 'sendBulkMessages']);
 Route::post('/send-template-messages', [AuthController::class, 'sendGupshupTemplateMessage']);
 
-// Route::middleware('auth:api')->group(function (){
+Route::middleware('auth:api')->group(function (){
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/get-user-details/{uid}', [UserController::class, 'getUserDetails']);
     //Route::get('/user-profile/{uid}', [UserController::class, 'userProfile']);
@@ -94,12 +94,13 @@ Route::post('/send-template-messages', [AuthController::class, 'sendGupshupTempl
     //villa/bunglow calls
     Route::post('/add-villa-bunglow-details', [VillaBunglowController::class, 'addVillaBunglowDetails']);
 
-// });
+});
 
 
 
 //apis without auth
-Route::get('/get-sources', [LeadController::class, 'getSources']); 
+Route::get('/get-sources', [LeadController::class, 'getLeadSources']); 
+Route::get('/get-lead-status', [LeadController::class, 'getLeadStatus']); 
 
 //remove this call later
 Route::get('/get-user-properties/{uid}', [LeadController::class, 'getUserProperties']); 
