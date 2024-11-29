@@ -229,6 +229,7 @@ class LeadController extends Controller
                 'agent_name' => 'nullable|string|max:255',
                 'agent_contact' =>  'nullable|string|max:15',
                 'source' => 'required|integer',            // Source ID is required (1-reference, 2-social media, etc.)
+                'status'=>'required|integer',
                 'budget' => 'nullable|numeric',            // Budget is optional and must be a number if provided
                 'leadid' => 'required|numeric',
                 'notes' => 'nullable|string',
@@ -249,6 +250,7 @@ class LeadController extends Controller
             $unit_id = $request->input('unitId'); // Optional unit ID
             $email = $request->input('email');
             $notes = $request->input('notes');
+            $status=$request->input('status');
 
 
 

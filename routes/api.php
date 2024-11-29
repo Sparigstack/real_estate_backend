@@ -100,7 +100,7 @@ Route::middleware('auth:api')->group(function (){
 
 //apis without auth
 Route::get('/get-sources', [LeadController::class, 'getLeadSources']); 
-Route::get('/get-lead-status', [LeadController::class, 'getLeadStatus']); 
+Route::get('/get-lead-statuses', [LeadController::class, 'getLeadStatus']); 
 
 //remove this call later
 Route::get('/get-user-properties/{uid}', [LeadController::class, 'getUserProperties']); 
