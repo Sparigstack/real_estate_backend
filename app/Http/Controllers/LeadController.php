@@ -273,7 +273,7 @@ class LeadController extends Controller
                             'agent_contact' => $agentcontact,
                             'email' => $email,
                             'source_id' => $sourceid,
-                            'status' => 0, // 0-new
+                            'status' => $status, // 0-new
                             'type' => 0, // manual,
                             'notes' => $notes,
                             'entity_type' => 1
@@ -329,7 +329,7 @@ class LeadController extends Controller
                         'agent_contact' => $agentcontact,
                         'email' => $email,
                         'source_id' => $sourceid,
-                        'status' => 0, // You can change this to another value if needed
+                        'status' => $status, // You can change this to another value if needed
                         'type' => 0, // 0 - manual, modify if necessary
                         'notes' => $notes,
                         'entity_type' => 1
@@ -362,7 +362,7 @@ class LeadController extends Controller
                             'agent_name' => $agentname,
                             'agent_contact' => $agentcontact,
                             'source_id' => $sourceid,
-                            'status' => 0, // 0-new
+                            'status' => $status, // 0-new
                             'type' => 0,  // manual
                             'notes' => $notes,
                             'entity_type' => 1
@@ -462,7 +462,7 @@ class LeadController extends Controller
                             'agent_name' => $agentname,
                             'agent_contact' => $agentcontact,
                             'source_id' => $sourceid,
-                            'status' => 0, // 0-new
+                            'status' => $status, // 0-new
                             'type' => 0, // manual
                             'notes' => $notes,
                             'entity_type' => 1

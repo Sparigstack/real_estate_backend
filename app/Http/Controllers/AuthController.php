@@ -149,6 +149,7 @@ class AuthController extends Controller
 
             // Default value for user property flag
             $flag = 0;
+            $token=null;
 
             // Check OTP and expiration
             $checkUserDetails = UserOtp::where('contact_no', $contact_no)->where('otp', $otp)->first();
