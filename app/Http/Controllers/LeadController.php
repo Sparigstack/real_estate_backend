@@ -822,6 +822,7 @@ class LeadController extends Controller
                 'leads.*.notes' => 'nullable|string', // Ensure budget is required and numeric
                 'leads.*.source' => 'required|string|max:255', // Example: "call"
                 'leads.*.property' => 'required|string|max:255', // Property could be validated more specifically if needed
+                'leads.* status'=>'required|string|max:255'
             ]);
 
             $createdLeads = [];
@@ -850,6 +851,7 @@ class LeadController extends Controller
 
                 // Find source ID
                 $sourceId = LeadSource::whereRaw('LOWER(name) = ?', [strtolower($leadData['source'])])->value('id');
+                $statusId = LeadStatus::whereRaw('LOWER(name) = ?', [strtolower($leadData['status'])])->value('id');
 
                 // Create the new lead
                 $newLead = LeadCustomer::create([
@@ -858,7 +860,7 @@ class LeadController extends Controller
                     'email' => $leadData['email'],
                     'contact_no' => $leadData['contact'],
                     'source_id' => $sourceId,
-                    'status' => 0,  // Default to new lead
+                    'status' =>  $statusId,  // Default to new lead
                     'type' => 2, // 0 for manual, 1 CSV, 2 REST API,
                     'notes' => $leadData['notes'],
                 ]);
@@ -957,6 +959,7 @@ class LeadController extends Controller
                 'contactno' => 'required|string|max:15',   // Contact number is required, can be a string
                 'source' => 'required|integer',            // Source ID is required (1-reference, 2-social media, etc.)      // Budget is optional and must be a number if provided
                 'notes' => 'nullable|string',
+                'status' => 'required|integer',   
             ]);
 
             // Retrieve validated data from the request
@@ -968,6 +971,7 @@ class LeadController extends Controller
             $notes = $request->input('notes'); // notes remains nullable
             $agentname = $request->input('agent_name');
             $agentcontact = $request->input('agent_contact');
+            $status = $validatedData['status'];
 
             // Check if the same email and property combination already exists
             $existingLead = LeadCustomer::where('contact_no', $contactno)
@@ -986,7 +990,7 @@ class LeadController extends Controller
                     'agent_contact' => $agentcontact,
                     'source_id' => $sourceid,
                     'notes' => $notes,
-                    'status' => 0, //0-new, 1-negotiation, 2-in contact, 3-highly interested, 4-closed
+                    'status' => $status, //0-new, 1-negotiation, 2-in contact, 3-highly interested, 4-closed
                     'type' => 3 //web form
                 ]);
 
