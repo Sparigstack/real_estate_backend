@@ -10,7 +10,7 @@ class LeadCustomer  extends Model
     use HasFactory;
     protected $table="leads_customers";
     protected $fillable = [
-        'property_id', 'name', 'email', 'contact_no', 'source_id','type','status','notes','entity_type','agent_name','agent_contact'
+        'property_id', 'name', 'email', 'contact_no', 'source_id','type','status_id','notes','entity_type','agent_name','agent_contact'
     ];
 
     public function userproperty()
