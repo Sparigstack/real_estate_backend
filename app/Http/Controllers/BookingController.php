@@ -54,14 +54,14 @@ class BookingController extends Controller
             // Determine the contact details from Lead or Customer based on allocation fields
             if (!is_null($leadUnit->leads_customers_id)) {
                 $contact = LeadCustomer::find($leadUnit->leads_customers_id);
-            } 
+            }
 
             // Populate contact details if available
             if (isset($contact)) {
                 $responseData['contact_name'] = $contact->name;
                 $responseData['contact_email'] = $contact->email ?? null;
                 $responseData['contact_number'] = $contact->contact_no;
-                $responseData['notes']=$contact->notes ?? null;
+                $responseData['notes'] = $contact->notes ?? null;
             }
 
 
@@ -211,14 +211,14 @@ class BookingController extends Controller
             $bookingreferencenumber = $request->input('bookingreferencenumber');
             $nextpaymenttype = $request->input('nextpaymenttype');
             $nextpaymentreferencenumber = $request->input('nextpaymentreferencenumber');
-            $notes=$request->input('notes');
+            $notes = $request->input('notes');
 
 
             $leadUnit = LeadCustomerUnit::where('unit_id', $unitId)->first();
 
             // Determine which IDs are allocated based on the $type
             $allocatedIds = ($leadUnit && $leadUnit->leads_customers_id ? explode(',', $leadUnit->leads_customers_id) : []);
-          
+
 
             if (is_null($entityId)) {
                 // Null entity ID - handle as new customer
@@ -234,7 +234,6 @@ class BookingController extends Controller
                         'message' => $leadcustomer->name . ' is already added with this contact no.',
                         'data' => null
                     ], 200);
-                  
                 } else {
                     // Create a new customer if no existing customer with the same contact number was found
                     $leadcustomer = leadcustomer::create([
@@ -242,8 +241,9 @@ class BookingController extends Controller
                         'email' => $contactEmail,
                         'name' => $contactName,
                         'contact_no' => $contactNumber,
-                        'entity_type' =>2,
-                        'notes'=>$notes
+                        'entity_type' => 2,
+                        'notes' => $notes,
+                        'status_id' => 1
                     ]);
                 }
 
@@ -258,35 +258,32 @@ class BookingController extends Controller
                 $leadUnit->save();
 
                 $allocatedId = $leadcustomer->id;
-            
             } else {
                 // Provided entity ID - handle as lead or customer based on type
-              
-                    $leadcustomer = LeadCustomer::find($entityId);
-                    if (!$leadcustomer) {
-                        return response()->json([
-                            'status' => 'error',
-                            'message' => 'Lead/Customer not found',
-                        ], 200);
-                    }
 
-                    Leadcustomer::where('id',$entityId)->update(['entity_type'=>2]);
-                    $leadUnit = $leadUnit ?: new LeadCustomerUnit();
-                    $leadUnit->unit_id = $unitId;
-                    if (!in_array($entityId, $allocatedIds)) {
-                        $allocatedIds[] = $entityId;
-                        $leadUnit->leads_customers_id = implode(',', $allocatedIds);
-                    }
-                    $leadUnit->booking_status = 4;
-                    $leadUnit->save();
+                $leadcustomer = LeadCustomer::find($entityId);
+                if (!$leadcustomer) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Lead/Customer not found',
+                    ], 200);
+                }
 
-                    $allocatedId = $entityId;
-                   
-                
+                Leadcustomer::where('id', $entityId)->update(['entity_type' => 2]);
+                $leadUnit = $leadUnit ?: new LeadCustomerUnit();
+                $leadUnit->unit_id = $unitId;
+                if (!in_array($entityId, $allocatedIds)) {
+                    $allocatedIds[] = $entityId;
+                    $leadUnit->leads_customers_id = implode(',', $allocatedIds);
+                }
+                $leadUnit->booking_status = 4;
+                $leadUnit->save();
+
+                $allocatedId = $entityId;
             }
 
             // Create the first payment transaction entry
-            
+
             if ($tokenAmt != null) {
                 $paymentTransaction = new PaymentTransaction();
                 $paymentTransaction->unit_id = $unitId;
@@ -389,7 +386,7 @@ class BookingController extends Controller
                 'payment_id' => 'nullable|integer',
                 'bookingpaymenttype' => 'nullable|integer',
                 'bookingreferencenumber' => 'nullable|numeric',
-                'userid' =>'required|integer' //lead/customerid
+                'userid' => 'required|integer' //lead/customerid
             ]);
 
             $amount = $validatedData['amount'];
@@ -398,7 +395,7 @@ class BookingController extends Controller
             $paymentId = $validatedData['payment_id'];
             $bookingpaymenttype = $validatedData['bookingpaymenttype'];
             $bookingreferencenumber = $validatedData['bookingreferencenumber'];
-            $leadscustomerid=$validatedData['userid'];
+            $leadscustomerid = $validatedData['userid'];
 
 
             // Retrieve the LeadUnit associated with the unit_id
@@ -415,7 +412,7 @@ class BookingController extends Controller
             $lastPaymentTransaction = PaymentTransaction::where('unit_id', $unitId)
                 ->orderBy('created_at', 'desc') // Get the most recent transaction
                 ->first();
-              
+
 
             if ($paymentId != null) {
                 // Update existing payment record
@@ -445,7 +442,7 @@ class BookingController extends Controller
                 $existingPayment = $previousPayments->first();
 
                 // Check if booking_date and token_amt are both null and have only one previous entry
-                if($existingPayment){
+                if ($existingPayment) {
                     if ((is_null($existingPayment->token_amt)) && $previousPayments->count() == 1) {
                         // Update the existing payment entry
                         $existingPayment->leads_customers_id = $existingPayment->leads_customers_id;
@@ -462,13 +459,13 @@ class BookingController extends Controller
                     } else {
                         // Create a new payment record
                         // Retrieve the last payment transaction for the unit
-    
-    
+
+
                         $paymentTransaction = new PaymentTransaction();
                         $paymentTransaction->unit_id = $unitId;
                         $paymentTransaction->payment_due_date = $paymentDate; // The new payment amount
                         $paymentTransaction->next_payable_amt = $amount; // Set the initial amount
-    
+
                         if ($lastPaymentTransaction) {
                             // Populate fields from the last payment transaction if it exists
                             $paymentTransaction->booking_date = $lastPaymentTransaction->booking_date ?? null; // Use the last booking date
@@ -481,39 +478,35 @@ class BookingController extends Controller
                             $paymentTransaction->payment_status = now()->gt($paymentDate) ? 2 : 1;
                         } else {
                             $unitDetail = UnitDetail::where('id', $unitId)->first();
-    
+
                             if ($unitDetail) {
                                 $propertyId = $unitDetail->property_id; // Get the property_id
                             } else {
                                 // Handle case where no unit_detail is found for the given unit_id
                                 $propertyId = null;
                             }
-    
+
                             $leadUnit = LeadCustomerUnit::where('unit_id', $unitId)->first();
-    
+
                             if ($leadUnit) {
                                 // Check for allocated_lead_id or allocated_customer_id
                                 if ($leadUnit->leads_customers_id) {
                                     // If allocated_lead_id exists, set allocated_type to 1 (Lead)
                                     $allocatedId = $leadUnit->leads_customers_id;
-                                } 
+                                }
                             } else {
                                 // Handle case where no LeadUnit is found for the given unit_id
                                 $allocatedId = null;
                             }
-    
-                          
-    
                         }
-    
+
                         // Set the initial payment status
-    
+
                         $paymentTransaction->save();
                     }
-                }
-                else{
+                } else {
                     $unitDetail = UnitDetail::where('id', $unitId)->first();
-    
+
                     if ($unitDetail) {
                         $propertyId = $unitDetail->property_id; // Get the property_id
                     } else {
@@ -533,7 +526,6 @@ class BookingController extends Controller
                     $paymentTransaction->transaction_notes = 'Booking entry created';
                     $paymentTransaction->save();
                 }
-               
             }
 
 
