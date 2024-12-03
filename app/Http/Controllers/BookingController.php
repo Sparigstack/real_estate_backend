@@ -243,7 +243,7 @@ class BookingController extends Controller
                         'contact_no' => $contactNumber,
                         'entity_type' => 2,
                         'notes' => $notes,
-                        'status_id' => 1
+                        'status_id' => 2
                     ]);
                 }
 
@@ -269,7 +269,7 @@ class BookingController extends Controller
                     ], 200);
                 }
 
-                Leadcustomer::where('id', $entityId)->update(['entity_type' => 2]);
+                Leadcustomer::where('id', $entityId)->update(['entity_type' => 2,'status_id' => 2]);
                 $leadUnit = $leadUnit ?: new LeadCustomerUnit();
                 $leadUnit->unit_id = $unitId;
                 if (!in_array($entityId, $allocatedIds)) {

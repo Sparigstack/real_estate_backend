@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Helper;
 use App\Mail\ManageLeads;
+use App\Models\FieldTypes;
 use App\Models\LeadCustomer;
 use App\Models\LeadCustomerUnit;
 use App\Models\LeadCustomerUnitData;
@@ -585,7 +586,7 @@ class LeadController extends Controller
                 // Open CSV file and process it
                 $csvFile = fopen($file, 'r');
                 $header = fgetcsv($csvFile);
-                $expectedHeaders = ['name', 'email(optional)', 'contact', 'source', 'notes(optional)'];
+                $expectedHeaders = ['name', 'email(optional)', 'contact', 'source', 'notes(optional)','status'];
                 $escapedHeader = [];
 
                 foreach ($header as $value) {
@@ -594,7 +595,7 @@ class LeadController extends Controller
                     $escapedHeader[] = $normalizedHeader;
                 }
 
-                $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source', 'notes'];
+                $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source', 'notes','status'];
 
                 // Validate CSV headers
                 if (array_diff($normalizedExpectedHeaders, $escapedHeader)) {
@@ -616,7 +617,7 @@ class LeadController extends Controller
                 $sheet = $spreadsheet->getActiveSheet();
                 $header = $sheet->rangeToArray('A1:E1')[0]; // Assuming headers are in the first row
 
-                $expectedHeaders = ['name', 'email(optional)', 'contact', 'source', 'notes(optional)'];
+                $expectedHeaders = ['name', 'email(optional)', 'contact', 'source', 'notes(optional)','status'];
                 $escapedHeader = [];
 
                 foreach ($header as $value) {
@@ -624,7 +625,7 @@ class LeadController extends Controller
                     $escapedHeader[] = $normalizedHeader;
                 }
 
-                $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source', 'notes'];
+                $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source', 'notes','status'];
 
                 // Validate XLSX headers
                 if (array_diff($normalizedExpectedHeaders, $escapedHeader)) {
@@ -651,12 +652,12 @@ class LeadController extends Controller
                     $data = array_combine($escapedHeader, $row);
                 }
 
-                if (empty($data['name']) && empty($data['contact']) && empty($data['source'])) {
+                if (empty($data['name']) && empty($data['contact']) && empty($data['source'] && empty($data['status']))) {
                     continue;
                 }
 
-                // Validate required fields (name, contact, source)
-                if (empty($data['name']) || empty($data['contact']) || empty($data['source'])) {
+                // Validate required fields (name, contact, source,status)
+                if (empty($data['name']) || empty($data['contact']) || empty($data['source'] ||  empty($data['status']))) {
                     Helper::errorLog('addLeadDetailsfailed', 'Missing required field(s)', 'high');
                     $leadsIssues[] = [
                         'name' => $data['name'] ?? 'N/A',
@@ -664,6 +665,7 @@ class LeadController extends Controller
                         'notes' => $data['notes'] ?? 'N/A',
                         'contact' => $data['contact'] ?? 'N/A',
                         'source' => $data['source'] ?? 'N/A',
+                        'status' =>$data['status'] ?? 'N/A',
                         'reason' => 'Missing required field(s)',
                     ];
                     continue;
@@ -695,7 +697,13 @@ class LeadController extends Controller
                     // Process the lead (same logic as before)
                     $source = LeadSource::whereRaw('LOWER(name) = ?', [strtolower($data['source'])])->first();
                     if (!$source) {
-                        $source = LeadSource::find(5);
+                        $source = LeadSource::find(6);
+                    }
+
+
+                    $status = LeadStatus::whereRaw('LOWER(name) = ?', [strtolower($data['status'])])->first();
+                    if (!$status) {
+                        $status = LeadStatus::find(1);
                     }
 
                     $existingLead = LeadCustomer::where('contact_no', $data['contact'])
@@ -718,7 +726,7 @@ class LeadController extends Controller
                         'contact_no' => $data['contact'],
                         'notes' => $data['notes'] ?? null,
                         'source_id' => $source->id,
-                        'status' => 0, // New lead
+                        'status_id' => $status->id, // New lead
                         'type' => 1, // From CSV/XLSX
                     ]);
 
@@ -821,7 +829,7 @@ class LeadController extends Controller
                 'leads.*.notes' => 'nullable|string', // Ensure budget is required and numeric
                 'leads.*.source' => 'required|string|max:255', // Example: "call"
                 'leads.*.property' => 'required|string|max:255', // Property could be validated more specifically if needed
-                'leads.* status' => 'required|string|max:255'
+                'leads.*.status' => 'required|string|max:255'
             ]);
 
             $createdLeads = [];
@@ -849,17 +857,24 @@ class LeadController extends Controller
                 }
 
                 // Find source ID
-                $sourceId = LeadSource::whereRaw('LOWER(name) = ?', [strtolower($leadData['source'])])->value('id');
-                $statusId = LeadStatus::whereRaw('LOWER(name) = ?', [strtolower($leadData['status'])])->value('id');
+                $source = LeadSource::whereRaw('LOWER(name) = ?', [strtolower($leadData['source'])])->first();
+                $status = LeadStatus::whereRaw('LOWER(name) = ?', [strtolower($leadData['status'])])->first();
 
+                if (!$source) {
+                    $source = LeadSource::find(6);
+                }
+
+                if (!$status) {
+                    $status = LeadStatus::find(1);
+                }
                 // Create the new lead
                 $newLead = LeadCustomer::create([
                     'property_id' => $property->id,
                     'name' => $leadData['name'],
                     'email' => $leadData['email'],
                     'contact_no' => $leadData['contact'],
-                    'source_id' => $sourceId,
-                    'status_id' =>  $statusId,  // Default to new lead
+                    'source_id' => $source->id,
+                    'status_id' =>  $status->id,  // Default to new lead
                     'type' => 2, // 0 for manual, 1 CSV, 2 REST API,
                     'notes' => $leadData['notes'],
                 ]);
@@ -881,7 +896,7 @@ class LeadController extends Controller
         } catch (\Exception $e) {
             // Log the error
             $errorFrom = 'restapidetails';
-            $errorMessage = $e->getMessage();
+            $errorMessage = $e->getMessage().$e->getLine();
             $priority = 'high';
             Helper::errorLog($errorFrom, $errorMessage, $priority);
 
@@ -989,7 +1004,7 @@ class LeadController extends Controller
                     'agent_contact' => $agentcontact,
                     'source_id' => $sourceid,
                     'notes' => $notes,
-                    'status' => $status, //0-new, 1-negotiation, 2-in contact, 3-highly interested, 4-closed
+                    'status_id' => $status, //0-new, 1-negotiation, 2-in contact, 3-highly interested, 4-closed
                     'type' => 3 //web form
                 ]);
 
@@ -1139,4 +1154,22 @@ class LeadController extends Controller
             ], 400);
         }
     }
+    public function getFieldTypes()
+    {
+        try {
+            $allfieldtypes = FieldTypes::all();
+            return $allfieldtypes;
+        } catch (Exception $e) {
+            $errorFrom = 'getFieldTypes';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
+
 }

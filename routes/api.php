@@ -17,7 +17,7 @@ Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
 Route::post('/send-bulk-messages', [AuthController::class, 'sendBulkMessages']);
 Route::post('/send-template-messages', [AuthController::class, 'sendGupshupTemplateMessage']);
 
-Route::middleware('auth:api')->group(function (){
+// Route::middleware('auth:api')->group(function (){
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/get-user-details/{uid}', [UserController::class, 'getUserDetails']);
     //Route::get('/user-profile/{uid}', [UserController::class, 'userProfile']);
@@ -94,7 +94,7 @@ Route::middleware('auth:api')->group(function (){
     //villa/bunglow calls
     Route::post('/add-villa-bunglow-details', [VillaBunglowController::class, 'addVillaBunglowDetails']);
 
-});
+// });
 
 
 
