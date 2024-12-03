@@ -233,7 +233,7 @@ class LeadController extends Controller
             $sourceid = $validatedData['source'];
             $budget = $request->input('budget'); // Budget remains nullable
             $leadid = $request->input('leadid');
-            $flag = $validatedData['flag'];  // New flag parameter
+            // $flag = $validatedData['flag'];  // New flag parameter
             $unit_id = $request->input('unitId'); // Optional unit ID
             $email = $request->input('email');
             $notes = $request->input('notes');
