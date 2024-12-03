@@ -330,7 +330,8 @@ class LeadController extends Controller
                         'data' => $lead
                     ], 200);
                 }
-            } elseif ($flag == 2) {
+            } elseif ($unit_id != null) {
+                //for add lead based on unit association means interested leads
                 // Flag 2: Add new lead with attached unit
 
                 if ($leadid == 0) { //if new lead
