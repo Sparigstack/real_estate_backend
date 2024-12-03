@@ -220,7 +220,7 @@ class LeadController extends Controller
                 'budget' => 'nullable|numeric',            // Budget is optional and must be a number if provided
                 'leadid' => 'required|numeric',
                 'notes' => 'nullable|string',
-                'flag' => 'required|in:1,2',                // Flag to determine lead type
+                // 'flag' => 'required|in:1,2',                // Flag to determine lead type
                 'unitId' => 'nullable|integer',           // Unit ID will be provided for flag 2
             ]);
 
