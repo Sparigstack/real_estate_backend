@@ -22,6 +22,7 @@ class LeadCustomer  extends Model
         'agent_name',
         'agent_contact',
         'address',
+        'city',
         'state',
         'pincode',
         'reminder_date'
@@ -64,4 +65,14 @@ class LeadCustomer  extends Model
     {
         return $this->belongsToMany(LeadCustomer::class,  'leads_customers_id');
     }
+    public function city()
+    {
+        return $this->belongsTo(City::class, 'city');
+    }
+
+    public function state()
+    {
+        return $this->belongsTo(State::class, 'state');
+    }
+
 }

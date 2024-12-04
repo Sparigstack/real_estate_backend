@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Helper;
 use App\Mail\ManageLeads;
-use App\Models\FieldTypes;
+use App\Models\CustomFieldsTypeValue ;
 use App\Models\LeadCustomer;
 use App\Models\LeadCustomerUnit;
 use App\Models\LeadCustomerUnitData;
@@ -187,7 +187,13 @@ class LeadController extends Controller
     {
         try {
             if ($pid != 'null' && $lid != 'null') {
-                $fetchLeadDetail = LeadCustomer::with('userproperty', 'leadSource')->where('property_id', $pid)->where('id', $lid)->first();
+                $fetchLeadDetail = LeadCustomer::with('userproperty', 'leadSource','tags')->where('property_id', $pid)->where('id', $lid)->first();
+                if ($fetchLeadDetail) {
+                    // Transform tags to include only names
+                    $tagsArray = $fetchLeadDetail->tags->pluck('name')->toArray();
+                    $fetchLeadDetail = $fetchLeadDetail->toArray(); // Convert to array
+                    $fetchLeadDetail['tags'] = $tagsArray;
+                }
                 return $fetchLeadDetail;
             } else {
                 return null;
@@ -273,10 +279,10 @@ class LeadController extends Controller
                             'type' => 0, // manual,
                             'notes' => $notes,
                             'entity_type' => 1,
-                            'address' =>$address,
-                            'city' =>$city,
-                            'state'=>$state,
-                            'pincode'=>$pincode ,
+                            'address' => $address,
+                            'city' => $city,
+                            'state'=> $state,
+                            'pincode'=> $pincode,
                             'reminder_date'=>$reminder_date
                         ]);
 
@@ -342,10 +348,10 @@ class LeadController extends Controller
                         'type' => 0, // 0 - manual, modify if necessary
                         'notes' => $notes,
                         'entity_type' => 1,
-                        'address' =>$address,
-                        'city' =>$city,
-                        'state'=>$state,
-                        'pincode'=>$pincode ,
+                        'address' => $address,
+                            'city' => $city,
+                            'state'=> $state,
+                            'pincode'=> $pincode,
                         'reminder_date'=>$reminder_date
                     ]);
                         // Add or update tags associated with this lead
@@ -395,10 +401,10 @@ class LeadController extends Controller
                             'type' => 0,  // manual
                             'notes' => $notes,
                             'entity_type' => 1,
-                            'address' =>$address,
-                            'city' =>$city,
-                            'state'=>$state,
-                            'pincode'=>$pincode ,
+                            'address' => $address,
+                            'city' => $city,
+                            'state'=> $state,
+                            'pincode'=> $pincode,
                             'reminder_date'=>$reminder_date
                         ]);
                             // Add or update tags associated with this lead
@@ -507,10 +513,10 @@ class LeadController extends Controller
                             'type' => 0, // manual
                             'notes' => $notes,
                             'entity_type' => 1,
-                            'address' =>$address,
-                            'city' =>$city,
-                            'state'=>$state,
-                            'pincode'=>$pincode ,
+                            'address' => $address,
+                            'city' => $city,
+                            'state'=> $state,
+                            'pincode'=> $pincode,
                             'reminder_date'=>$reminder_date
                         ]);
 
@@ -1237,7 +1243,7 @@ class LeadController extends Controller
     public function getFieldTypes()
     {
         try {
-            $allfieldtypes = FieldTypes::all();
+            $allfieldtypes = CustomFieldsTypeValue::all();
             return $allfieldtypes;
         } catch (Exception $e) {
             $errorFrom = 'getFieldTypes';
