@@ -10,10 +10,12 @@ use App\Models\FieldTypes;
 use App\Models\LeadCustomer;
 use App\Models\LeadCustomerUnit;
 use App\Models\LeadCustomerUnitData;
+use App\Models\LeadsCustomersTag;
 use App\Models\LeadSource;
 use App\Models\LeadStatus;
 use App\Models\PaymentTransaction;
 use App\Models\Property;
+use App\Models\Tag;
 use App\Models\UserProperty;
 use App\Models\User;
 use Exception;
@@ -212,7 +214,7 @@ class LeadController extends Controller
             $validatedData = $request->validate([
                 'propertyinterest' => 'required|integer',  // Assuming propertyinterest is an integer (property_id)
                 'name' => 'required|string|max:255',       // Name is required and must be a string
-                'contactno' => 'required|string|max:15',   // Contact number is required, can be a string
+                'contactno' => 'required|integer',   // Contact number is required, can be a string
                 'agent_name' => 'nullable|string|max:255',
                 'agent_contact' =>  'nullable|string|max:15',
                 'source' => 'required|integer',            // Source ID is required (1-reference, 2-social media, etc.)
@@ -238,6 +240,12 @@ class LeadController extends Controller
             $email = $request->input('email');
             $notes = $request->input('notes');
             $status = $request->input('status');
+            $address = $request->input('address');
+            $city = $request->input('city');
+            $state = $request->input('state');
+            $pincode = $request->input('pincode');
+            $reminder_date = $request->input('reminder_date');
+            $tags=$request->input('tags');
 
 
 
@@ -264,8 +272,21 @@ class LeadController extends Controller
                             'status_id' => $status, // 0-new
                             'type' => 0, // manual,
                             'notes' => $notes,
-                            'entity_type' => 1
+                            'entity_type' => 1,
+                            'address' =>$address,
+                            'city' =>$city,
+                            'state'=>$state,
+                            'pincode'=>$pincode ,
+                            'reminder_date'=>$reminder_date
                         ]);
+
+                            // Add or update tags associated with this lead
+                            if (isset($tags) && is_array($tags)) {
+                                foreach ($tags as $tagName) {
+                                    // Call the addTagToLead function to handle tag insertion and association
+                                    $this->addTagToLead($lead->id, $lead->property_id, $tagName);
+                                }
+                            }
 
                         // Return success response
                         return response()->json([
@@ -320,9 +341,28 @@ class LeadController extends Controller
                         'status_id' => $status, // You can change this to another value if needed
                         'type' => 0, // 0 - manual, modify if necessary
                         'notes' => $notes,
-                        'entity_type' => 1
+                        'entity_type' => 1,
+                        'address' =>$address,
+                        'city' =>$city,
+                        'state'=>$state,
+                        'pincode'=>$pincode ,
+                        'reminder_date'=>$reminder_date
                     ]);
+                        // Add or update tags associated with this lead
+                        if (isset($tags) && is_array($tags)) {
+                            foreach ($tags as $tagName) {
+                                // Call the addTagToLead function to handle tag insertion and association
+                                $this->addTagToLead($lead->id, $lead->property_id, $tagName);
+                            }
+                        }
 
+                        // Add or update tags associated with this lead
+                        if (isset($tags) && is_array($tags)) {
+                            foreach ($tags as $tagName) {
+                                // Call the addTagToLead function to handle tag insertion and association
+                                $this->addTagToLead($lead->id, $lead->property_id, $tagName);
+                            }
+                        }
                     // Return success response for updating the lead
                     return response()->json([
                         'status' => 'success',
@@ -354,8 +394,20 @@ class LeadController extends Controller
                             'status_id' => $status, // 0-new
                             'type' => 0,  // manual
                             'notes' => $notes,
-                            'entity_type' => 1
+                            'entity_type' => 1,
+                            'address' =>$address,
+                            'city' =>$city,
+                            'state'=>$state,
+                            'pincode'=>$pincode ,
+                            'reminder_date'=>$reminder_date
                         ]);
+                            // Add or update tags associated with this lead
+                            if (isset($tags) && is_array($tags)) {
+                                foreach ($tags as $tagName) {
+                                    // Call the addTagToLead function to handle tag insertion and association
+                                    $this->addTagToLead($lead->id, $lead->property_id, $tagName);
+                                }
+                            }
 
                         // Now handle the LeadUnit entry
                         $existingUnit = LeadCustomerUnit::where('unit_id', $unit_id)->first();
@@ -454,8 +506,21 @@ class LeadController extends Controller
                             'status_id' => $status, // 0-new
                             'type' => 0, // manual
                             'notes' => $notes,
-                            'entity_type' => 1
+                            'entity_type' => 1,
+                            'address' =>$address,
+                            'city' =>$city,
+                            'state'=>$state,
+                            'pincode'=>$pincode ,
+                            'reminder_date'=>$reminder_date
                         ]);
+
+                            // Add or update tags associated with this lead
+                            if (isset($tags) && is_array($tags)) {
+                                foreach ($tags as $tagName) {
+                                    // Call the addTagToLead function to handle tag insertion and association
+                                    $this->addTagToLead($lead->id, $lead->property_id, $tagName);
+                                }
+                            }
 
                         // Now handle the LeadUnit entry
                         $existingUnit = LeadCustomerUnit::where('unit_id', $unit_id)->first();
@@ -534,6 +599,8 @@ class LeadController extends Controller
                     ], 200);
                 }
             }
+
+            
         } catch (\Exception $e) {
             // Log the error
             $errorFrom = 'addEditLeadDetails';
@@ -545,6 +612,31 @@ class LeadController extends Controller
                 'status' => 'error',
                 'message' => 'Something went wrong',
             ], 400);
+        }
+    }
+
+
+    private function addTagToLead($leadId, $propertyId, $tagName)
+    {
+        // Check if the tag already exists for the given property
+        $tag = Tag::firstOrCreate(
+            ['name' => $tagName, 'property_id' => $propertyId],
+            ['created_at' => now(), 'updated_at' => now()]
+        );
+    
+        // Check if the tag is already associated with the lead, if not, add it
+        $existingAssociation = LeadsCustomersTag::where('leads_customers_id', $leadId)
+            ->where('tag_id', $tag->id)
+            ->first();
+    
+        if (!$existingAssociation) {
+            // Add the new association in the bridge table
+            LeadsCustomersTag::create([
+                'leads_customers_id' => $leadId,
+                'tag_id' => $tag->id,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
         }
     }
 
@@ -1149,6 +1241,28 @@ class LeadController extends Controller
             return $allfieldtypes;
         } catch (Exception $e) {
             $errorFrom = 'getFieldTypes';
+            $errorMessage = $e->getMessage();
+            $priority = 'high';
+            Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Not found',
+            ], 400);
+        }
+    }
+
+    public function fetchTags($pid){
+        try {
+            if ($pid != 'null') {
+                $allTags = Tag::where('property_id', $pid)->get();
+                return $allTags;
+            } else {
+                return null;
+            }
+        } catch (Exception $e) {
+            // Log the error
+            $errorFrom = 'fetchTags';
             $errorMessage = $e->getMessage();
             $priority = 'high';
             Helper::errorLog($errorFrom, $errorMessage, $priority);

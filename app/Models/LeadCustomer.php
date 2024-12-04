@@ -20,7 +20,11 @@ class LeadCustomer  extends Model
         'notes',
         'entity_type',
         'agent_name',
-        'agent_contact'
+        'agent_contact',
+        'address',
+        'state',
+        'pincode',
+        'reminder_date'
     ];
 
     public function userproperty()
@@ -51,5 +55,9 @@ class LeadCustomer  extends Model
     public function leadStatus()
     {
         return $this->belongsTo(leadStatus::class, 'status_id', 'id');
+    }
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class, 'leads_customers_tags', 'leads_customers_id', 'tag_id');
     }
 }
