@@ -60,4 +60,8 @@ class LeadCustomer  extends Model
     {
         return $this->belongsToMany(Tag::class, 'leads_customers_tags', 'leads_customers_id', 'tag_id');
     }
+    public function leadCustomerTags()
+    {
+        return $this->belongsToMany(LeadCustomer::class,  'leads_customers_id');
+    }
 }

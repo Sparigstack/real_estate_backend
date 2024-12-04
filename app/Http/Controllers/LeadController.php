@@ -45,7 +45,7 @@ class LeadController extends Controller
         try {
             if ($pid != 'null') {
                 // Base query
-                $allLeads = LeadCustomer::with(['userproperty', 'leadSource', 'leadCustomerUnits.unit.wingDetail'])
+                $allLeads = LeadCustomer::with(['userproperty', 'leadSource', 'leadCustomerUnits.unit.wingDetail','tags'])
                     ->where('property_id', $pid);
 
                 // Apply filtering based on flag
