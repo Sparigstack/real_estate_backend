@@ -124,7 +124,6 @@ class CustomFieldController extends Controller
                 'propertyId' => 'required',  // Ensure property exists
                 'fieldname' => 'required|string|max:255',
                 'fieldtype' => 'required|integer',
-                'fieldrequired' => 'required|in:1,2',  // 1 = required, 2 = not required
                 'singleselection' => 'array',
                 'multiselection' => 'array',
                 'fieldId' => 'nullable|integer', // fieldid can be nullable
@@ -134,7 +133,6 @@ class CustomFieldController extends Controller
             $propertyId = $validatedData['propertyId'];
             $fieldName = $validatedData['fieldname'];
             $fieldType = $validatedData['fieldtype'];
-            $isRequired = $validatedData['fieldrequired'];
             $singleSelection = $validatedData['singleselection'];
             $multiSelection = $validatedData['multiselection'];
             $fieldId = $validatedData['fieldId'];
