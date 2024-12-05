@@ -43,6 +43,7 @@ class CustomFieldController extends Controller
                 'fieldrequired' => 'required|in:1,2',  // 1 = required, 2 = not required
                 'singleselection' => 'array',
                 'multiselection' => 'array',
+                'fieldid'=>'nuallable',
             ]);
 
             // Extract input data
@@ -129,7 +130,7 @@ class CustomFieldController extends Controller
                     return response()->json([
                         'status' => 'error',
                         'message' => 'No custom fields found for this property.',
-                    ], 404);
+                    ], 200);
                 }
 
                 // Return success response with the fetched custom fields
@@ -139,6 +140,37 @@ class CustomFieldController extends Controller
             }
         } catch (\Exception $e) {
             Helper::errorLog('getCustomFields', $e->getLine() . $e->getMessage(), 'high');
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Something went wrong.',
+            ], 400);
+        }
+    }
+
+
+    public function fetchCustomField($cfid)
+    {
+        try {
+            if ($cfid != 'null') {
+                $customFieldDetail = CustomField::where('id', $cfid)
+                    ->with('customFieldStructures', 'typeValue')  // Eager load custom field structures (if needed)
+                    ->get();
+
+                // Check if custom fields are found
+                if ($customFieldDetail->isEmpty()) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'No custom fields found for this property.',
+                    ], 200);
+                }
+
+                // Return success response with the fetched custom fields
+                return $customFieldDetail;
+            } else {
+                return null;
+            }
+        } catch (\Exception $e) {
+            Helper::errorLog('fetchCustomField', $e->getLine() . $e->getMessage(), 'high');
             return response()->json([
                 'status' => 'error',
                 'message' => 'Something went wrong.',
