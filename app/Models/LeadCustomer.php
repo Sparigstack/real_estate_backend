@@ -75,4 +75,8 @@ class LeadCustomer  extends Model
         return $this->belongsTo(State::class, 'state');
     }
 
+    public function customFields()
+    {
+        return $this->hasMany(CustomFieldValue::class, 'leads_customers_id');
+    }
 }

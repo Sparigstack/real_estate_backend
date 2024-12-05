@@ -9,7 +9,11 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\WingController;
 use App\Http\Controllers\ChequeScanController;
+use App\Http\Controllers\CustomFieldController;
 use App\Http\Controllers\VillaBunglowController;
+
+
+
 
 Route::post('/register-user', [AuthController::class, 'registerUser']);
 // Route::post('/check-user-otp', [AuthController::class, 'checkUserOtp']);
@@ -94,6 +98,10 @@ Route::post('/send-template-messages', [AuthController::class, 'sendGupshupTempl
 
     //villa/bunglow calls
     Route::post('/add-villa-bunglow-details', [VillaBunglowController::class, 'addVillaBunglowDetails']);
+
+    //custom field calls
+    Route::post('/add-custom-fields', [CustomFieldController::class, 'addCustomFields']);
+    Route::get('/get-custom-fields/{pid}', [CustomFieldController::class, 'getCustomFields']);
 
 // });
 
