@@ -77,6 +77,6 @@ class LeadCustomer  extends Model
 
     public function customFields()
     {
-        return $this->hasMany(CustomFieldValue::class, 'leads_customers_id');
+        return $this->hasMany(CustomFieldsValue::class, 'leads_customers_id');
     }
 }

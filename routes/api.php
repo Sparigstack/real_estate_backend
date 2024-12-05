@@ -103,6 +103,7 @@ Route::post('/send-template-messages', [AuthController::class, 'sendGupshupTempl
     Route::post('/add-custom-fields', [CustomFieldController::class, 'addCustomFields']);
     Route::get('/get-custom-fields/{pid}', [CustomFieldController::class, 'getCustomFields']);
     Route::get('/fetch-custom-field/{cfid}', [CustomFieldController::class, 'fetchCustomField']);
+    Route::post('/remove-custom-field', [CustomFieldController::class, 'removeCustomField']);
 
 // });
 

@@ -9,7 +9,7 @@ use App\Models\CustomField;
 use App\Models\CustomFieldsStructure;
 use App\Models\CustomFieldsTypeValue;
 use App\Models\CustomFieldTypeValue;
-use App\Models\CustomFieldValue;
+use App\Models\CustomFieldsValue;
 use App\Models\LeadCustomer;
 use App\Models\LeadsCustomersTag;
 use App\Models\Property;
@@ -153,7 +153,7 @@ class CustomFieldController extends Controller
                 }
 
                 // Check if the field name is being changed, ensure no other field with the same name exists
-                if ($customField->name != $fieldName && CustomField::where('property_id', $propertyId)->where('id','!=',$fieldId)->where('name', $fieldName)->exists()) {
+                if ($customField->name != $fieldName && CustomField::where('property_id', $propertyId)->where('id', '!=', $fieldId)->where('name', $fieldName)->exists()) {
                     return response()->json([
                         'status' => 'error',
                         'message' => 'Custom field with the same name already exists for this property.',
@@ -299,6 +299,53 @@ class CustomFieldController extends Controller
             }
         } catch (\Exception $e) {
             Helper::errorLog('fetchCustomField', $e->getLine() . $e->getMessage(), 'high');
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Something went wrong.',
+            ], 400);
+        }
+    }
+
+    public function removeCustomField(Request $request)
+    {
+        try {
+            $validatedData = $request->validate([
+                'propertyId' => 'required',  // Ensure propertyId is valid
+                'fieldId' => 'required',    // Ensure fieldId is valid
+            ]);
+
+            $propertyId = $validatedData['propertyId'];
+            $fieldId = $validatedData['fieldId'];
+
+            // Fetch the custom field by fieldId and propertyId
+            $customField = CustomField::where('id', $fieldId)
+                ->where('property_id', $propertyId)
+                ->first();
+
+            if (!$customField) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Custom field not found for this property.',
+                ], 404);
+            }
+
+            // Delete related records in `custom_fields_structures`
+            CustomFieldsStructure::where('custom_field_id', $customField->id)->delete();
+
+            // Delete related records in `custom_fields_values`
+            CustomFieldsValue::where('custom_field_id', $customField->id)
+                ->where('property_id', $propertyId)
+                ->delete();
+
+            // Delete the custom field itself
+            $customField->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Custom field and all related data removed successfully.',
+            ], 200);
+        } catch (\Exception $e) {
+            Helper::errorLog('removeCustomField', $e->getLine() . $e->getMessage(), 'high');
             return response()->json([
                 'status' => 'error',
                 'message' => 'Something went wrong.',

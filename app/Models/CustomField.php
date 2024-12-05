@@ -28,7 +28,7 @@ class CustomField extends Model
 
     public function customFieldValues()
     {
-        return $this->hasMany(CustomFieldValue::class, 'custom_field_id');
+        return $this->hasMany(CustomFieldsValue::class, 'custom_field_id');
     }
 
     public function customFieldStructures()
