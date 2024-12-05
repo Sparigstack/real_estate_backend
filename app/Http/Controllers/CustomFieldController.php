@@ -164,7 +164,6 @@ class CustomFieldController extends Controller
                 $customField->update([
                     'name' => $fieldName,
                     'custom_fields_type_values_id' => $fieldType,
-                    'is_required' => $isRequired,
                     'updated_at' => now(),
                 ]);
 
@@ -200,7 +199,6 @@ class CustomFieldController extends Controller
                 'property_id' => $propertyId,
                 'name' => $fieldName,
                 'custom_fields_type_values_id' => $fieldType,
-                'is_required' => $isRequired,
             ]);
 
             // Save the single and multi-selection values in the custom_fields_structures table

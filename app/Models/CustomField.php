@@ -13,7 +13,6 @@ class CustomField extends Model
         'name',
         'custom_fields_type_values_id',
         'contact_no',
-        'is_required',
     ];
     // Relationships
     public function property()
