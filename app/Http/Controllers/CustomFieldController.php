@@ -43,7 +43,7 @@ class CustomFieldController extends Controller
                 'fieldrequired' => 'required|in:1,2',  // 1 = required, 2 = not required
                 'singleselection' => 'array',
                 'multiselection' => 'array',
-                'fieldid'=>'nuallable',
+                'fieldId'=>'nuallable',
             ]);
 
             // Extract input data
@@ -152,18 +152,10 @@ class CustomFieldController extends Controller
     {
         try {
             if ($cfid != 'null') {
-                $customFieldDetail = CustomField::where('id', $cfid)
-                    ->with('customFieldStructures', 'typeValue')  // Eager load custom field structures (if needed)
-                    ->get();
-
-                // Check if custom fields are found
-                if ($customFieldDetail->isEmpty()) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'No custom fields found for this property.',
-                    ], 200);
-                }
-
+                $customFieldDetail = CustomField::with('customFieldStructures', 'typeValue')// Eager load custom field structures (if needed)
+                    ->where('id', $cfid) 
+                    ->first();
+                        
                 // Return success response with the fetched custom fields
                 return $customFieldDetail;
             } else {
