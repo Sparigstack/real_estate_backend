@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Helper;
 use App\Mail\ManageLeads;
-use App\Models\CustomFieldsTypeValue ;
+use App\Models\CustomFieldsTypeValue;
 use App\Models\LeadCustomer;
 use App\Models\LeadCustomerUnit;
 use App\Models\LeadCustomerUnitData;
@@ -45,7 +45,7 @@ class LeadController extends Controller
         try {
             if ($pid != 'null') {
                 // Base query
-                $allLeads = LeadCustomer::with(['userproperty', 'leadSource', 'leadCustomerUnits.unit.wingDetail','tags'])
+                $allLeads = LeadCustomer::with(['userproperty', 'leadSource', 'leadCustomerUnits.unit.wingDetail', 'tags'])
                     ->where('property_id', $pid);
 
                 // Apply filtering based on flag
@@ -54,7 +54,6 @@ class LeadController extends Controller
                     $allLeads->where('entity_type', 2);
                 } elseif ($flag == 3) {
                     $allLeads->where('entity_type', 1);
-    
                 }
 
                 // Apply search filter
@@ -77,7 +76,7 @@ class LeadController extends Controller
                         $allLeads->join('lead_sources', 'leads_customers.source_id', '=', 'lead_sources.id')
                             ->orderBy('lead_sources.name', $sort);
                     }
-                }else {
+                } else {
                     // Default sorting: descending by created_at
                     $allLeads->orderBy('id', 'desc');
                 }
@@ -187,7 +186,7 @@ class LeadController extends Controller
     {
         try {
             if ($pid != 'null' && $lid != 'null') {
-                $fetchLeadDetail = LeadCustomer::with('userproperty', 'leadSource','tags')->where('property_id', $pid)->where('id', $lid)->first();
+                $fetchLeadDetail = LeadCustomer::with('userproperty', 'leadSource', 'tags')->where('property_id', $pid)->where('id', $lid)->first();
                 if ($fetchLeadDetail) {
                     // Transform tags to include only names
                     $tagsArray = $fetchLeadDetail->tags->pluck('name')->toArray();
@@ -251,7 +250,7 @@ class LeadController extends Controller
             $state = $request->input('state');
             $pincode = $request->input('pincode');
             $reminder_date = $request->input('reminder_date');
-            $tags=$request->input('tags');
+            $tags = $request->input('tags');
 
 
 
@@ -281,18 +280,18 @@ class LeadController extends Controller
                             'entity_type' => 1,
                             'address' => $address,
                             'city' => $city,
-                            'state'=> $state,
-                            'pincode'=> $pincode,
-                            'reminder_date'=>$reminder_date
+                            'state' => $state,
+                            'pincode' => $pincode,
+                            'reminder_date' => $reminder_date
                         ]);
 
-                            // Add or update tags associated with this lead
-                            if (isset($tags) && is_array($tags)) {
-                                foreach ($tags as $tagName) {
-                                    // Call the addTagToLead function to handle tag insertion and association
-                                    $this->addTagToLead($lead->id, $lead->property_id, $tagName);
-                                }
+                        // Add or update tags associated with this lead
+                        if (isset($tags) && is_array($tags)) {
+                            foreach ($tags as $tagName) {
+                                // Call the addTagToLead function to handle tag insertion and association
+                                $this->addTagToLead($lead->id, $lead->property_id, $tagName);
                             }
+                        }
 
                         // Return success response
                         return response()->json([
@@ -308,6 +307,7 @@ class LeadController extends Controller
                         ], 200);
                     }
                 } else {
+                    //edit case of lead
                     // Update an existing lead record
                     $lead = LeadCustomer::find($leadid);
 
@@ -349,26 +349,42 @@ class LeadController extends Controller
                         'notes' => $notes,
                         'entity_type' => 1,
                         'address' => $address,
-                            'city' => $city,
-                            'state'=> $state,
-                            'pincode'=> $pincode,
-                        'reminder_date'=>$reminder_date
+                        'city' => $city,
+                        'state' => $state,
+                        'pincode' => $pincode,
+                        'reminder_date' => $reminder_date
                     ]);
-                        // Add or update tags associated with this lead
-                        if (isset($tags) && is_array($tags)) {
-                            foreach ($tags as $tagName) {
-                                // Call the addTagToLead function to handle tag insertion and association
-                                $this->addTagToLead($lead->id, $lead->property_id, $tagName);
-                            }
+                    // Add or update tags associated with this lead
+                    if (isset($tags) && is_array($tags)) {
+                        // Get the current tags associated with the lead
+                        $currentTags = $lead->tags->pluck('id')->toArray();
+
+                        // Iterate over the incoming tags
+                        foreach ($tags as $tagName) {
+                            $this->addTagToLead($lead->id, $lead->property_id, $tagName);
                         }
 
-                        // Add or update tags associated with this lead
-                        if (isset($tags) && is_array($tags)) {
-                            foreach ($tags as $tagName) {
-                                // Call the addTagToLead function to handle tag insertion and association
-                                $this->addTagToLead($lead->id, $lead->property_id, $tagName);
-                            }
-                        }
+                        // Find tags that need to be removed (tags present in current but not in the new list)
+                        $tagsToRemove = array_diff($currentTags, array_map(function ($tag) use ($lead) {
+                            return Tag::firstOrCreate(
+                                ['name' => $tag, 'property_id' => $lead->property_id],
+                                ['created_at' => now(), 'updated_at' => now()]
+                            )->id;
+                        }, $tags));
+
+                        // Remove those tags
+                        LeadsCustomersTag::where('leads_customers_id', $lead->id)
+                            ->whereIn('tag_id', $tagsToRemove)
+                            ->delete();
+                    }
+
+                    // // Add or update tags associated with this lead
+                    // if (isset($tags) && is_array($tags)) {
+                    //     foreach ($tags as $tagName) {
+                    //         // Call the addTagToLead function to handle tag insertion and association
+                    //         $this->addTagToLead($lead->id, $lead->property_id, $tagName);
+                    //     }
+                    // }
                     // Return success response for updating the lead
                     return response()->json([
                         'status' => 'success',
@@ -403,17 +419,17 @@ class LeadController extends Controller
                             'entity_type' => 1,
                             'address' => $address,
                             'city' => $city,
-                            'state'=> $state,
-                            'pincode'=> $pincode,
-                            'reminder_date'=>$reminder_date
+                            'state' => $state,
+                            'pincode' => $pincode,
+                            'reminder_date' => $reminder_date
                         ]);
-                            // Add or update tags associated with this lead
-                            if (isset($tags) && is_array($tags)) {
-                                foreach ($tags as $tagName) {
-                                    // Call the addTagToLead function to handle tag insertion and association
-                                    $this->addTagToLead($lead->id, $lead->property_id, $tagName);
-                                }
+                        // Add or update tags associated with this lead
+                        if (isset($tags) && is_array($tags)) {
+                            foreach ($tags as $tagName) {
+                                // Call the addTagToLead function to handle tag insertion and association
+                                $this->addTagToLead($lead->id, $lead->property_id, $tagName);
                             }
+                        }
 
                         // Now handle the LeadUnit entry
                         $existingUnit = LeadCustomerUnit::where('unit_id', $unit_id)->first();
@@ -515,18 +531,18 @@ class LeadController extends Controller
                             'entity_type' => 1,
                             'address' => $address,
                             'city' => $city,
-                            'state'=> $state,
-                            'pincode'=> $pincode,
-                            'reminder_date'=>$reminder_date
+                            'state' => $state,
+                            'pincode' => $pincode,
+                            'reminder_date' => $reminder_date
                         ]);
 
-                            // Add or update tags associated with this lead
-                            if (isset($tags) && is_array($tags)) {
-                                foreach ($tags as $tagName) {
-                                    // Call the addTagToLead function to handle tag insertion and association
-                                    $this->addTagToLead($lead->id, $lead->property_id, $tagName);
-                                }
+                        // Add or update tags associated with this lead
+                        if (isset($tags) && is_array($tags)) {
+                            foreach ($tags as $tagName) {
+                                // Call the addTagToLead function to handle tag insertion and association
+                                $this->addTagToLead($lead->id, $lead->property_id, $tagName);
                             }
+                        }
 
                         // Now handle the LeadUnit entry
                         $existingUnit = LeadCustomerUnit::where('unit_id', $unit_id)->first();
@@ -605,8 +621,6 @@ class LeadController extends Controller
                     ], 200);
                 }
             }
-
-            
         } catch (\Exception $e) {
             // Log the error
             $errorFrom = 'addEditLeadDetails';
@@ -629,12 +643,12 @@ class LeadController extends Controller
             ['name' => $tagName, 'property_id' => $propertyId],
             ['created_at' => now(), 'updated_at' => now()]
         );
-    
+
         // Check if the tag is already associated with the lead, if not, add it
         $existingAssociation = LeadsCustomersTag::where('leads_customers_id', $leadId)
             ->where('tag_id', $tag->id)
             ->first();
-    
+
         if (!$existingAssociation) {
             // Add the new association in the bridge table
             LeadsCustomersTag::create([
@@ -672,7 +686,7 @@ class LeadController extends Controller
                 // Open CSV file and process it
                 $csvFile = fopen($file, 'r');
                 $header = fgetcsv($csvFile);
-                $expectedHeaders = ['name', 'email(optional)', 'contact', 'source', 'notes(optional)','status'];
+                $expectedHeaders = ['name', 'email(optional)', 'contact', 'source', 'notes(optional)', 'status'];
                 $escapedHeader = [];
 
                 foreach ($header as $value) {
@@ -681,7 +695,7 @@ class LeadController extends Controller
                     $escapedHeader[] = $normalizedHeader;
                 }
 
-                $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source', 'notes','status'];
+                $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source', 'notes', 'status'];
 
                 // Validate CSV headers
                 if (array_diff($normalizedExpectedHeaders, $escapedHeader)) {
@@ -703,7 +717,7 @@ class LeadController extends Controller
                 $sheet = $spreadsheet->getActiveSheet();
                 $header = $sheet->rangeToArray('A1:E1')[0]; // Assuming headers are in the first row
 
-                $expectedHeaders = ['name', 'email(optional)', 'contact', 'source', 'notes(optional)','status'];
+                $expectedHeaders = ['name', 'email(optional)', 'contact', 'source', 'notes(optional)', 'status'];
                 $escapedHeader = [];
 
                 foreach ($header as $value) {
@@ -711,7 +725,7 @@ class LeadController extends Controller
                     $escapedHeader[] = $normalizedHeader;
                 }
 
-                $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source', 'notes','status'];
+                $normalizedExpectedHeaders = ['name', 'email', 'contact', 'source', 'notes', 'status'];
 
                 // Validate XLSX headers
                 if (array_diff($normalizedExpectedHeaders, $escapedHeader)) {
@@ -751,7 +765,7 @@ class LeadController extends Controller
                         'notes' => $data['notes'] ?? 'N/A',
                         'contact' => $data['contact'] ?? 'N/A',
                         'source' => $data['source'] ?? 'N/A',
-                        'status' =>$data['status'] ?? 'N/A',
+                        'status' => $data['status'] ?? 'N/A',
                         'reason' => 'Missing required field(s)',
                     ];
                     continue;
@@ -982,7 +996,7 @@ class LeadController extends Controller
         } catch (\Exception $e) {
             // Log the error
             $errorFrom = 'restapidetails';
-            $errorMessage = $e->getMessage().$e->getLine();
+            $errorMessage = $e->getMessage() . $e->getLine();
             $priority = 'high';
             Helper::errorLog($errorFrom, $errorMessage, $priority);
 
@@ -1258,7 +1272,8 @@ class LeadController extends Controller
         }
     }
 
-    public function fetchTags($pid){
+    public function fetchTags($pid)
+    {
         try {
             if ($pid != 'null') {
                 $allTags = Tag::where('property_id', $pid)->get();
@@ -1279,5 +1294,4 @@ class LeadController extends Controller
             ], 400);
         }
     }
-
 }
