@@ -140,7 +140,7 @@ class CustomFieldController extends Controller
             $fieldId = $validatedData['fieldId'];
 
             // Case: If fieldid is provided and not 0, it's an edit request
-            if ($fieldId !== null && $fieldId !== 0) {
+            if ($fieldId != null && $fieldId != 0) {
                 // Find the custom field by id
                 $customField = CustomField::find($fieldId);
 
@@ -153,7 +153,7 @@ class CustomFieldController extends Controller
                 }
 
                 // Check if the field name is being changed, ensure no other field with the same name exists
-                if ($customField->name !== $fieldName && CustomField::where('property_id', $propertyId)->where('name', $fieldName)->exists()) {
+                if ($customField->name != $fieldName && CustomField::where('property_id', $propertyId)->where('id','!=',$fieldId)->where('name', $fieldName)->exists()) {
                     return response()->json([
                         'status' => 'error',
                         'message' => 'Custom field with the same name already exists for this property.',
