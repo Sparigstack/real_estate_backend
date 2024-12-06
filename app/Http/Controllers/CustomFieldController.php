@@ -357,15 +357,21 @@ class CustomFieldController extends Controller
             $valueType = $customField['value_type'];
             $value = $customField['value'];
             $customFieldStructureId = $customField['custom_field_structure_id'] ?? null;
-
-            // Fetch custom field type using Eloquent
+    
+            // Fetch the custom field type using Eloquent
             $fieldType = CustomFieldsTypeValue::find($valueType)->type ?? null;
-
+    
+            // Remove existing values for the current custom field
+            CustomFieldsValue::where('property_id', $propertyId)
+                ->where('leads_customers_id', $leadId)
+                ->where('custom_field_id', $customFieldId)
+                ->delete();
+    
             if ($fieldType == 'Single Selection' || $fieldType == 'Multi Selection') {
                 if ($customFieldStructureId) {
                     $structureIds = explode(',', $customFieldStructureId);
                     $values = explode(',', $value);
-
+    
                     foreach ($structureIds as $index => $structureId) {
                         CustomFieldsValue::create([
                             'property_id' => $propertyId,

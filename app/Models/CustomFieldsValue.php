@@ -36,7 +36,7 @@ class CustomFieldsValue extends Model
         return $this->belongsTo(CustomFieldsTypeValue::class, 'custom_fields_type_values_id');
     }
 
-    public function customFieldStructure()
+    public function customFieldStructures()
     {
         return $this->belongsTo(CustomFieldsStructure::class, 'custom_fields_structure_id');
     }

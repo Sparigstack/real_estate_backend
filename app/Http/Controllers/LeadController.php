@@ -186,8 +186,8 @@ class LeadController extends Controller
     {
         try {
             if ($pid != 'null' && $lid != 'null') {
-                $fetchLeadDetail = LeadCustomer::with('userproperty', 'leadSource', 'tags','customFields.customFieldStructure','customFields.typeValue')->where('property_id', $pid)->where('id', $lid)->first();
-            // return ($fetchLeadDetail->customFields->toArray());
+                $fetchLeadDetail = LeadCustomer::with('userproperty', 'leadSource', 'tags','customFields.customFieldStructures','customFields.typeValue')->where('property_id', $pid)->where('id', $lid)->first();
+            
                 if ($fetchLeadDetail) {
                     // Transform tags to include only names
                     $tagsArray = $fetchLeadDetail->tags->pluck('name')->toArray();
