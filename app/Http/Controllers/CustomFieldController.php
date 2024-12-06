@@ -348,4 +348,76 @@ class CustomFieldController extends Controller
             ], 400);
         }
     }
+
+    //common function for saving customfields based on leads
+    public static function saveCustomFieldData($propertyId, $leadId, $customFieldData)
+    {
+        foreach ($customFieldData as $customField) {
+            $customFieldId = $customField['custom_field_id'];
+            $valueType = $customField['value_type'];
+            $value = $customField['value'];
+            $customFieldStructureId = $customField['custom_field_structure_id'] ?? null;
+
+            // Fetch custom field type using Eloquent
+            $fieldType = CustomFieldsTypeValue::find($valueType)->type ?? null;
+
+            if ($fieldType == 'Single Selection' || $fieldType == 'Multi Selection') {
+                if ($customFieldStructureId) {
+                    $structureIds = explode(',', $customFieldStructureId);
+                    $values = explode(',', $value);
+
+                    foreach ($structureIds as $index => $structureId) {
+                        CustomFieldsValue::create([
+                            'property_id' => $propertyId,
+                            'leads_customers_id' => $leadId,
+                            'custom_fields_type_values_id' => $valueType,
+                            'custom_field_id' => $customFieldId,
+                            'custom_fields_structure_id' => $structureId,
+                            'text_value' => $values[$index] ?? null,
+                        ]);
+                    }
+                }
+            } elseif ($fieldType == 'Long Text') {
+                CustomFieldsValue::create([
+                    'property_id' => $propertyId,
+                    'leads_customers_id' => $leadId,
+                    'custom_fields_type_values_id' => $valueType,
+                    'custom_field_id' => $customFieldId,
+                    'text_value' => $value,
+                ]);
+            } elseif ($fieldType == 'Date') {
+                CustomFieldsValue::create([
+                    'property_id' => $propertyId,
+                    'leads_customers_id' => $leadId,
+                    'custom_fields_type_values_id' => $valueType,
+                    'custom_field_id' => $customFieldId,
+                    'date_value' => $value,
+                ]);
+            } elseif ($fieldType == 'Small Text') {
+                CustomFieldsValue::create([
+                    'property_id' => $propertyId,
+                    'leads_customers_id' => $leadId,
+                    'custom_fields_type_values_id' => $valueType,
+                    'custom_field_id' => $customFieldId,
+                    'small_text_value' => $value,
+                ]);
+            } elseif ($fieldType == 'Number') {
+                CustomFieldsValue::create([
+                    'property_id' => $propertyId,
+                    'leads_customers_id' => $leadId,
+                    'custom_fields_type_values_id' => $valueType,
+                    'custom_field_id' => $customFieldId,
+                    'int_value' => $value,
+                ]);
+            } else {
+                CustomFieldsValue::create([
+                    'property_id' => $propertyId,
+                    'leads_customers_id' => $leadId,
+                    'custom_fields_type_values_id' => $valueType,
+                    'custom_field_id' => $customFieldId,
+                    'text_value' => $value,
+                ]);
+            }
+        }
+    }
 }

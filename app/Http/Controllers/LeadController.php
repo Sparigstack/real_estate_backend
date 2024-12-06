@@ -251,6 +251,9 @@ class LeadController extends Controller
             $pincode = $request->input('pincode');
             $reminder_date = $request->input('reminder_date');
             $tags = $request->input('tags');
+            $customFieldData = $request->input('CustomFieldData', []);
+
+         
 
 
 
@@ -292,6 +295,9 @@ class LeadController extends Controller
                                 $this->addTagToLead($lead->id, $lead->property_id, $tagName);
                             }
                         }
+
+                        //common function for saving customfields based on leads
+                        CustomFieldController::saveCustomFieldData($propertyid,$lead->id, $customFieldData);
 
                         // Return success response
                         return response()->json([
@@ -378,13 +384,9 @@ class LeadController extends Controller
                             ->delete();
                     }
 
-                    // // Add or update tags associated with this lead
-                    // if (isset($tags) && is_array($tags)) {
-                    //     foreach ($tags as $tagName) {
-                    //         // Call the addTagToLead function to handle tag insertion and association
-                    //         $this->addTagToLead($lead->id, $lead->property_id, $tagName);
-                    //     }
-                    // }
+                     //common function for saving customfields based on leads
+                     CustomFieldController::saveCustomFieldData($propertyid,$lead->id, $customFieldData);
+                     
                     // Return success response for updating the lead
                     return response()->json([
                         'status' => 'success',
@@ -430,6 +432,9 @@ class LeadController extends Controller
                                 $this->addTagToLead($lead->id, $lead->property_id, $tagName);
                             }
                         }
+
+                         //common function for saving customfields based on leads
+                         CustomFieldController::saveCustomFieldData($propertyid,$lead->id, $customFieldData);
 
                         // Now handle the LeadUnit entry
                         $existingUnit = LeadCustomerUnit::where('unit_id', $unit_id)->first();
@@ -478,11 +483,6 @@ class LeadController extends Controller
                             $leadcustomerunitdata->leads_customers_id = $lead->id;
                             $leadcustomerunitdata->budget = $budget;
                             $leadcustomerunitdata->save();
-                            // LeadCustomerUnitData::create([
-                            //     'leads_customers_unit_id' => $existingUnit->id,
-                            //     'leads_customers_id' => $lead->id,
-                            //     'budget' => $budget,
-                            // ]);
                         }
 
                         return response()->json([
@@ -492,7 +492,6 @@ class LeadController extends Controller
                         ], 200);
                     } else {
                         // If the lead exists, don't create a new lead, but pass it to the LeadUnit table
-                        // $lead = $existingLead;
 
                         return response()->json([
                             'status' => 'error',
@@ -544,6 +543,9 @@ class LeadController extends Controller
                             }
                         }
 
+                         //common function for saving customfields based on leads
+                         CustomFieldController::saveCustomFieldData($propertyid,$lead->id, $customFieldData);
+
                         // Now handle the LeadUnit entry
                         $existingUnit = LeadCustomerUnit::where('unit_id', $unit_id)->first();
 
@@ -589,11 +591,6 @@ class LeadController extends Controller
                             $leadcustomerunitdata->leads_customers_id = $lead->id;
                             $leadcustomerunitdata->budget = $budget;
                             $leadcustomerunitdata->save();
-                            // LeadCustomerUnitData::create([
-                            //     'leads_customers_unit_id' => $existingUnit->id,
-                            //     'leads_customers_id' => $lead->id,
-                            //     'budget' => $budget,
-                            // ]);
                         }
 
                         return response()->json([
