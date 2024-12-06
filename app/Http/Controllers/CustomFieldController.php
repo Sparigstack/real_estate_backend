@@ -250,6 +250,25 @@ class CustomFieldController extends Controller
                     ->with('customFieldStructures', 'typeValue')  // Eager load custom field structures (if needed)
                     ->get();
 
+
+                // Transform custom fields to include value_type and value_type_name from typeValue
+                $customFields = $customFields->map(function ($customField) {
+                    // If typeValue exists, transform it
+                    if ($customField->typeValue) {
+                        $customField->value_type = $customField->typeValue->id; // assuming id is the value_type
+                        $customField->value_type_name = $customField->typeValue->type; // assuming type is the value_type_name
+                    } else {
+                        // If no typeValue, set default values or handle the absence
+                        $customField->value_type = null;
+                        $customField->value_type_name = null;
+                    }
+
+                    // Optionally, you can remove the typeValue object from the response
+                    unset($customField->typeValue);
+
+                    return $customField;
+                });
+
                 // Check if custom fields are found
                 if ($customFields->isEmpty()) {
                     return response()->json([
@@ -272,6 +291,88 @@ class CustomFieldController extends Controller
         }
     }
 
+    public function getCustomFieldWithLeadValues($pid, $lid)
+    {
+        try {
+
+            // Fetch custom fields for the given property ID with related structures and type values
+            $customFields = CustomField::where('property_id', $pid)
+                ->with(['typeValue', 'customFieldValues' => function ($query) use ($lid) {
+                    $query->where('leads_customers_id', $lid);
+                }, 'customFieldStructures'])
+                ->get();
+
+            // Check if custom fields are found
+            if ($customFields->isEmpty()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No custom fields found for this property.',
+                ], 200);
+            }
+
+            // Transform the custom fields with the respective values
+            $customFields = $customFields->map(function ($customField) {
+                // Default values to be returned
+                $customFieldData = [
+                    'id' => $customField->id,
+                    'property_id' => $customField->property_id ?? null,
+                    'name' => $customField->name,
+                    'value_type' => $customField->typeValue ? $customField->typeValue->id : null,
+                    'value_type_name' => $customField->typeValue ? $customField->typeValue->type : null,
+                    'custom_field_structures' => [],
+                    'created_at' => $customField->created_at,
+                    'value' => null,
+                    'CustomFieldValueid' => null
+                ];
+
+                // If custom field has values for the lead, map the values
+                if ($customField->customFieldValues->isNotEmpty()) {
+                    $leadValue = $customField->customFieldValues->first(); // Assuming there is only one value per field for the lead
+                    $customFieldData['CustomFieldValueid'] = $leadValue->id;
+
+                    // Depending on the field type, set the appropriate value
+                    switch ($customField->typeValue->id) {
+                        case 1: // For "Small Text", use text_value
+                            $customFieldData['value'] = $leadValue->text_value;
+                            break;
+                        case 6: // For "Single Selection" or Multi Selection
+                            $customFieldData['value'] = $leadValue->customFieldStructure->pluck('id')->toArray(); // Multi Selection
+                            break;
+                        case 7: // For "Multi Selection"
+                            $customFieldData['value'] = $leadValue->customFieldStructure->pluck('id')->toArray();
+                            break;
+                            // Add more cases for other types if needed
+                        default:
+                            $customFieldData['value'] = $leadValue->int_value ?? null; // default fallback
+                    }
+                }
+
+                // Add custom field structures for multi-selection or other types
+                $customFieldData['customefieldstructures'] = $customField->customFieldStructures->map(function ($structure) {
+                    return [
+                        'id' => $structure->id,
+                        'value' => $structure->value,
+                        'created_at' => $structure->created_at,
+                        'updated_at' => $structure->updated_at
+                    ];
+                });
+
+                return $customFieldData;
+            });
+
+            // Return the custom fields with their respective lead values
+            return response()->json($customFields, 200);
+        } catch (\Exception $e) {
+            Helper::errorLog('getCustomFieldWithLeadValues', $e->getLine() . $e->getMessage(), 'high');
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Something went wrong.',
+            ], 400);
+        }
+    }
+
+
+    
 
     public function fetchCustomField($cfid)
     {
@@ -357,21 +458,21 @@ class CustomFieldController extends Controller
             $valueType = $customField['value_type'];
             $value = $customField['value'];
             $customFieldStructureId = $customField['custom_field_structure_id'] ?? null;
-    
+
             // Fetch the custom field type using Eloquent
             $fieldType = CustomFieldsTypeValue::find($valueType)->type ?? null;
-    
+
             // Remove existing values for the current custom field
             CustomFieldsValue::where('property_id', $propertyId)
                 ->where('leads_customers_id', $leadId)
                 ->where('custom_field_id', $customFieldId)
                 ->delete();
-    
+
             if ($fieldType == 'Single Selection' || $fieldType == 'Multi Selection') {
                 if ($customFieldStructureId) {
                     $structureIds = explode(',', $customFieldStructureId);
                     $values = explode(',', $value);
-    
+
                     foreach ($structureIds as $index => $structureId) {
                         CustomFieldsValue::create([
                             'property_id' => $propertyId,
