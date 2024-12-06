@@ -319,7 +319,7 @@ class CustomFieldController extends Controller
                     'name' => $customField->name,
                     'value_type' => $customField->typeValue ? $customField->typeValue->id : null,
                     'value_type_name' => $customField->typeValue ? $customField->typeValue->type : null,
-                    'custom_field_structures' => [],
+                    // 'custom_field_structures' => [],
                     'created_at' => $customField->created_at,
                     'value' => null,
                     'CustomFieldValueid' => null
@@ -348,7 +348,7 @@ class CustomFieldController extends Controller
                 }
 
                 // Add custom field structures for multi-selection or other types
-                $customFieldData['customefieldstructures'] = $customField->customFieldStructures->map(function ($structure) {
+                $customFieldData['custom_field_structures'] = $customField->customFieldStructures->map(function ($structure) {
                     return [
                         'id' => $structure->id,
                         'value' => $structure->value,
