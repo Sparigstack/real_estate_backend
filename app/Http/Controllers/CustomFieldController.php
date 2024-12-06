@@ -336,20 +336,23 @@ class CustomFieldController extends Controller
                             $customFieldData['value'] = $leadValue->small_text_value;
                             break;
                             
-                        case 2: // For "Small Text", use text_value
+                        case 2: // For "long Text", use text_value
                                 $customFieldData['value'] = $leadValue->text_value;
                                 break;
-                        case 3: // For "Small Text", use text_value
+                        case 3: // For "int Text", use int_value
                                 $customFieldData['value'] = $leadValue->int_value;
                                 break;
-                        case 4: // For "Small Text", use text_value
+                        case 4: // For "date Text", use date
                                 $customFieldData['value'] = $leadValue->date_value;
                                 break;
                         case 5: // For "Single Selection" 
                             $customFieldData['value'] = $leadValue->custom_fields_structure_id; 
                             break;
                         case 6: // For "Multi Selection"
-                            $customFieldData['value'] = $leadValue->customFieldStructure->pluck('id')->toArray(); // Multi Selection
+                            $customFieldData['value'] = $customField->customFieldValues
+                            ->pluck('custom_fields_structure_id') // Pluck all the selected structure IDs
+                            ->toArray();
+                            // $customFieldData['value'] = $leadValue->customFieldStructure; // Multi Selection
                             break;
                             // Add more cases for other types if needed
                         default:
