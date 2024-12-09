@@ -64,6 +64,9 @@ class LeadController extends Controller
                             ->orWhere('contact_no', 'like', "%{$skey}%")
                             ->orWhereHas('leadSource', function ($q) use ($skey) {
                                 $q->where('name', 'like', "%{$skey}%");
+                            })
+                            ->orWhereHas('tags', function ($q) use ($skey) {
+                                $q->where('name', 'like', "%{$skey}%");
                             });
                     });
                 }
