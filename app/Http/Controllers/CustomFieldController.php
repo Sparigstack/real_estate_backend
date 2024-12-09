@@ -247,7 +247,8 @@ class CustomFieldController extends Controller
         try {
             if ($pid != 'null') {
                 $customFields = CustomField::where('property_id', $pid)
-                    ->with('customFieldStructures', 'typeValue')  // Eager load custom field structures (if needed)
+                    ->with('customFieldStructures', 'typeValue')
+                    ->orderBy('id', 'desc')   // Eager load custom field structures (if needed)
                     ->get();
 
 
@@ -487,13 +488,14 @@ class CustomFieldController extends Controller
                     $values = explode(',', $value);
 
                     foreach ($structureIds as $index => $structureId) {
+                        $customstructurefieldname=CustomFieldsStructure::where('id',$structureId)->first();
                         CustomFieldsValue::create([
                             'property_id' => $propertyId,
                             'leads_customers_id' => $leadId,
                             'custom_fields_type_values_id' => $valueType,
                             'custom_field_id' => $customFieldId,
                             'custom_fields_structure_id' => $structureId,
-                            'text_value' => $values[$index] ?? null,
+                            'text_value' => $customstructurefieldname->value ?? null,
                         ]);
                     }
                 }
@@ -513,7 +515,7 @@ class CustomFieldController extends Controller
                     'custom_field_id' => $customFieldId,
                     'date_value' => $value,
                 ]);
-            } elseif ($fieldType == 'Small Text') {
+            } elseif ($fieldType == 'Small Text(max character 100)') {
                 CustomFieldsValue::create([
                     'property_id' => $propertyId,
                     'leads_customers_id' => $leadId,
