@@ -190,7 +190,7 @@ class LeadController extends Controller
         try {
             if ($pid != 'null' && $lid != 'null') {
                 $fetchLeadDetail = LeadCustomer::with('userproperty', 'leadSource', 'tags')->where('property_id', $pid)->where('id', $lid)->first();
-            
+
                 if ($fetchLeadDetail) {
                     // Transform tags to include only names
                     $tagsArray = $fetchLeadDetail->tags->pluck('name')->toArray();
@@ -249,15 +249,17 @@ class LeadController extends Controller
             $email = $request->input('email');
             $notes = $request->input('notes');
             $status = $request->input('status');
-            $address = $request->input('address');
-            $city = $request->input('city');
-            $state = $request->input('state');
-            $pincode = $request->input('pincode');
-            $reminder_date = $request->input('reminder_date');
-            $tags = $request->input('tags');
-            $customFieldData = $request->input('CustomFieldData', []);
+            $flag = $request->input('flag'); //1 means form leads add sales module, 2 means leads add from lead module
 
-         
+            if ($flag == 2) {
+                $address = $request->input('address');
+                $city = $request->input('city');
+                $state = $request->input('state');
+                $pincode = $request->input('pincode');
+                $reminder_date = $request->input('reminder_date');
+                $tags = $request->input('tags');
+                $customFieldData = $request->input('CustomFieldData', []);
+            }
 
 
 
@@ -273,7 +275,7 @@ class LeadController extends Controller
 
                     if (!$existingLead) {
                         // Create a new lead record for manual or web form entry
-                        $lead = LeadCustomer::create([
+                        $leadData = [
                             'property_id' => $propertyid,
                             'name' => $name,
                             'contact_no' => $contactno,
@@ -282,27 +284,40 @@ class LeadController extends Controller
                             'email' => $email,
                             'source_id' => $sourceid,
                             'status_id' => $status, // 0-new
-                            'type' => 0, // manual,
+                            'type' => 0, // manual
                             'notes' => $notes,
                             'entity_type' => 1,
-                            'address' => $address,
-                            'city' => $city,
-                            'state' => $state,
-                            'pincode' => $pincode,
-                            'reminder_date' => $reminder_date
-                        ]);
+                        ];
 
-                        // Add or update tags associated with this lead
-                        if (isset($tags) && is_array($tags)) {
-                            foreach ($tags as $tagName) {
-                                // Call the addTagToLead function to handle tag insertion and association
-                                $this->addTagToLead($lead->id, $lead->property_id, $tagName);
-                            }
+                        // Add additional fields if flag is 2
+                        if ($flag == 2) {
+                            $leadData = array_merge($leadData, [
+                                'address' => $address,
+                                'city' => $city,
+                                'state' => $state,
+                                'pincode' => $pincode,
+                                'reminder_date' => $reminder_date,
+                            ]);
                         }
 
-                        //common function for saving customfields based on leads
-                        CustomFieldController::saveCustomFieldData($propertyid,$lead->id, $customFieldData);
+                        // Create the lead
+                        $lead = LeadCustomer::create($leadData);
 
+
+                        if ($flag == 2) {
+                            // Add or update tags associated with this lead
+                            if (isset($tags) && is_array($tags)) {
+                                foreach ($tags as $tagName) {
+                                    // Call the addTagToLead function to handle tag insertion and association
+                                    $this->addTagToLead($lead->id, $lead->property_id, $tagName);
+                                }
+                            }
+
+                            //common function for saving customfields based on leads
+                            if (isset($customFieldData) && is_array($customFieldData)) {
+                                CustomFieldController::saveCustomFieldData($propertyid, $lead->id, $customFieldData);
+                            }
+                        }
                         // Return success response
                         return response()->json([
                             'status' => 'success',
@@ -358,39 +373,48 @@ class LeadController extends Controller
                         'type' => 0, // 0 - manual, modify if necessary
                         'notes' => $notes,
                         'entity_type' => 1,
-                        'address' => $address,
-                        'city' => $city,
-                        'state' => $state,
-                        'pincode' => $pincode,
-                        'reminder_date' => $reminder_date
                     ]);
-                    // Add or update tags associated with this lead
-                    if (isset($tags) && is_array($tags)) {
-                        // Get the current tags associated with the lead
-                        $currentTags = $lead->tags->pluck('id')->toArray();
 
-                        // Iterate over the incoming tags
-                        foreach ($tags as $tagName) {
-                            $this->addTagToLead($lead->id, $lead->property_id, $tagName);
-                        }
-
-                        // Find tags that need to be removed (tags present in current but not in the new list)
-                        $tagsToRemove = array_diff($currentTags, array_map(function ($tag) use ($lead) {
-                            return Tag::firstOrCreate(
-                                ['name' => $tag, 'property_id' => $lead->property_id],
-                                ['created_at' => now(), 'updated_at' => now()]
-                            )->id;
-                        }, $tags));
-
-                        // Remove those tags
-                        LeadsCustomersTag::where('leads_customers_id', $lead->id)
-                            ->whereIn('tag_id', $tagsToRemove)
-                            ->delete();
+                    if ($flag == 2) {
+                        $lead->update([
+                            'address' => $address,
+                            'city' => $city,
+                            'state' => $state,
+                            'pincode' => $pincode,
+                            'reminder_date' => $reminder_date
+                        ]);
                     }
 
-                     //common function for saving customfields based on leads
-                     CustomFieldController::saveCustomFieldData($propertyid,$lead->id, $customFieldData);
+                    if ($flag == 2) {
+                        // Add or update tags associated with this lead
+                        if (isset($tags) && is_array($tags)) {
+                            // Get the current tags associated with the lead
+                            $currentTags = $lead->tags->pluck('id')->toArray();
 
+                            // Iterate over the incoming tags
+                            foreach ($tags as $tagName) {
+                                $this->addTagToLead($lead->id, $lead->property_id, $tagName);
+                            }
+
+                            // Find tags that need to be removed (tags present in current but not in the new list)
+                            $tagsToRemove = array_diff($currentTags, array_map(function ($tag) use ($lead) {
+                                return Tag::firstOrCreate(
+                                    ['name' => $tag, 'property_id' => $lead->property_id],
+                                    ['created_at' => now(), 'updated_at' => now()]
+                                )->id;
+                            }, $tags));
+
+                            // Remove those tags
+                            LeadsCustomersTag::where('leads_customers_id', $lead->id)
+                                ->whereIn('tag_id', $tagsToRemove)
+                                ->delete();
+                        }
+
+                        //common function for saving customfields based on leads
+                        if (isset($customFieldData) && is_array($customFieldData)) {
+                            CustomFieldController::saveCustomFieldData($propertyid, $lead->id, $customFieldData);
+                        }
+                    }
                     // Return success response for updating the lead
                     return response()->json([
                         'status' => 'success',
@@ -411,35 +435,49 @@ class LeadController extends Controller
 
                     if (!$existingLead) {
                         // Create a new lead record
-                        $lead = LeadCustomer::create([
+
+
+                        $leadData = [
                             'property_id' => $propertyid,
                             'name' => $name,
                             'contact_no' => $contactno,
-                            'email' => $email,
                             'agent_name' => $agentname,
                             'agent_contact' => $agentcontact,
+                            'email' => $email,
                             'source_id' => $sourceid,
                             'status_id' => $status, // 0-new
-                            'type' => 0,  // manual
+                            'type' => 0, // manual
                             'notes' => $notes,
                             'entity_type' => 1,
-                            'address' => $address,
-                            'city' => $city,
-                            'state' => $state,
-                            'pincode' => $pincode,
-                            'reminder_date' => $reminder_date
-                        ]);
-                        // Add or update tags associated with this lead
-                        if (isset($tags) && is_array($tags)) {
-                            foreach ($tags as $tagName) {
-                                // Call the addTagToLead function to handle tag insertion and association
-                                $this->addTagToLead($lead->id, $lead->property_id, $tagName);
-                            }
+                        ];
+
+                        // Add additional fields if flag is 2
+                        if ($flag == 2) {
+                            $leadData = array_merge($leadData, [
+                                'address' => $address,
+                                'city' => $city,
+                                'state' => $state,
+                                'pincode' => $pincode,
+                                'reminder_date' => $reminder_date,
+                            ]);
                         }
 
-                         //common function for saving customfields based on leads
-                         CustomFieldController::saveCustomFieldData($propertyid,$lead->id, $customFieldData);
+                        // Create the lead
+                        $lead = LeadCustomer::create($leadData);
 
+
+                        if ($flag == 2) {
+                            // Add or update tags associated with this lead
+                            if (isset($tags) && is_array($tags)) {
+                                foreach ($tags as $tagName) {
+                                    // Call the addTagToLead function to handle tag insertion and association
+                                    $this->addTagToLead($lead->id, $lead->property_id, $tagName);
+                                }
+                            }
+
+                            //common function for saving customfields based on leads
+                            CustomFieldController::saveCustomFieldData($propertyid, $lead->id, $customFieldData);
+                        }
                         // Now handle the LeadUnit entry
                         $existingUnit = LeadCustomerUnit::where('unit_id', $unit_id)->first();
 
@@ -520,36 +558,47 @@ class LeadController extends Controller
 
                     if (!$existingLead) {
                         // Create a new lead record
-                        $lead = LeadCustomer::create([
+                        $leadData = [
                             'property_id' => $propertyid,
                             'name' => $name,
                             'contact_no' => $contactno,
-                            'email' => $email,
                             'agent_name' => $agentname,
                             'agent_contact' => $agentcontact,
+                            'email' => $email,
                             'source_id' => $sourceid,
                             'status_id' => $status, // 0-new
                             'type' => 0, // manual
                             'notes' => $notes,
                             'entity_type' => 1,
-                            'address' => $address,
-                            'city' => $city,
-                            'state' => $state,
-                            'pincode' => $pincode,
-                            'reminder_date' => $reminder_date
-                        ]);
+                        ];
 
-                        // Add or update tags associated with this lead
-                        if (isset($tags) && is_array($tags)) {
-                            foreach ($tags as $tagName) {
-                                // Call the addTagToLead function to handle tag insertion and association
-                                $this->addTagToLead($lead->id, $lead->property_id, $tagName);
-                            }
+                        // Add additional fields if flag is 2
+                        if ($flag == 2) {
+                            $leadData = array_merge($leadData, [
+                                'address' => $address,
+                                'city' => $city,
+                                'state' => $state,
+                                'pincode' => $pincode,
+                                'reminder_date' => $reminder_date,
+                            ]);
                         }
 
-                         //common function for saving customfields based on leads
-                         CustomFieldController::saveCustomFieldData($propertyid,$lead->id, $customFieldData);
+                        // Create the lead
+                        $lead = LeadCustomer::create($leadData);
 
+
+                        if ($flag == 2) {
+                            // Add or update tags associated with this lead
+                            if (isset($tags) && is_array($tags)) {
+                                foreach ($tags as $tagName) {
+                                    // Call the addTagToLead function to handle tag insertion and association
+                                    $this->addTagToLead($lead->id, $lead->property_id, $tagName);
+                                }
+                            }
+
+                            //common function for saving customfields based on leads
+                            CustomFieldController::saveCustomFieldData($propertyid, $lead->id, $customFieldData);
+                        }
                         // Now handle the LeadUnit entry
                         $existingUnit = LeadCustomerUnit::where('unit_id', $unit_id)->first();
 
@@ -625,7 +674,7 @@ class LeadController extends Controller
         } catch (\Exception $e) {
             // Log the error
             $errorFrom = 'addEditLeadDetails';
-            $errorMessage = $e->getMessage();
+            $errorMessage = $e->getMessage().$e->getLine();
             $priority = 'high';
             Helper::errorLog($errorFrom, $errorMessage, $priority);
 
