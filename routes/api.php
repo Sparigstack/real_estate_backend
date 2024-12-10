@@ -53,7 +53,7 @@ Route::post('/send-template-messages', [AuthController::class, 'sendGupshupTempl
     
 
     //leads call
-    Route::get('/get-leads/{pid}&{flag}&{skey}&{sort}&{sortbykey}&{offset}&{limit}', [LeadController::class, 'getLeads']);  
+    Route::get('/get-leads/{pid}&{flag}&{skey}&{sort}&{sortbykey}&{status}&{offset}&{limit}', [LeadController::class, 'getLeads']);  
     Route::get('/fetch-lead-detail/{pid}/{lid}', [LeadController::class, 'fetchLeadDetail']); 
     Route::get('/fetch-tags/{pid}', [LeadController::class, 'fetchTags']); 
     Route::post('/add-edit-leads', [LeadController::class, 'addOrEditLeads']); 
@@ -124,5 +124,7 @@ Route::post('/generate-lead', [LeadController::class, 'generateLead']);
 Route::post('/web-form-lead', [LeadController::class, 'webFormLead']); 
 Route::post('/detect-cheque', [ChequeScanController::class, 'detectCheque']); 
 
-
+Route::get('/testapi', function () {
+  return 'Hello, this is an echo route api!';
+});
 

@@ -38,7 +38,7 @@ use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 class LeadController extends Controller
 {
 
-    public function getLeads($pid, $flag, $skey, $sort, $sortbykey, $offset, $limit)
+    public function getLeads($pid, $flag, $skey, $sort, $sortbykey,$status, $offset, $limit)
     {
         // flag  1->allleads,2->members(customers),3->non members(interested leads)
 
@@ -54,6 +54,11 @@ class LeadController extends Controller
                     $allLeads->where('entity_type', 2);
                 } elseif ($flag == 3) {
                     $allLeads->where('entity_type', 1);
+                }
+
+                    // Apply status filter
+                if ($status != 'null') {
+                    $allLeads->where('status_id', $status);
                 }
 
                 // Apply search filter
@@ -76,7 +81,8 @@ class LeadController extends Controller
                     if (in_array($sortbykey, ['name', 'email', 'contact_no'])) {
                         $allLeads->orderBy($sortbykey, $sort);
                     } elseif ($sortbykey == 'source') {
-                        $allLeads->join('lead_sources', 'leads_customers.source_id', '=', 'lead_sources.id')
+                        $allLeads->leftJoin('lead_sources', 'leads_customers.source_id', '=', 'lead_sources.id')
+                            ->select('leads_customers.*', 'lead_sources.name as source_name') // Ensure columns are explicit
                             ->orderBy('lead_sources.name', $sort);
                     }
                 } else {
