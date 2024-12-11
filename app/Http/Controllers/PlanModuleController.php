@@ -40,6 +40,7 @@ class PlanModuleController extends Controller
             // Format the data to show the module name and its starting monthly price
             $formattedModules = $modules->map(function ($module) {
                 return [
+                    'id'=> $module->id,
                     'module_name' => $module->name,
                     'starting_price' => $module->plans->isNotEmpty()
                         ? $module->plans->first()->pivot->monthly_price
