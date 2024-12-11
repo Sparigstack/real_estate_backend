@@ -56,13 +56,13 @@ class User extends Authenticatable
         return $this->hasMany(UserProperty::class,'user_id','id');
     }
 
-    public function customerProperties()
-    {
-        return $this->hasMany(CustomerProperty::class,'user_id','id');
-    }
 
     public function companyDetail()
     {
         return $this->hasOne(CompanyDetail::class,'user_id','id');
+    }
+    public function planDetails()
+    {
+        return $this->hasOne(PlanUsageLog::class,'user_id','id');
     }
 }

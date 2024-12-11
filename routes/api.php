@@ -11,6 +11,7 @@ use App\Http\Controllers\WingController;
 use App\Http\Controllers\ChequeScanController;
 use App\Http\Controllers\CustomFieldController;
 use App\Http\Controllers\VillaBunglowController;
+use App\Http\Controllers\PlanModuleController;
 
 
 
@@ -106,6 +107,10 @@ Route::post('/send-template-messages', [AuthController::class, 'sendGupshupTempl
     Route::get('/fetch-custom-field/{cfid}', [CustomFieldController::class, 'fetchCustomField']);
     Route::post('/remove-custom-field', [CustomFieldController::class, 'removeCustomField']);
 
+
+
+    //plan-module apis
+    Route::get('/get-module-with-price', [PlanModuleController::class, 'getModulesWithPricing']);
 // });
 
 
