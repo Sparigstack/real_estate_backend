@@ -16,12 +16,22 @@ class Module extends Model
     public function plans()
     {
         return $this->belongsToMany(Plan::class, 'module_plan_pricing', 'module_id', 'plan_id')
-                    ->withPivot('monthly_price', 'yearly_price')
-                    ->withTimestamps();
+            ->withPivot('monthly_price', 'yearly_price')
+            ->withTimestamps();
     }
 
     public function features()
     {
         return $this->hasMany(Feature::class, 'module_id');
+    }
+
+    public function pricingPlanFeatures()
+    {
+        return $this->hasMany(PricingPlanFeature::class, 'module_id');
+    }
+
+    public function modulePricingPlans()
+    {
+        return $this->hasMany(ModulePlanPricing::class, 'module_id');
     }
 }

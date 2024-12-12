@@ -71,29 +71,45 @@ class PlanModuleController extends Controller
     public function getModulePlanDetails($uid, $mid)
     {
         try {
-            $plans = ModulePlanPricing::where('module_id', $mid)
-                ->join('plans', 'plans.id', '=', 'module_plan_pricing.plan_id')
-                ->select('plans.id as plan_id', 'plans.name as plan_name', 'module_plan_pricing.monthly_price', 'module_plan_pricing.yearly_price')
-                ->get();
+              // Retrieve the module with its associated pricing plans and features
+              $module = Module::with(['modulePricingPlans.plan.pricingPlanFeatures'])->findOrFail($mid);
 
-            // Prepare the dynamic pricing details for each plan
-            $planDetails = [];
-            foreach ($plans as $plan) {
-                $planDetails[strtolower(str_replace(' ', '_', $plan->plan_name)) . 'id'] = $plan->plan_id;
-                $planDetails[strtolower(str_replace(' ', '_', $plan->plan_name)) . 'monthly_price'] = $plan->monthly_price;
-                $planDetails[strtolower(str_replace(' ', '_', $plan->plan_name)) . 'yearly_price'] = $plan->yearly_price;
-            }
-
-            // Get the active plan for the user and the module from user_capabilities
-            $activePlan = UserCapability::where('user_id', $uid)
+              // Format the response
+                // Get the active plan for the user and the module from user_capabilities
+                $activePlan = UserCapability::where('user_id', $uid)
                 ->where('module_id', $mid)
                 ->first(['plan_id']);
 
             // Add active plan information to the response
-            $planDetails['active_plan_id'] = $activePlan ? $activePlan->plan_id : null;
-
-            // Return the JSON response
-            return  $planDetails;
+            // $planDetails['active_plan_id'] = $activePlan ? $activePlan->plan_id : null;
+              $response = [
+                  'module_id' => $module->id,
+                  'module_name' => $module->name,
+                  'active_plan_id' => $activePlan ? $activePlan->plan_id : null, // Assuming the first plan is active
+                  'plandetails' => []
+              ];
+  
+              foreach ($module->modulePricingPlans as $pricing) {
+                  $plan = $pricing->plan;
+                  $planDetails = [
+                      'id' => $plan->id,
+                      'name' => $plan->name,
+                      'monthly_price' => $pricing->monthly_price,
+                      'yearly_price' => $pricing->yearly_price,
+                      'features' => []
+                  ];
+  
+                  // Collect all features for the plan
+                  foreach ($plan->pricingPlanFeatures as $feature) {
+                      $planDetails['features'][] = [
+                          'data' => $feature->description
+                      ];
+                  }
+  
+                  $response['plandetails'][] = $planDetails;
+              }
+  
+              return response()->json($response);
         } catch (Exception $e) {
             // Log the error
             $errorFrom = 'getModulePlanDetails';
