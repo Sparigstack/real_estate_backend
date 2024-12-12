@@ -16,6 +16,13 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 
+use App\Models\Feature;
+use App\Models\Module;
+use App\Models\ModulePlanFeature;
+use App\Models\ModulePlanPricing;
+use App\Models\Plan;
+use App\Models\UserCapability;
+
 
 class AuthController extends Controller
 {
@@ -197,6 +204,36 @@ class AuthController extends Controller
                         $newCompany->user_id = $userId;
                         $newCompany->name = $company_name;
                         $newCompany->save();
+
+
+                        $basicPlan = Plan::where('id', 1)->first();
+                        if ($basicPlan) {
+                            $modules = ModulePlanPricing::where('plan_id', $basicPlan->id)
+                                ->pluck('module_id')
+                                ->toArray();
+    
+                            foreach ($modules as $moduleId) {
+                                $features = ModulePlanFeature::where('module_id', $moduleId)
+                                ->where('plan_id', 1)
+                                ->with('feature') // Eager load feature to get action_name
+                                ->get();
+                                // $features = Feature::where('module_id', $moduleId)->get();
+    
+                                foreach ($features as $feature) {
+                                    UserCapability::create([
+                                        'user_id' => $userId,
+                                        'plan_id' => $basicPlan->id,
+                                        'module_id' => $moduleId,
+                                        'feature_id' => $feature->feature_id,
+                                        'limit' => $feature->limit ?? 0,
+                                        'object_name' => $feature->feature->action_name, 
+    
+                                    ]);
+                                }
+                            }
+                        }
+
+
                     }
 
                     // Delete the OTP record after successful verification

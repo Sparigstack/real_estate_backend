@@ -111,6 +111,8 @@ Route::post('/send-template-messages', [AuthController::class, 'sendGupshupTempl
 
     //plan-module apis
     Route::get('/get-module-with-price', [PlanModuleController::class, 'getModulesWithPricing']);
+    Route::get('/get-module-plan-details/{uid}/{mid}', [PlanModuleController::class, 'getModulePlanDetails']);
+    Route::post('/add-user-module-plan', [PlanModuleController::class, 'addUserModulePlan']);
 // });
 
 
