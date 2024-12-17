@@ -206,32 +206,32 @@ class AuthController extends Controller
                         $newCompany->save();
 
 
-                        // $basicPlan = Plan::where('id', 1)->first();
-                        // if ($basicPlan) {
-                        //     $modules = ModulePlanPricing::where('plan_id', $basicPlan->id)
-                        //         ->pluck('module_id')
-                        //         ->toArray();
+                        $basicPlan = Plan::where('id', 1)->first();
+                        if ($basicPlan) {
+                            $modules = ModulePlanPricing::where('plan_id', $basicPlan->id)
+                                ->pluck('module_id')
+                                ->toArray();
     
-                        //     foreach ($modules as $moduleId) {
-                        //         $features = ModulePlanFeature::where('module_id', $moduleId)
-                        //         ->where('plan_id', 1)
-                        //         ->with('feature') // Eager load feature to get action_name
-                        //         ->get();
-                        //         // $features = Feature::where('module_id', $moduleId)->get();
+                            foreach ($modules as $moduleId) {
+                                $features = ModulePlanFeature::where('module_id', $moduleId)
+                                ->where('plan_id', 1)
+                                ->with('feature') // Eager load feature to get action_name
+                                ->get();
+                                // $features = Feature::where('module_id', $moduleId)->get();
     
-                        //         foreach ($features as $feature) {
-                        //             UserCapability::create([
-                        //                 'user_id' => $userId,
-                        //                 'plan_id' => $basicPlan->id,
-                        //                 'module_id' => $moduleId,
-                        //                 'feature_id' => $feature->feature_id,
-                        //                 'limit' => $feature->limit ?? 0,
-                        //                 'object_name' => $feature->feature->action_name, 
+                                foreach ($features as $feature) {
+                                    UserCapability::create([
+                                        'user_id' => $userId,
+                                        'plan_id' => $basicPlan->id,
+                                        'module_id' => $moduleId,
+                                        'feature_id' => $feature->feature_id,
+                                        'limit' => $feature->limit ?? 0,
+                                        'object_name' => $feature->feature->action_name, 
     
-                        //             ]);
-                        //         }
-                        //     }
-                        // }
+                                    ]);
+                                }
+                            }
+                        }
 
 
                     }
