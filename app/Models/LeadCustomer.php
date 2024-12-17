@@ -55,7 +55,7 @@ class LeadCustomer  extends Model
 
     public function leadStatus()
     {
-        return $this->belongsTo(leadStatus::class, 'status_id', 'id');
+        return $this->belongsTo(LeadStatus::class, 'status_id', 'id');
     }
     public function tags()
     {

@@ -10,7 +10,7 @@ class Feature extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['module_id', 'description', 'action_name'];
+    protected $fillable = ['module_id', 'description', 'action_name','Basic','Standard','Premium','Enterprise'];
 
     // Relations
     public function module()

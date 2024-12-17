@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class LeadStatus extends Model
 {
     use HasFactory;
+    protected $table = "lead_statuses";
     protected $fillable = ['name'];
 
     public function leadscustomers()

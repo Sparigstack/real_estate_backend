@@ -71,45 +71,64 @@ class PlanModuleController extends Controller
     public function getModulePlanDetails($uid, $mid)
     {
         try {
-              // Retrieve the module with its associated pricing plans and features
-              $module = Module::with(['modulePricingPlans.plan.pricingPlanFeatures'])->findOrFail($mid);
+            // Retrieve the module with its associated pricing plans and features
+            $module = Module::with(['modulePricingPlans.plan.pricingPlanFeatures'])->findOrFail($mid);
 
-              // Format the response
-                // Get the active plan for the user and the module from user_capabilities
-                $activePlan = UserCapability::where('user_id', $uid)
+            $features = Feature::where('module_id', $mid)
+                ->select('description', 'Basic', 'Standard', 'Premium', 'Enterprise')
+                ->get();
+
+
+
+            // Format the response
+            // Format features as required
+            $featureDetails = $features->map(function ($feature) {
+                return [
+                    'feature_description' => $feature->description,
+                    'Basic_plan' => $feature->Basic ?? '',
+                    'Standard_plan' => $feature->Standard ?? '',
+                    'Premium_plan' => $feature->Premium ?? '',
+                    'Enterprise_plan' => $feature->Enterprise ?? '',
+                ];
+            });
+
+
+            // Get the active plan for the user and the module from user_capabilities
+            $activePlan = UserCapability::where('user_id', $uid)
                 ->where('module_id', $mid)
                 ->first(['plan_id']);
 
             // Add active plan information to the response
-            // $planDetails['active_plan_id'] = $activePlan ? $activePlan->plan_id : null;
-              $response = [
-                  'module_id' => $module->id,
-                  'module_name' => $module->name,
-                  'active_plan_id' => $activePlan ? $activePlan->plan_id : null, // Assuming the first plan is active
-                  'plandetails' => []
-              ];
-  
-              foreach ($module->modulePricingPlans as $pricing) {
-                  $plan = $pricing->plan;
-                  $planDetails = [
-                      'id' => $plan->id,
-                      'name' => $plan->name,
-                      'monthly_price' => $pricing->monthly_price,
-                      'yearly_price' => $pricing->yearly_price,
-                      'features' => []
-                  ];
-  
-                  // Collect all features for the plan
-                  foreach ($plan->pricingPlanFeatures as $feature) {
-                      $planDetails['features'][] = [
-                          'data' => $feature->description
-                      ];
-                  }
-  
-                  $response['plandetails'][] = $planDetails;
-              }
-  
-              return response()->json($response);
+
+            $response = [
+                'module_id' => $module->id,
+                'module_name' => $module->name,
+                'active_plan_id' => $activePlan ? $activePlan->plan_id : null, // Assuming the first plan is active
+                'plandetails' => [],
+                'featuredetails' => $featureDetails // Add the featuredetails array here
+            ];
+
+            foreach ($module->modulePricingPlans as $pricing) {
+                $plan = $pricing->plan;
+                $planDetails = [
+                    'id' => $plan->id,
+                    'name' => $plan->name,
+                    'monthly_price' => $pricing->monthly_price,
+                    'yearly_price' => $pricing->yearly_price,
+                    'features' => []
+                ];
+
+                // Collect all features for the plan
+                foreach ($plan->pricingPlanFeatures as $feature) {
+                    $planDetails['features'][] = [
+                        'data' => $feature->description
+                    ];
+                }
+
+                $response['plandetails'][] = $planDetails;
+            }
+
+            return response()->json($response);
         } catch (Exception $e) {
             // Log the error
             $errorFrom = 'getModulePlanDetails';
@@ -124,6 +143,41 @@ class PlanModuleController extends Controller
         }
     }
 
+    // public function getFeaturesWithPlans($mid)
+    // {
+    //     try {
+    //         // Fetch Features with the Module and Plans
+    //         $features = Feature::where('module_id', $mid)
+    //             ->select('description', 'Basic', 'Standard', 'Premium', 'Enterprise')
+    //             ->get();
+
+    //         // Format the response
+    //         $response = $features->map(function ($feature) {
+    //             return [
+    //                 'feature_description' => $feature->description,
+    //                 'Basic_plan' => $feature->Basic ?? '',
+    //                 'Standard_plan' => $feature->Standard ?? '',
+    //                 'Premium_plan' => $feature->Premium ?? '',
+    //                 'Enterprise_plan' => $feature->Enterprise ?? '',
+    //             ];
+    //         });
+
+
+    //         return response()->json($response);
+    //     } catch (Exception $e) {
+    //         echo $e->getMessage() . $e->getLine();
+    //         // Log the error
+    //         $errorFrom = 'getFeaturesWithPlans';
+    //         $errorMessage = $e->getMessage();
+    //         $priority = 'high';
+    //         Helper::errorLog($errorFrom, $errorMessage, $priority);
+
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'message' => 'Not found',
+    //         ], 400);
+    //     }
+    // }
 
     public function addUserModulePlan(Request $request)
     {
