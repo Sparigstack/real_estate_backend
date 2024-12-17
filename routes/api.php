@@ -57,7 +57,7 @@ Route::post('/send-template-messages', [AuthController::class, 'sendGupshupTempl
     Route::get('/get-leads/{pid}&{flag}&{skey}&{sort}&{sortbykey}&{status}&{offset}&{limit}', [LeadController::class, 'getLeads']);  
     Route::get('/fetch-lead-detail/{pid}/{lid}', [LeadController::class, 'fetchLeadDetail']); 
     Route::get('/fetch-tags/{pid}', [LeadController::class, 'fetchTags']); 
-    Route::post('/add-edit-leads', [LeadController::class, 'addOrEditLeads']); 
+    Route::post('/add-edit-leads', [LeadController::class, 'addOrEditLeads'])->middleware('check.feature');
     Route::post('/add-leads-csv', [LeadController::class, 'addLeadsCsv']); 
     Route::post('/lead-messages/send', [LeadController::class, 'sendBulkMessages']);
     Route::get('/fetch-lead-intersted-booked-detail/{pid}/{lid}', [LeadController::class, 'fetchLeadInterestedBookedDetail']); 

@@ -27,6 +27,9 @@ use Barryvdh\DomPDF\Facade as PDF;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Reader\Csv;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
+use App\Models\UserCapability;
+use App\Models\Feature;
+use App\Models\Plan;
 
 
 
@@ -38,14 +41,14 @@ use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 class LeadController extends Controller
 {
 
-    public function getLeads($pid, $flag, $skey, $sort, $sortbykey,$status, $offset, $limit)
+    public function getLeads($pid, $flag, $skey, $sort, $sortbykey, $status, $offset, $limit)
     {
         // flag  1->allleads,2->members(customers),3->non members(interested leads)
 
         try {
             if ($pid != 'null') {
                 // Base query
-                $allLeads = LeadCustomer::with(['userproperty', 'leadSource', 'leadCustomerUnits.unit.wingDetail', 'tags'])
+                $allLeads = LeadCustomer::with(['userproperty', 'leadSource', 'leadCustomerUnits.unit.wingDetail', 'tags', 'leadStatus'])
                     ->where('property_id', $pid);
 
                 // Apply filtering based on flag
@@ -56,7 +59,7 @@ class LeadController extends Controller
                     $allLeads->where('entity_type', 1);
                 }
 
-                    // Apply status filter
+                // Apply status filter
                 if ($status != 'null') {
                     $allLeads->where('status_id', $status);
                 }
@@ -256,6 +259,8 @@ class LeadController extends Controller
             $notes = $request->input('notes');
             $status = $request->input('status');
             $flag = $request->input('flag'); //1 means form leads add sales module, 2 means leads add from lead module
+            $userId = $request->input('userId');
+            $actionName = $request->input('userCapabilities');
 
             if ($flag == 2) {
                 $address = $request->input('address');
@@ -274,6 +279,22 @@ class LeadController extends Controller
                 // Flag 1: Normal lead add
 
                 if ($leadid == 0) { //if new lead
+
+
+                    //add lead condidtions plan limit check
+                    $moduleId = Helper::getModuleIdFromAction($actionName);
+
+                    $feature = Feature::where('action_name', $actionName)
+                        ->where('module_id', $moduleId)
+                        ->first();
+
+                    $limitCheck = $this->checkFeatureLimits($userId, $moduleId, $feature);
+                    if ($limitCheck) {
+                        return $limitCheck; // Return upgrade response if limit is exceeded
+                    }
+
+
+
                     // Check if the same contact number and property combination already exists
                     $existingLead = LeadCustomer::where('contact_no', $contactno)
                         ->where('property_id', $propertyid)
@@ -293,6 +314,7 @@ class LeadController extends Controller
                             'type' => 0, // manual
                             'notes' => $notes,
                             'entity_type' => 1,
+                            'user_id' => $userId
                         ];
 
                         // Add additional fields if flag is 2
@@ -379,6 +401,7 @@ class LeadController extends Controller
                         'type' => 0, // 0 - manual, modify if necessary
                         'notes' => $notes,
                         'entity_type' => 1,
+                        'user_id' => $userId,
                     ]);
 
                     if ($flag == 2) {
@@ -433,6 +456,22 @@ class LeadController extends Controller
                 // Flag 2: Add new lead with attached unit
 
                 if ($leadid == 0) { //if new lead
+
+
+
+                    //add lead condidtions plan limit check
+                    $moduleId = Helper::getModuleIdFromAction($actionName);
+
+                    $feature = Feature::where('action_name', $actionName)
+                        ->where('module_id', $moduleId)
+                        ->first();
+
+                    $limitCheck = $this->checkFeatureLimits($userId, $moduleId, $feature);
+                    if ($limitCheck) {
+                        return $limitCheck; // Return upgrade response if limit is exceeded
+                    }
+
+
                     // Check if the same contact number and property combination already exists
                     $existingLead = LeadCustomer::where('contact_no', $contactno)
                         ->where('property_id', $propertyid)
@@ -455,6 +494,7 @@ class LeadController extends Controller
                             'type' => 0, // manual
                             'notes' => $notes,
                             'entity_type' => 1,
+                            'user_id' => $userId,
                         ];
 
                         // Add additional fields if flag is 2
@@ -558,6 +598,20 @@ class LeadController extends Controller
                         'data' => $lead
                     ], 200);
                 } else {
+
+                    //add lead condidtions plan limit check
+                    $moduleId = Helper::getModuleIdFromAction($actionName);
+
+                    $feature = Feature::where('action_name', $actionName)
+                        ->where('module_id', $moduleId)
+                        ->first();
+
+                    $limitCheck = $this->checkFeatureLimits($userId, $moduleId, $feature);
+                    if ($limitCheck) {
+                        return $limitCheck; // Return upgrade response if limit is exceeded
+                    }
+
+
                     $existingLead = LeadCustomer::where('contact_no', $contactno)
                         ->where('property_id', $propertyid)
                         ->first();
@@ -576,6 +630,7 @@ class LeadController extends Controller
                             'type' => 0, // manual
                             'notes' => $notes,
                             'entity_type' => 1,
+                            'user_id' => $userId,
                         ];
 
                         // Add additional fields if flag is 2
@@ -680,7 +735,7 @@ class LeadController extends Controller
         } catch (\Exception $e) {
             // Log the error
             $errorFrom = 'addEditLeadDetails';
-            $errorMessage = $e->getMessage().$e->getLine();
+            $errorMessage = $e->getMessage() . $e->getLine();
             $priority = 'high';
             Helper::errorLog($errorFrom, $errorMessage, $priority);
 
@@ -1349,5 +1404,48 @@ class LeadController extends Controller
                 'message' => 'Not found',
             ], 400);
         }
+    }
+
+    public function checkFeatureLimits($userId, $moduleId, $feature)
+    {
+        // Get the user's plan limit for the feature
+        $userCapability = UserCapability::where('user_id', $userId)
+            ->where('module_id', $moduleId)
+            ->where('feature_id', $feature->id)
+            ->first();
+
+        if (!$userCapability) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Feature access not found for the user.',
+            ], 200);
+        }
+
+
+       
+      
+        $plandetail=Plan::find($userCapability->plan_id);
+        $limit = 10; // The limit based on the user's plan
+
+        if ($plandetail->id == 1){
+            $limit =10;
+        }else if($plandetail->id == 2){
+            $limit =2500;
+        }
+       
+        // Count how many leads the user has already entered
+        $leadCount = LeadCustomer::where('user_id', $userId)->count();
+
+        if ($leadCount >= $limit && ($plandetail->id==1 || $plandetail->id==2)) {
+            // If the limit is exceeded, return the upgrade plan message
+            return response()->json([
+                'status' => 'upgradeplan',
+                'moduleid' => $moduleId,
+                'activeplanname' => $plandetail->name ?? 'Unknown',
+            ], 200);
+        }
+
+        // If the limit is not exceeded, proceed with the request
+        return null; // Proceed
     }
 }

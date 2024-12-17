@@ -4,6 +4,7 @@ use App\Mail\GetOtpMail;
 use App\Models\ErrorLog;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Http;
+use App\Models\Feature;
 
 
 class Helper{
@@ -15,6 +16,17 @@ class Helper{
         $error->error_priority = $priority;
         $error->error_created_date = now()->format('Y-m-d');
         $error->save();
+    }
+
+    public static function getModuleIdFromAction($actionName)
+    {
+        $feature = Feature::where('action_name', $actionName)->first();
+        
+        if ($feature) {
+            return $feature->module_id;
+        }
+
+        return null; // Or throw an exception if module_id is critical
     }
      public static function sendOtpcopy($contactno, $otp)
         {

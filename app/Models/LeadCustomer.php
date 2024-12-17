@@ -11,6 +11,7 @@ class LeadCustomer  extends Model
     protected $table = "leads_customers";
     protected $fillable = [
         'property_id',
+        'user_id',
         'name',
         'email',
         'contact_no',

@@ -196,7 +196,7 @@ class BookingController extends Controller
     {
 
         try {
-            $unitId = $request->input('unit_id');
+            $unitId = $request->input(key: 'unit_id');
             $propertyId = $request->input('property_id');
             $entityId = $request->input('entity_id'); // Now used for lead_id or customer_id based on $type
             $contactName = $request->input('contact_name');
