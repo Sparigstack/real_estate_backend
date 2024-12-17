@@ -183,14 +183,16 @@ class PlanModuleController extends Controller
     {
         try {
             $validated = $request->validate([
-                'user_id' => 'required|exists:users,id',
-                'module_id' => 'required|exists:modules,id',
-                'plan_id' => 'required|exists:plans,id',
+                'userId' => 'required|exists:users,id',
+                'moduleId' => 'required|exists:modules,id',
+                'planId' => 'required|exists:plans,id',
+                'mothly_yearly'=>'required' //1 means monthly,2 means yearly
             ]);
 
-            $userId = $validated['user_id'];
-            $moduleId = $validated['module_id'];
-            $planId = $validated['plan_id'];
+            $userId = $validated['userId'];
+            $moduleId = $validated['moduleId'];
+            $planId = $validated['planId'];
+            $planduration=$validated['mothly_yearly'];
 
             // Fetch all features for the given module and plan
             $features = ModulePlanFeature::where('module_id', $moduleId)
@@ -218,6 +220,7 @@ class PlanModuleController extends Controller
                     'plan_id' => $planId,
                     'module_id' => $moduleId,
                     'feature_id' => $feature->feature_id,
+                    'plan_duration' => $planduration,
                     'limit' => $feature->limit,
                     'object_name' => $feature->feature->action_name, // Map action_name to object_name
                 ];

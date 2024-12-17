@@ -16,6 +16,7 @@ class UserCapability extends Model
         'plan_id',
         'feature_id',
         'module_id',
+        'plan_duration',
         'limit',
         'object_name',
     ];
