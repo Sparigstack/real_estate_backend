@@ -432,19 +432,30 @@ class WingController extends Controller
                 $unitDetails = UnitDetail::where('floor_id', $oldFloorId)
                     ->where('property_id', $propertyId)
                     ->get();
+                    
 
                 foreach ($unitDetails as $unit) {
-                    UnitDetail::create([
-                        'property_id' => $propertyId,
-                        'wing_id' => $wingId,
-                        'floor_id' => $newFloor->id, // Assign the new floor ID here
-                        'name' => $unit->name,
-                        'status_id' => $unit->status_id,
-                        'square_feet' => $unit->square_feet,
-                        'price' => $unit->price,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+
+                    $unitDetail = new UnitDetail();
+                    $unitDetail->property_id = $propertyId;
+                    $unitDetail->wing_id = $wingId;
+                    $unitDetail->floor_id = $newFloor->id;
+                    $unitDetail->name =$unit->name;
+                    $unitDetail->status_id =$unit->status_id;
+                    $unitDetail->square_feet =$unit->square_feet;
+                    $unitDetail->price =$unit->price;
+                    $unitDetail->save();
+                    // UnitDetail::create([
+                    //     'property_id' => $propertyId,
+                    //     'wing_id' => $wingId,
+                    //     'floor_id' => $newFloor->id, // Assign the new floor ID here
+                    //     'name' => $unit->name,
+                    //     'status_id' => $unit->status_id,
+                    //     'square_feet' => $unit->square_feet,
+                    //     'price' => $unit->price,
+                    //     'created_at' => now(),
+                    //     'updated_at' => now(),
+                    // ]);
                 }
             }
 

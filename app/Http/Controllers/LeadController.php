@@ -41,14 +41,14 @@ use App\Models\Plan;
 class LeadController extends Controller
 {
 
-    public function getLeads($pid, $flag, $skey, $sort, $sortbykey, $status, $offset, $limit)
+    public function getLeads($pid, $flag, $skey, $sort, $sortbykey, $statusid, $customfieldid, $tagid, $offset, $limit)
     {
         // flag  1->allleads,2->members(customers),3->non members(interested leads)
 
         try {
             if ($pid != 'null') {
                 // Base query
-                $allLeads = LeadCustomer::with(['userproperty', 'leadSource', 'leadCustomerUnits.unit.wingDetail', 'tags', 'leadStatus'])
+                $allLeads = LeadCustomer::with(['userproperty', 'leadSource', 'leadCustomerUnits.unit.wingDetail', 'tags', 'leadStatus', 'customFields'])
                     ->where('property_id', $pid);
 
                 // Apply filtering based on flag
@@ -60,20 +60,41 @@ class LeadController extends Controller
                 }
 
                 // Apply status filter
-                if ($status != 'null') {
-                    $allLeads->where('status_id', $status);
+                if ($statusid != 'null') {
+                    $allLeads->where('status_id', $statusid);
+                }
+
+                // Apply tag filter
+                if ($tagid != 'null') {
+                    $allLeads->whereHas('tags', function ($q) use ($tagid) {
+                        $q->where('tag_id', $tagid);
+                    });
+                }
+
+                // $customfieldid=9;
+                // echo $customfieldid.$skey;
+                // Apply custom field filter
+                if ($customfieldid != 'null' && $skey != 'null') {
+                    // echo "sdfsd";
+                    $allLeads->whereHas('customFields', function ($q) use ($customfieldid, $skey) {
+                        $q->where('custom_field_id', $customfieldid)
+                            ->where(function ($subQ) use ($skey) {
+                                $subQ->where('text_value', 'like', "%{$skey}%")
+                                    ->orWhere('small_text_value', 'like', "%{$skey}%")
+                                    ->orWhere('int_value', 'like', "%{$skey}%")
+                                    ->orWhere('date_value', 'like', "%{$skey}%")
+                                    ->orWhere('date_time_value', 'like', "%{$skey}%");
+                            });
+                    });
                 }
 
                 // Apply search filter
-                if ($skey != 'null') {
+                if ($skey != 'null' && $customfieldid == 'null') {
                     $allLeads->where(function ($q) use ($skey) {
                         $q->where('name', 'like', "%{$skey}%")
                             ->orWhere('email', 'like', "%{$skey}%")
                             ->orWhere('contact_no', 'like', "%{$skey}%")
                             ->orWhereHas('leadSource', function ($q) use ($skey) {
-                                $q->where('name', 'like', "%{$skey}%");
-                            })
-                            ->orWhereHas('tags', function ($q) use ($skey) {
                                 $q->where('name', 'like', "%{$skey}%");
                             });
                     });
@@ -400,9 +421,14 @@ class LeadController extends Controller
                         'status_id' => $status, // You can change this to another value if needed
                         'type' => 0, // 0 - manual, modify if necessary
                         'notes' => $notes,
-                        'entity_type' => 1,
                         'user_id' => $userId,
                     ]);
+
+                    if ($lead->entity_type != 2) {
+                        $lead->update([
+                            'entity_type' => 1,
+                        ]);
+                    }
 
                     if ($flag == 2) {
                         $lead->update([
@@ -777,6 +803,7 @@ class LeadController extends Controller
             // Check if a single CSV file is uploaded
             $file = $request->file('file');
             $propertyId = $request->input('propertyid');
+            $userId = $request->input('userId');
 
             // Fetch property user email based on property id
             $property = UserProperty::find($propertyId);
@@ -932,6 +959,7 @@ class LeadController extends Controller
                     // Create lead record
                     $lead = LeadCustomer::create([
                         'property_id' => $propertyId,
+                        'user_id' => $userId,
                         'name' => $data['name'],
                         'email' => $data['email'] ?? null,
                         'contact_no' => $data['contact'],
@@ -1040,7 +1068,8 @@ class LeadController extends Controller
                 'leads.*.notes' => 'nullable|string', // Ensure budget is required and numeric
                 'leads.*.source' => 'required|string|max:255', // Example: "call"
                 'leads.*.property' => 'required|string|max:255', // Property could be validated more specifically if needed
-                'leads.*.status' => 'required|string|max:255'
+                'leads.*.status' => 'required|string|max:255',
+                'leads.*.userId' => 'required'
             ]);
 
             $createdLeads = [];
@@ -1082,6 +1111,7 @@ class LeadController extends Controller
                 $newLead = LeadCustomer::create([
                     'property_id' => $property->id,
                     'name' => $leadData['name'],
+                    'user_id' => $leadData['userId'],
                     'email' => $leadData['email'],
                     'contact_no' => $leadData['contact'],
                     'source_id' => $source->id,
@@ -1197,6 +1227,7 @@ class LeadController extends Controller
             $agentname = $request->input('agent_name');
             $agentcontact = $request->input('agent_contact');
             $status = $validatedData['status'];
+            $userId = $request->input('userId');
 
             // Check if the same email and property combination already exists
             $existingLead = LeadCustomer::where('contact_no', $contactno)
@@ -1208,6 +1239,7 @@ class LeadController extends Controller
                 // Create a new lead record for manual or web form entry //0 or 2
                 $lead = LeadCustomer::create([
                     'property_id' => $propertyid,
+                    'user_id' => $userId,
                     'name' => $name,
                     'email' => $email,
                     'contact_no' => $contactno,
@@ -1422,21 +1454,21 @@ class LeadController extends Controller
         }
 
 
-       
-      
-        $plandetail=Plan::find($userCapability->plan_id);
-        $limit = 10; // The limit based on the user's plan
 
-        if ($plandetail->id == 1){
-            $limit =10;
-        }else if($plandetail->id == 2){
-            $limit =2500;
+
+        $plandetail = Plan::find($userCapability->plan_id);
+        $limit = 20; // The limit based on the user's plan
+
+        if ($plandetail->id == 1) {
+            $limit = 20;
+        } else if ($plandetail->id == 2) {
+            $limit = 2500;
         }
-       
+
         // Count how many leads the user has already entered
         $leadCount = LeadCustomer::where('user_id', $userId)->count();
 
-        if ($leadCount >= $limit && ($plandetail->id==1 || $plandetail->id==2)) {
+        if ($leadCount >= $limit && ($plandetail->id == 1 || $plandetail->id == 2)) {
             // If the limit is exceeded, return the upgrade plan message
             return response()->json([
                 'status' => 'upgradeplan',

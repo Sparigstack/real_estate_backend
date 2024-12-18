@@ -212,6 +212,7 @@ class BookingController extends Controller
             $nextpaymenttype = $request->input('nextpaymenttype');
             $nextpaymentreferencenumber = $request->input('nextpaymentreferencenumber');
             $notes = $request->input('notes');
+            $userId = $request->input('userId');
 
 
             $leadUnit = LeadCustomerUnit::where('unit_id', $unitId)->first();
@@ -238,6 +239,7 @@ class BookingController extends Controller
                     // Create a new customer if no existing customer with the same contact number was found
                     $leadcustomer = leadcustomer::create([
                         'property_id' => $propertyId,
+                        'user_id' => $userId,
                         'email' => $contactEmail,
                         'name' => $contactName,
                         'contact_no' => $contactNumber,
