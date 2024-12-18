@@ -1069,7 +1069,6 @@ class LeadController extends Controller
                 'leads.*.source' => 'required|string|max:255', // Example: "call"
                 'leads.*.property' => 'required|string|max:255', // Property could be validated more specifically if needed
                 'leads.*.status' => 'required|string|max:255',
-                'leads.*.userId' => 'required'
             ]);
 
             $createdLeads = [];
@@ -1111,7 +1110,7 @@ class LeadController extends Controller
                 $newLead = LeadCustomer::create([
                     'property_id' => $property->id,
                     'name' => $leadData['name'],
-                    'user_id' => $leadData['userId'],
+                    'user_id' => $property->user_id,
                     'email' => $leadData['email'],
                     'contact_no' => $leadData['contact'],
                     'source_id' => $source->id,
