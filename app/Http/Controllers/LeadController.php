@@ -52,32 +52,35 @@ class LeadController extends Controller
                     ->where('property_id', $pid);
 
                 // Apply filtering based on flag
-                if ($flag == 2) {
-                    // Flag 2: Customers (entity_type = 2)
-                    $allLeads->where('entity_type', 2);
-                } elseif ($flag == 3) {
-                    $allLeads->where('entity_type', 1);
-                }
+                // $allLeads->when($flag != 'null', function ($query) use ($flag) {
+                //     if ($flag == 2) {
+                //         // Customers (entity_type = 2)
+                //         $query->where('entity_type', 2);
+                //     } elseif ($flag == 3) {
+                //         // Non-members (entity_type = 1)
+                //         $query->where('entity_type', 1);
+                //     }
+                // });
 
-                // Apply status filter
-                if ($statusid != 'null') {
-                    $allLeads->where('status_id', $statusid);
-                }
 
-                // Apply tag filter
-                if ($tagid != 'null') {
-                    $allLeads->whereHas('tags', function ($q) use ($tagid) {
-                        $q->where('tag_id', $tagid);
+                // Combine filters for tags, status, and custom fields
+                $allLeads->when($flag != 'null', function ($query) use ($flag) {
+                    if ($flag == 2) {
+                        // Customers (entity_type = 2)
+                        $query->where('entity_type', 2);
+                    } elseif ($flag == 3) {
+                        // Non-members (entity_type = 1)
+                        $query->where('entity_type', 1);
+                    }
+                })->when($statusid != 'null', function ($query) use ($statusid) {
+                    $query->where('status_id', $statusid);
+                })->when($tagid != 'null', function ($query) use ($tagid) {
+                    $query->whereHas('tags', function ($subQuery) use ($tagid) {
+                        $subQuery->where('tag_id', $tagid);
                     });
-                }
-
-                // $customfieldid=9;
-                // echo $customfieldid.$skey;
-                // Apply custom field filter
-                if ($customfieldid != 'null' && $skey != 'null') {
-                    // echo "sdfsd";
-                    $allLeads->whereHas('customFields', function ($q) use ($customfieldid, $skey) {
-                        $q->where('custom_field_id', $customfieldid)
+                })->when($customfieldid != 'null' && $skey != 'null', function ($query) use ($customfieldid, $skey) {
+                    $query->whereHas('customFields', function ($subQuery) use ($customfieldid, $skey) {
+                        $subQuery->where('custom_field_id', $customfieldid)
                             ->where(function ($subQ) use ($skey) {
                                 $subQ->where('text_value', 'like', "%{$skey}%")
                                     ->orWhere('small_text_value', 'like', "%{$skey}%")
@@ -86,33 +89,85 @@ class LeadController extends Controller
                                     ->orWhere('date_time_value', 'like', "%{$skey}%");
                             });
                     });
-                }
+                });
 
-                // Apply search filter
-                if ($skey != 'null' && $customfieldid == 'null') {
-                    $allLeads->where(function ($q) use ($skey) {
-                        $q->where('name', 'like', "%{$skey}%")
+                // Apply search key filter (without custom fields)
+                $allLeads->when($skey != 'null' && $customfieldid == 'null', function ($query) use ($skey) {
+                    $query->where(function ($subQuery) use ($skey) {
+                        $subQuery->where('name', 'like', "%{$skey}%")
                             ->orWhere('email', 'like', "%{$skey}%")
                             ->orWhere('contact_no', 'like', "%{$skey}%")
-                            ->orWhereHas('leadSource', function ($q) use ($skey) {
-                                $q->where('name', 'like', "%{$skey}%");
+                            ->orWhereHas('leadSource', function ($sourceQuery) use ($skey) {
+                                $sourceQuery->where('name', 'like', "%{$skey}%");
                             });
                     });
-                }
+                });
 
                 // Apply sorting
-                if ($sortbykey != 'null') {
+                $allLeads->when($sortbykey != 'null', function ($query) use ($sortbykey, $sort) {
                     if (in_array($sortbykey, ['name', 'email', 'contact_no'])) {
-                        $allLeads->orderBy($sortbykey, $sort);
+                        $query->orderBy($sortbykey, $sort);
                     } elseif ($sortbykey == 'source') {
-                        $allLeads->leftJoin('lead_sources', 'leads_customers.source_id', '=', 'lead_sources.id')
-                            ->select('leads_customers.*', 'lead_sources.name as source_name') // Ensure columns are explicit
+                        $query->leftJoin('lead_sources', 'leads_customers.source_id', '=', 'lead_sources.id')
+                            ->select('leads_customers.*', 'lead_sources.name as source_name')
                             ->orderBy('lead_sources.name', $sort);
                     }
-                } else {
-                    // Default sorting: descending by created_at
-                    $allLeads->orderBy('id', 'desc');
-                }
+                }, function ($query) {
+                    $query->orderBy('id', 'desc'); // Default sorting
+                });
+
+                // // Apply status filter
+                // if ($statusid != 'null') {
+                //     $allLeads->where('status_id', $statusid);
+                // }
+
+                // // Apply tag filter
+                // if ($tagid != 'null') {
+                //     $allLeads->whereHas('tags', function ($q) use ($tagid) {
+                //         $q->where('tag_id', $tagid);
+                //     });
+                // }
+
+
+                // // Apply custom field filter
+                // if ($customfieldid != 'null' && $skey != 'null') {
+                //     $allLeads->whereHas('customFields', function ($q) use ($customfieldid, $skey) {
+                //         $q->where('custom_field_id', $customfieldid)
+                //             ->where(function ($subQ) use ($skey) {
+                //                 $subQ->where('text_value', 'like', "%{$skey}%")
+                //                     ->orWhere('small_text_value', 'like', "%{$skey}%")
+                //                     ->orWhere('int_value', 'like', "%{$skey}%")
+                //                     ->orWhere('date_value', 'like', "%{$skey}%")
+                //                     ->orWhere('date_time_value', 'like', "%{$skey}%");
+                //             });
+                //     });
+                // }
+
+                // // Apply search filter
+                // if ($skey != 'null' && $customfieldid == 'null') {
+                //     $allLeads->where(function ($q) use ($skey) {
+                //         $q->where('name', 'like', "%{$skey}%")
+                //             ->orWhere('email', 'like', "%{$skey}%")
+                //             ->orWhere('contact_no', 'like', "%{$skey}%")
+                //             ->orWhereHas('leadSource', function ($q) use ($skey) {
+                //                 $q->where('name', 'like', "%{$skey}%");
+                //             });
+                //     });
+                // }
+
+                // // Apply sorting
+                // if ($sortbykey != 'null') {
+                //     if (in_array($sortbykey, ['name', 'email', 'contact_no'])) {
+                //         $allLeads->orderBy($sortbykey, $sort);
+                //     } elseif ($sortbykey == 'source') {
+                //         $allLeads->leftJoin('lead_sources', 'leads_customers.source_id', '=', 'lead_sources.id')
+                //             ->select('leads_customers.*', 'lead_sources.name as source_name') // Ensure columns are explicit
+                //             ->orderBy('lead_sources.name', $sort);
+                //     }
+                // } else {
+                //     // Default sorting: descending by created_at
+                //     $allLeads->orderBy('id', 'desc');
+                // }
 
                 // Paginate results
                 $allLeads = $allLeads->paginate($limit, ['*'], 'page', $offset);
